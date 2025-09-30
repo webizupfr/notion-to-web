@@ -1,0 +1,38 @@
+{
+  "name": "notion-publisher",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build --turbopack",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@notionhq/client": "^2.3.0",
+    "@upstash/redis": "^1.35.4",
+    "@vercel/blob": "^2.0.0",
+    "@vercel/kv": "^0.2.4",
+    "@vercel/speed-insights": "^1.2.0",
+    "date-fns": "^4.1.0",
+    "image-size": "^1.0.2",
+    "next": "15.5.3",
+    "next-seo": "^6.8.0",
+    "notion-client": "^7.6.0",
+    "notion-types": "^7.6.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "zod": "^4.1.9"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.3",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
