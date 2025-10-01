@@ -535,15 +535,22 @@ async function syncPage(
     stats: opts.stats,
   });
 
+  // Récupérer le full_width depuis le RecordMap (l'API officielle ne le retourne pas)
   let fullWidth = false;
   try {
-    const raw = (await getPage(page.id)) as unknown as {
-      full_width?: boolean;
-      page_full_width?: boolean;
-      is_full_width?: boolean;
-    };
-    fullWidth = Boolean(raw.full_width ?? raw.page_full_width ?? raw.is_full_width ?? false);
-  } catch {
+    if (recordMap?.block) {
+      const pageBlock = recordMap.block[page.id.replace(/-/g, '')];
+      const pageValue = pageBlock?.value as { 
+        format?: { 
+          page_full_width?: boolean;
+          page_cover_position?: number;
+        } 
+      } | undefined;
+      fullWidth = Boolean(pageValue?.format?.page_full_width);
+      console.log(`[sync] Full width detected for "${slug}":`, fullWidth);
+    }
+  } catch (error) {
+    console.warn(`[sync] Could not detect full_width for "${slug}":`, error);
     fullWidth = false;
   }
 
