@@ -538,19 +538,37 @@ async function syncPage(
   // Récupérer le full_width depuis le RecordMap (l'API officielle ne le retourne pas)
   let fullWidth = false;
   try {
+    console.log(`[sync] 🔍 Detecting full_width for "${slug}"...`);
+    console.log(`[sync] RecordMap exists:`, !!recordMap);
+    console.log(`[sync] RecordMap has blocks:`, !!recordMap?.block);
+    
     if (recordMap?.block) {
-      const pageBlock = recordMap.block[page.id.replace(/-/g, '')];
-      const pageValue = pageBlock?.value as { 
-        format?: { 
-          page_full_width?: boolean;
-          page_cover_position?: number;
-        } 
-      } | undefined;
-      fullWidth = Boolean(pageValue?.format?.page_full_width);
-      console.log(`[sync] Full width detected for "${slug}":`, fullWidth);
+      const normalizedId = page.id.replace(/-/g, '');
+      console.log(`[sync] Page ID:`, page.id);
+      console.log(`[sync] Normalized ID:`, normalizedId);
+      console.log(`[sync] RecordMap block keys:`, Object.keys(recordMap.block).slice(0, 5));
+      
+      const pageBlock = recordMap.block[normalizedId];
+      console.log(`[sync] Page block found:`, !!pageBlock);
+      
+      if (pageBlock) {
+        const pageValue = pageBlock.value as { 
+          format?: { 
+            page_full_width?: boolean;
+            page_cover_position?: number;
+          } 
+        } | undefined;
+        console.log(`[sync] Page value format:`, pageValue?.format);
+        fullWidth = Boolean(pageValue?.format?.page_full_width);
+        console.log(`[sync] ✅ Full width detected for "${slug}":`, fullWidth);
+      } else {
+        console.warn(`[sync] ⚠️  Page block not found in RecordMap for "${slug}"`);
+      }
+    } else {
+      console.warn(`[sync] ⚠️  No RecordMap blocks available for "${slug}"`);
     }
   } catch (error) {
-    console.warn(`[sync] Could not detect full_width for "${slug}":`, error);
+    console.error(`[sync] ❌ Error detecting full_width for "${slug}":`, error);
     fullWidth = false;
   }
 
