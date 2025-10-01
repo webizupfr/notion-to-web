@@ -1,6 +1,6 @@
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
-import type { PageBundle } from '@/lib/types';
+import type { PageBundle } from '@/lib/content-store';
 
 /**
  * Endpoint de debug pour lister toutes les pages en cache
