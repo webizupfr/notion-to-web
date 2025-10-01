@@ -1,7 +1,6 @@
 import 'server-only';
 
 import { NextResponse } from 'next/server';
-import { verifySignatureAppRouter } from '@upstash/qstash/nextjs';
 
 /**
  * 🎯 Worker de synchronisation (exécuté par QStash)
@@ -83,6 +82,11 @@ async function POST_HANDLER(request: Request) {
       }
     }
 
+    // Vérifier que result existe (ne devrait jamais arriver, mais TypeScript)
+    if (!result) {
+      throw new Error('Sync completed but no result returned');
+    }
+
     console.log('[sync-worker] ✅ Sync completed successfully');
     console.log('[sync-worker] Result:', {
       synced: result.synced,
@@ -116,5 +120,14 @@ async function POST_HANDLER(request: Request) {
 }
 
 // Vérifier la signature QStash pour la sécurité
-export const POST = verifySignatureAppRouter(POST_HANDLER);
+// Import dynamique pour éviter l'erreur au build
+const verifySignature = async () => {
+  const { verifySignatureAppRouter } = await import('@upstash/qstash/nextjs');
+  return verifySignatureAppRouter;
+};
+
+export const POST = async (request: Request) => {
+  const verify = await verifySignature();
+  return verify(POST_HANDLER)(request);
+};
 

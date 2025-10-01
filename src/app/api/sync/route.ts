@@ -588,11 +588,13 @@ async function syncPage(
     });
     await revalidateTag(`db:${databaseId}`);
 
-    // Synchroniser les pages enfants de la database
-    await syncDatabaseChildren(databaseId, slug, opts);
+    // TEMPORAIREMENT DÉSACTIVÉ : Synchroniser les pages enfants de la database
+    // Pour éviter les rate limits, on désactive temporairement cette fonctionnalité
+    console.log(`[sync] ⏸️  Database children sync temporarily disabled to avoid rate limits`);
   }
 
   // Synchroniser les pages enfants (child_page blocks)
+  // Avec délais pour respecter les rate limits de Notion (3 req/sec)
   console.log(`[sync] 🔍 Checking for child pages in "${slug}"...`);
   console.log(`[sync] Total blocks count: ${blocks.length}`);
   
@@ -702,14 +704,21 @@ async function syncChildPages(
     
     const syncedChildren: Array<{ id: string; title: string; slug: string }> = [];
     
-    // Synchroniser en parallèle avec concurrence limitée (2 à la fois)
-    const CONCURRENCY = 2;
+    // Synchroniser SÉQUENTIELLEMENT pour éviter les rate limits
+    // Notion limite à 3 requêtes/seconde, donc on attend 400ms entre chaque
+    const DELAY_MS = 400; // 400ms = 2.5 requêtes/seconde (sous la limite)
     
-    for (let i = 0; i < pagesToSync.length; i += CONCURRENCY) {
-      const batch = pagesToSync.slice(i, i + CONCURRENCY);
-      
-      const batchResults = await Promise.allSettled(
-        batch.map(async (childPage) => {
+    for (const childPage of pagesToSync) {
+      try {
+        // Attendre avant chaque requête (sauf la première)
+        if (syncedChildren.length > 0) {
+          console.log(`[syncChildPages] ⏳ Waiting ${DELAY_MS}ms to respect Notion rate limits...`);
+          await new Promise(resolve => setTimeout(resolve, DELAY_MS));
+        }
+        
+        console.log(`[syncChildPages] 🔄 Processing child page: ${childPage.title}`);
+        
+        const result = await (async () => {
           try {
             // Récupérer les métadonnées de la page enfant
             const childPageData = await getPage(childPage.id);
@@ -806,15 +815,16 @@ async function syncChildPages(
             console.error(`[sync] Failed to sync child page ${childPage.title}:`, error);
             return null;
           }
-        })
-      );
-      
-      // Collecter les résultats réussis
-      for (const result of batchResults) {
-        if (result.status === 'fulfilled' && result.value) {
-          syncedChildren.push(result.value);
+        })();
+        
+        // Collecter le résultat
+        if (result) {
+          syncedChildren.push(result);
           opts.stats.childPagesSynced += 1;
+          console.log(`[syncChildPages] ✅ Synced child page: ${result.title}`);
         }
+      } catch (error) {
+        console.error(`[syncChildPages] Error processing child page ${childPage.title}:`, error);
       }
     }
     
