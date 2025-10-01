@@ -29,6 +29,7 @@ import { fetchDatabaseBundle } from '@/lib/db-render';
 import { resolveDatabaseIdFromBlock, type LinkedDatabaseBlock } from '@/lib/resolve-db-id';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60; // Limite pour appel direct (backup)
 
 const PAGES_DB = process.env.NOTION_PAGES_DB;
 const POSTS_DB = process.env.NOTION_POSTS_DB;
@@ -52,6 +53,8 @@ type SyncStats = {
   buttonSources: Array<{ slug: string; pageId: string; blockId: string }>;
   unsupportedBlocks: Array<{ slug: string; pageId: string; blockId: string }>;
   databaseChildrenSynced: number;
+  childPagesSynced: number;
+  pagesSkipped: number;
 };
 
 async function notifySyncFailure(payload: Record<string, unknown>) {
@@ -253,9 +256,15 @@ async function syncPage(
 
   const metaInfo = await getPageMeta(page.id);
   const existing = await getPageBundle(slug);
+  
+  // Skip si la page n'a pas été modifiée (sync sélectif)
   if (!opts.force && existing && existing.meta.lastEdited === metaInfo.lastEdited) {
+    console.log(`[sync] ⏭️  Skipping "${slug}" - not modified since last sync`);
+    opts.stats.pagesSkipped += 1;
     return existing.meta;
   }
+  
+  console.log(`[sync] 🔄 Syncing "${slug}" (${existing ? 'updated' : 'new'})`);
 
   const handledDatabases = new Set<string>();
 
@@ -583,7 +592,237 @@ async function syncPage(
     await syncDatabaseChildren(databaseId, slug, opts);
   }
 
+  // Synchroniser les pages enfants (child_page blocks)
+  console.log(`[sync] 🔍 Checking for child pages in "${slug}"...`);
+  console.log(`[sync] Total blocks count: ${blocks.length}`);
+  
+  // Debug: afficher tous les types de blocks
+  const blockTypes = blocks.map(b => b.type);
+  console.log(`[sync] Block types found:`, blockTypes);
+  
+  const syncedChildren = await syncChildPages(slug, page.id, blocks, opts);
+  
+  console.log(`[sync] 📄 Child pages synced for "${slug}": ${syncedChildren.length}`);
+  if (syncedChildren.length > 0) {
+    console.log(`[sync] Child pages:`, syncedChildren.map(c => c.title).join(', '));
+  }
+  
+  // Ajouter les child pages aux métadonnées si présentes
+  if (syncedChildren.length > 0) {
+    meta.childPages = syncedChildren;
+    // Mettre à jour le bundle avec les child pages
+    const updatedBundle: PageBundle = {
+      meta,
+      blocks: plainBlocks,
+      syncedAt: new Date().toISOString(),
+    };
+    await setPageBundle(slug, updatedBundle);
+    console.log(`[sync] ✅ Updated bundle with ${syncedChildren.length} child pages`);
+  } else {
+    console.log(`[sync] ⚠️  No child pages found for "${slug}"`);
+  }
+
   return meta;
+}
+
+/**
+ * Collecte tous les blocks child_page dans une arborescence de blocs
+ */
+function collectChildPageBlocks(blocks: NotionBlock[]): Array<{ id: string; title: string }> {
+  const childPages: Array<{ id: string; title: string }> = [];
+  
+  console.log(`[collectChildPageBlocks] 🔍 Starting traversal of ${blocks.length} blocks`);
+  
+  function traverse(blockList: NotionBlock[], depth = 0) {
+    const indent = '  '.repeat(depth);
+    console.log(`${indent}[traverse] Processing ${blockList.length} blocks at depth ${depth}`);
+    
+    for (const block of blockList) {
+      console.log(`${indent}  - Block type: ${block.type}, id: ${block.id.substring(0, 8)}...`);
+      
+      if (block.type === 'child_page') {
+        const childPageBlock = block as Extract<NotionBlock, { type: 'child_page' }>;
+        console.log(`${indent}    ✅ Found child_page: "${childPageBlock.child_page.title}"`);
+        childPages.push({
+          id: block.id,
+          title: childPageBlock.child_page.title
+        });
+      }
+      
+      const children = (block as AugmentedBlock).__children;
+      if (children?.length) {
+        console.log(`${indent}    📁 Block has ${children.length} children, traversing...`);
+        traverse(children, depth + 1);
+      }
+    }
+  }
+  
+  traverse(blocks);
+  
+  console.log(`[collectChildPageBlocks] ✅ Collected ${childPages.length} child pages`);
+  return childPages;
+}
+
+/**
+ * Synchronise les pages enfants (child_page) pour qu'elles soient accessibles individuellement
+ * Par exemple: si la page "documentation" contient des child pages,
+ * elles seront accessibles à "/documentation/getting-started", etc.
+ * 
+ * OPTIMISÉ: Synchronise en parallèle avec concurrence limitée pour éviter les timeouts
+ */
+async function syncChildPages(
+  parentSlug: string,
+  parentPageId: string,
+  blocks: NotionBlock[],
+  opts: { type: 'page' | 'post'; stats: SyncStats; force?: boolean }
+) {
+  try {
+    console.log(`[syncChildPages] 🔍 Collecting child pages from ${blocks.length} blocks...`);
+    const childPages = collectChildPageBlocks(blocks);
+    
+    console.log(`[syncChildPages] 📊 Found ${childPages.length} child pages`);
+    if (childPages.length > 0) {
+      console.log(`[syncChildPages] Child pages found:`, childPages.map(c => c.title));
+    }
+    
+    if (!childPages.length) {
+      console.log(`[syncChildPages] ⚠️  No child pages found for "${parentSlug}"`);
+      return [];
+    }
+    
+    console.log(`[sync] Found ${childPages.length} child pages in page "${parentSlug}"`);
+    
+    // Limiter le nombre de child pages pour éviter les timeouts
+    const MAX_CHILD_PAGES = 10;
+    const pagesToSync = childPages.slice(0, MAX_CHILD_PAGES);
+    
+    if (childPages.length > MAX_CHILD_PAGES) {
+      console.warn(`[sync] Too many child pages (${childPages.length}), limiting to ${MAX_CHILD_PAGES}`);
+    }
+    
+    const syncedChildren: Array<{ id: string; title: string; slug: string }> = [];
+    
+    // Synchroniser en parallèle avec concurrence limitée (2 à la fois)
+    const CONCURRENCY = 2;
+    
+    for (let i = 0; i < pagesToSync.length; i += CONCURRENCY) {
+      const batch = pagesToSync.slice(i, i + CONCURRENCY);
+      
+      const batchResults = await Promise.allSettled(
+        batch.map(async (childPage) => {
+          try {
+            // Récupérer les métadonnées de la page enfant
+            const childPageData = await getPage(childPage.id);
+            
+            if (!isFullPage(childPageData)) {
+              console.warn(`[sync] Child page ${childPage.id} is not a full page`);
+              return null;
+            }
+            
+            // Créer un slug depuis le titre (kebab-case)
+            const titleSlug = childPage.title
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '') // Remove accents
+              .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
+              .replace(/\s+/g, '-') // Spaces to hyphens
+              .replace(/-+/g, '-') // Multiple hyphens to single
+              .replace(/^-|-$/g, ''); // Trim hyphens
+            
+            const fullSlug = `${parentSlug}/${titleSlug}`;
+            
+            console.log(`[sync] Syncing child page: ${fullSlug} (${childPage.title})`);
+            
+            // Créer un objet PageObjectResponse simulé
+            const modifiedPage = structuredClone(childPageData) as PageObjectResponse;
+            
+            // Ajouter une propriété slug simulée
+            if (!modifiedPage.properties.slug) {
+              (modifiedPage.properties as Record<string, unknown>).slug = {
+                type: 'rich_text',
+                rich_text: [],
+                id: 'slug'
+              };
+            }
+            
+            if ('rich_text' in modifiedPage.properties.slug) {
+              modifiedPage.properties.slug.rich_text = [
+                {
+                  type: 'text' as const,
+                  text: { content: fullSlug, link: null },
+                  plain_text: fullSlug,
+                  href: null,
+                  annotations: {
+                    bold: false,
+                    italic: false,
+                    strikethrough: false,
+                    underline: false,
+                    code: false,
+                    color: 'default' as const,
+                  },
+                },
+              ];
+            }
+            
+            // Ajouter un titre si absent
+            if (!modifiedPage.properties.Title) {
+              (modifiedPage.properties as Record<string, unknown>).Title = {
+                type: 'title',
+                title: [],
+                id: 'title'
+              };
+            }
+            
+            if ('title' in modifiedPage.properties.Title) {
+              modifiedPage.properties.Title.title = [
+                {
+                  type: 'text' as const,
+                  text: { content: childPage.title, link: null },
+                  plain_text: childPage.title,
+                  href: null,
+                  annotations: {
+                    bold: false,
+                    italic: false,
+                    strikethrough: false,
+                    underline: false,
+                    code: false,
+                    color: 'default' as const,
+                  },
+                },
+              ];
+            }
+            
+            // Synchroniser sans récursion pour éviter les timeouts
+            await syncPage(modifiedPage, { ...opts, type: 'page', force: false });
+            
+            await revalidatePath(`/${fullSlug}`, 'page');
+            
+            return {
+              id: childPage.id,
+              title: childPage.title,
+              slug: fullSlug
+            };
+          } catch (error) {
+            console.error(`[sync] Failed to sync child page ${childPage.title}:`, error);
+            return null;
+          }
+        })
+      );
+      
+      // Collecter les résultats réussis
+      for (const result of batchResults) {
+        if (result.status === 'fulfilled' && result.value) {
+          syncedChildren.push(result.value);
+          opts.stats.childPagesSynced += 1;
+        }
+      }
+    }
+    
+    return syncedChildren;
+  } catch (error) {
+    console.error(`[sync] Error syncing child pages for ${parentSlug}:`, error);
+    return [];
+  }
 }
 
 /**
@@ -672,6 +911,96 @@ async function syncDatabaseChildren(
   }
 }
 
+/**
+ * Fonction principale de synchronisation
+ * Exportée pour être utilisée par le worker QStash
+ */
+export async function runFullSync(force: boolean = false) {
+  if (!PAGES_DB || !POSTS_DB) {
+    throw new Error('Missing Notion database env vars');
+  }
+
+  const syncedPages: string[] = [];
+  const postsIndex: PostMeta[] = [];
+  const stats: SyncStats = {
+    imageMirrored: 0,
+    imageFallbacks: [],
+    missingBlocks: new Set<string>(),
+    recordMapPages: 0,
+    buttonsConverted: 0,
+    buttonSources: [],
+    unsupportedBlocks: [],
+    databaseChildrenSynced: 0,
+    childPagesSynced: 0,
+    pagesSkipped: 0,
+  };
+  const startedAt = Date.now();
+  let pagesProcessed = 0;
+  let postsProcessed = 0;
+
+  const [pages, posts] = await Promise.all([
+    collectDatabasePages(PAGES_DB),
+    collectDatabasePages(POSTS_DB),
+  ]);
+
+  pagesProcessed = pages.length;
+  postsProcessed = posts.length;
+
+  for (const page of pages) {
+    const meta = await syncPage(page, { type: 'page', stats, force });
+    if (meta) {
+      syncedPages.push(meta.slug);
+    }
+  }
+
+  for (const post of posts) {
+    const meta = await syncPage(post, { type: 'post', stats, force });
+    if (meta) {
+      const postExcerpt = firstRichText(post.properties.excerpt);
+      postsIndex.push({
+        slug: meta.slug,
+        title: meta.title,
+        excerpt: postExcerpt,
+        notionId: meta.notionId,
+        cover: meta.cover ?? null,
+        lastEdited: meta.lastEdited,
+      });
+    }
+  }
+
+  await setPostsIndex({ items: postsIndex, syncedAt: new Date().toISOString() });
+  await revalidateTag('posts:index');
+  await revalidatePath('/blog', 'page');
+
+  const durationMs = Date.now() - startedAt;
+  const summary = {
+    durationMs,
+    pagesProcessed,
+    pagesSynced: syncedPages.length,
+    pagesSkipped: stats.pagesSkipped,
+    postsProcessed,
+    postsSynced: postsIndex.length,
+    databaseChildrenSynced: stats.databaseChildrenSynced,
+    childPagesSynced: stats.childPagesSynced,
+    imageMirrored: stats.imageMirrored,
+    imageFallbacks: stats.imageFallbacks.length,
+    missingBlocks: Array.from(stats.missingBlocks),
+    recordMapPages: stats.recordMapPages,
+    buttonsConverted: stats.buttonsConverted,
+    unsupportedBlocks: stats.unsupportedBlocks,
+  };
+
+  console.info('[sync] summary', summary);
+
+  return {
+    ok: true,
+    synced: syncedPages.length,
+    posts: postsIndex.length,
+    metrics: summary,
+    imageFallbackSamples: stats.imageFallbacks.slice(0, 10),
+  };
+}
+
 export async function GET(request: Request) {
   if (!CRON_SECRET) {
     return NextResponse.json({ message: 'Missing CRON_SECRET' }, { status: 500 });
@@ -688,94 +1017,14 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
-  const syncedPages: string[] = [];
-  const postsIndex: PostMeta[] = [];
-  const stats: SyncStats = {
-    imageMirrored: 0,
-    imageFallbacks: [],
-    missingBlocks: new Set<string>(),
-    recordMapPages: 0,
-    buttonsConverted: 0,
-    buttonSources: [],
-    unsupportedBlocks: [],
-    databaseChildrenSynced: 0,
-  };
-  const startedAt = Date.now();
-  let pagesProcessed = 0;
-  let postsProcessed = 0;
-
   try {
-    const [pages, posts] = await Promise.all([
-      collectDatabasePages(PAGES_DB),
-      collectDatabasePages(POSTS_DB),
-    ]);
-
-    pagesProcessed = pages.length;
-    postsProcessed = posts.length;
-
-    for (const page of pages) {
-      const meta = await syncPage(page, { type: 'page', stats, force });
-      if (meta) {
-        syncedPages.push(meta.slug);
-      }
-    }
-
-    for (const post of posts) {
-      const meta = await syncPage(post, { type: 'post', stats, force });
-      if (meta) {
-        const postExcerpt = firstRichText(post.properties.excerpt);
-        postsIndex.push({
-          slug: meta.slug,
-          title: meta.title,
-          excerpt: postExcerpt,
-          notionId: meta.notionId,
-          cover: meta.cover ?? null,
-        });
-      }
-    }
-
-    await setPostsIndex({ items: postsIndex, syncedAt: new Date().toISOString() });
-    await revalidateTag('posts:index');
-    await revalidatePath('/blog', 'page');
-
-    const durationMs = Date.now() - startedAt;
-    const summary = {
-      durationMs,
-      pagesProcessed,
-      pagesSynced: syncedPages.length,
-      postsProcessed,
-      postsSynced: postsIndex.length,
-      databaseChildrenSynced: stats.databaseChildrenSynced,
-      imageMirrored: stats.imageMirrored,
-      imageFallbacks: stats.imageFallbacks.length,
-      missingBlocks: Array.from(stats.missingBlocks),
-      recordMapPages: stats.recordMapPages,
-      buttonsConverted: stats.buttonsConverted,
-      unsupportedBlocks: stats.unsupportedBlocks,
-    };
-
-    console.info('[sync] summary', summary);
-
-    const fallbackSamples = stats.imageFallbacks.slice(0, 10);
-
-    return NextResponse.json({
-      ok: true,
-      synced: syncedPages.length,
-      posts: postsIndex.length,
-      metrics: summary,
-      imageFallbackSamples: fallbackSamples,
-      buttonSamples: stats.buttonSources.slice(0, 10),
-    });
+    const result = await runFullSync(force);
+    return NextResponse.json(result);
   } catch (error) {
-    const durationMs = Date.now() - startedAt;
-    console.error('Sync error', error);
+    console.error('[sync] Fatal error:', error);
     await notifySyncFailure({
       error: error instanceof Error ? error.message : String(error),
-      durationMs,
-      imageFallbacks: stats.imageFallbacks.slice(0, 10),
-      missingBlocks: Array.from(stats.missingBlocks),
-      buttonsConverted: stats.buttonsConverted,
-      unsupportedBlocks: stats.unsupportedBlocks,
+      timestamp: new Date().toISOString(),
     });
     return NextResponse.json({ message: 'Sync failed' }, { status: 500 });
   }
