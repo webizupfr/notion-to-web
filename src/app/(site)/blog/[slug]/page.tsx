@@ -44,7 +44,7 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
 
         <div className="surface-card px-0 pb-0 pt-0">
           <div className="space-y-5 px-6 pb-8 pt-8 sm:px-8">
-            <Blocks blocks={blocks} />
+            <Blocks blocks={blocks} currentSlug={`blog/${slug}`} />
           </div>
         </div>
       </article>

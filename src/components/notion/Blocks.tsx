@@ -2,7 +2,7 @@ import Image from "next/image";
 import type { CSSProperties, ReactNode } from "react";
 import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 
-import { Collection } from "@/components/collections/Collection";
+import { NotionCollectionView } from "@/components/notion/CollectionView";
 import { resolveDatabaseIdFromBlock } from "@/lib/resolve-db-id";
 import type { LinkedDatabaseBlock } from "@/lib/resolve-db-id";
 
@@ -54,6 +54,230 @@ function notionColorAttr(color?: string | null) {
 function notionColorTone(color?: string | null) {
   if (!color || color === 'default') return undefined;
   return color.replace('_background', '');
+}
+
+type AnyRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is AnyRecord {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function toUuid(id?: string | null): string | null {
+  if (!id) return null;
+  const clean = id.replace(/-/g, '');
+  if (clean.length !== 32) return id;
+  return `${clean.slice(0, 8)}-${clean.slice(8, 12)}-${clean.slice(12, 16)}-${clean.slice(16, 20)}-${clean.slice(20)}`;
+}
+
+function extractPlainText(value: unknown): string | null {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  }
+  if (Array.isArray(value)) {
+    const text = value
+      .map((entry) => (Array.isArray(entry) && typeof entry[0] === 'string' ? entry[0] : ''))
+      .join('')
+      .trim();
+    return text || null;
+  }
+  return null;
+}
+
+function extractCollectionIds(record: AnyRecord): string[] {
+  const ids = new Set<string>();
+  const add = (value: unknown) => {
+    if (typeof value === 'string' && value.trim()) {
+      ids.add(value.trim());
+    }
+  };
+
+  add(record.collection_id);
+  add(record.collectionId);
+
+  const collection = isRecord(record.collection) ? (record.collection as AnyRecord) : null;
+  if (collection) {
+    add(collection.id);
+    add(collection.collection_id);
+    const pointer = isRecord(collection.collection_pointer)
+      ? (collection.collection_pointer as AnyRecord)
+      : isRecord((collection as { pointer?: unknown }).pointer)
+      ? ((collection as { pointer?: unknown }).pointer as AnyRecord)
+      : null;
+    if (pointer) {
+      add(pointer.id);
+    }
+  }
+
+  const format = isRecord(record.format) ? (record.format as AnyRecord) : null;
+  if (format) {
+    const pointer = isRecord(format.collection_pointer)
+      ? (format.collection_pointer as AnyRecord)
+      : isRecord((format as { collectionPointer?: unknown }).collectionPointer)
+      ? ((format as { collectionPointer?: unknown }).collectionPointer as AnyRecord)
+      : null;
+    if (pointer) {
+      add(pointer.id);
+    }
+  }
+
+  const linkedDb = isRecord(record.linked_db) ? (record.linked_db as AnyRecord) : null;
+  if (linkedDb) {
+    add(linkedDb.database_id);
+  }
+
+  const linkToPage = isRecord(record.link_to_page) ? (record.link_to_page as AnyRecord) : null;
+  if (linkToPage?.type === 'database_id' && typeof linkToPage.database_id === 'string') {
+    add(linkToPage.database_id);
+  }
+
+  if (record.type === 'child_database' && typeof record.id === 'string') {
+    add(record.id);
+  }
+
+  return Array.from(ids);
+}
+
+function extractViewIds(record: AnyRecord): string[] {
+  const ids = new Set<string>();
+  const add = (value: unknown) => {
+    if (typeof value === 'string' && value.trim()) {
+      ids.add(value.trim());
+    }
+  };
+  const addMany = (value: unknown) => {
+    if (Array.isArray(value)) {
+      value.forEach(add);
+    }
+  };
+
+  add(record.view_id);
+  add(record.viewId);
+  addMany(record.view_ids);
+  addMany(record.viewIds);
+
+  const format = isRecord(record.format) ? (record.format as AnyRecord) : null;
+  if (format) {
+    add(format.view_id);
+    add(format.viewId);
+    addMany(format.view_ids);
+    addMany(format.viewIds);
+
+    const pointer = isRecord(format.collection_view)
+      ? (format.collection_view as AnyRecord)
+      : isRecord((format as { collectionView?: unknown }).collectionView)
+      ? ((format as { collectionView?: unknown }).collectionView as AnyRecord)
+      : null;
+    if (pointer) {
+      add(pointer.view_id);
+      add(pointer.viewId);
+      addMany(pointer.view_ids);
+      addMany(pointer.viewIds);
+    }
+
+    const altPointer = isRecord(format.collection_pointer)
+      ? (format.collection_pointer as AnyRecord)
+      : isRecord((format as { collectionPointer?: unknown }).collectionPointer)
+      ? ((format as { collectionPointer?: unknown }).collectionPointer as AnyRecord)
+      : null;
+    if (altPointer) {
+      add(altPointer.view_id);
+      add(altPointer.viewId);
+      addMany(altPointer.view_ids);
+      addMany(altPointer.viewIds);
+    }
+  }
+
+  const collectionView = isRecord(record.collection_view) ? (record.collection_view as AnyRecord) : null;
+  if (collectionView) {
+    add(collectionView.view_id);
+    add(collectionView.viewId);
+    addMany(collectionView.view_ids);
+    addMany(collectionView.viewIds);
+  }
+
+  return Array.from(ids);
+}
+
+function extractCollectionTitle(record: AnyRecord): string | null {
+  const childDb = isRecord(record.child_database) ? (record.child_database as AnyRecord) : null;
+  if (childDb && typeof childDb.title === 'string' && childDb.title.trim()) {
+    return childDb.title.trim();
+  }
+
+  const collectionView = isRecord(record.collection_view) ? (record.collection_view as AnyRecord) : null;
+  if (collectionView) {
+    const name = extractPlainText(collectionView.name);
+    if (name) return name;
+  }
+
+  const format = isRecord(record.format) ? (record.format as AnyRecord) : null;
+  if (format) {
+    const viewRef = isRecord(format.collection_view)
+      ? (format.collection_view as AnyRecord)
+      : isRecord((format as { collectionView?: unknown }).collectionView)
+      ? ((format as { collectionView?: unknown }).collectionView as AnyRecord)
+      : null;
+    if (viewRef) {
+      const name = extractPlainText(viewRef.name);
+      if (name) return name;
+    }
+  }
+
+  const collection = isRecord(record.collection) ? (record.collection as AnyRecord) : null;
+  if (collection) {
+    const name = extractPlainText(collection.name);
+    if (name) return name;
+  }
+
+  if (isRecord(record.properties)) {
+    const properties = record.properties as AnyRecord;
+    const titleProp = properties.title;
+    const name = extractPlainText(titleProp);
+    if (name) return name;
+  }
+
+  return null;
+}
+
+async function resolveCollectionContext(block: NotionBlock): Promise<{
+  databaseId: string | null;
+  viewId: string | null;
+  title: string | null;
+}> {
+  const record = block as unknown as AnyRecord;
+  const rawViewId = extractViewIds(record)[0] ?? null;
+  const rawIds = extractCollectionIds(record);
+  let databaseId: string | null = null;
+  if (rawIds.length) {
+    databaseId = toUuid(rawIds[0]);
+  }
+  if (!databaseId) {
+    databaseId = await resolveDatabaseIdFromBlock(block as LinkedDatabaseBlock);
+  }
+  const title = extractCollectionTitle(record);
+
+  return {
+    databaseId,
+    viewId: rawViewId ?? null,
+    title,
+  };
+}
+
+async function renderCollectionBlock(block: NotionBlock, currentSlug?: string) {
+  const context = await resolveCollectionContext(block);
+  if (!context.databaseId) return null;
+  return (
+    <div className="my-8">
+      <NotionCollectionView
+        databaseId={context.databaseId}
+        viewId={context.viewId ?? undefined}
+        title={context.title ?? undefined}
+        basePath={currentSlug ? `/${currentSlug}` : ""}
+      />
+    </div>
+  );
 }
 
 function getInlineClasses(item: RichTextItemResponse): string {
@@ -218,7 +442,7 @@ function parseButtonFromRichText(items: RichTextItemResponse[] | undefined):
   return { href, label, variant };
 }
 
-function renderListItems(items: ListBlock[]): ReactNode {
+function renderListItems(items: ListBlock[], currentSlug?: string): ReactNode {
   return items.map((item) => (
     <li key={item.id} className="space-y-2.5 text-[0.98rem] leading-[1.65]">
       <div>
@@ -230,20 +454,20 @@ function renderListItems(items: ListBlock[]): ReactNode {
       </div>
       {getBlockChildren(item as NotionBlock).length ? (
         <div className="pl-5 text-[0.92rem]">
-          <Blocks blocks={getBlockChildren(item as NotionBlock)} />
+          <Blocks blocks={getBlockChildren(item as NotionBlock)} currentSlug={currentSlug} />
         </div>
       ) : null}
     </li>
   ));
 }
 
-function renderGrouped(block: GroupedListBlock): ReactNode {
+function renderGrouped(block: GroupedListBlock, currentSlug?: string): ReactNode {
   const Component = (block.type === "bulleted_list_group" ? "ul" : "ol") as "ul" | "ol";
   const markerClass = block.type === "bulleted_list_group" ? "list-disc" : "list-decimal";
 
   return (
     <Component className={`space-y-2.5 pl-6 ${markerClass} text-[0.98rem] leading-[1.65]`}>
-      {renderListItems(block.items)}
+      {renderListItems(block.items, currentSlug)}
     </Component>
   );
 }
@@ -292,7 +516,13 @@ function renderMedia({
 }
 
 
-export async function renderBlockAsync(block: NotionBlock): Promise<ReactNode> {
+export async function renderBlockAsync(block: NotionBlock, currentSlug?: string): Promise<ReactNode> {
+  const blockType = (block as { type?: string }).type;
+
+  if (blockType === 'collection_view' || blockType === 'collection_view_page') {
+    return await renderCollectionBlock(block, currentSlug);
+  }
+
   if (isButtonBlock(block)) {
     const data = block.button;
     if (!data) return null;
@@ -374,7 +604,7 @@ export async function renderBlockAsync(block: NotionBlock): Promise<ReactNode> {
           </span>
           {getBlockChildren(block).length ? (
             <div className="mt-3 w-full space-y-3 text-[0.92rem]">
-              <Blocks blocks={getBlockChildren(block)} />
+              <Blocks blocks={getBlockChildren(block)} currentSlug={currentSlug} />
             </div>
           ) : null}
         </label>
@@ -398,7 +628,7 @@ export async function renderBlockAsync(block: NotionBlock): Promise<ReactNode> {
           </summary>
           {getBlockChildren(block).length ? (
             <div className="mt-4 space-y-3 text-[0.95rem]">
-              <Blocks blocks={getBlockChildren(block)} />
+              <Blocks blocks={getBlockChildren(block)} currentSlug={currentSlug} />
             </div>
           ) : null}
         </details>
@@ -452,7 +682,7 @@ export async function renderBlockAsync(block: NotionBlock): Promise<ReactNode> {
             ) : null}
             <div className="space-y-3 text-[0.98rem] leading-[1.6]">
               <div>{renderRichText(block.callout.rich_text)}</div>
-              {getBlockChildren(block).length ? <Blocks blocks={getBlockChildren(block)} /> : null}
+              {getBlockChildren(block).length ? <Blocks blocks={getBlockChildren(block)} currentSlug={currentSlug} /> : null}
             </div>
           </div>
         </div>
@@ -460,16 +690,9 @@ export async function renderBlockAsync(block: NotionBlock): Promise<ReactNode> {
     }
 
     case "child_database":
-    case "link_to_page": {
-      const databaseId = await resolveDatabaseIdFromBlock(block as LinkedDatabaseBlock);
-      if (!databaseId) return null;
-      const title = block.type === "child_database" ? block.child_database.title ?? null : null;
-      return (
-        <section className="my-8 space-y-4">
-          {title ? <h3 className="text-lg font-semibold">{title}</h3> : null}
-          <Collection databaseId={databaseId} title={title ?? undefined} />
-        </section>
-      );
+    case "link_to_page":
+    {
+      return await renderCollectionBlock(block, currentSlug);
     }
 
     case "bookmark":
@@ -505,7 +728,7 @@ export async function renderBlockAsync(block: NotionBlock): Promise<ReactNode> {
       }
 
       const children = getBlockChildren(augmented);
-      return children.length ? <Blocks blocks={children} /> : null;
+      return children.length ? <Blocks blocks={children} currentSlug={currentSlug} /> : null;
     }
 
     case "column_list": {
@@ -591,7 +814,7 @@ export async function renderBlockAsync(block: NotionBlock): Promise<ReactNode> {
         <div className="notion-columns" style={style}>
           {columns.map((column) => (
             <div key={column.id} className="space-y-5">
-              {getBlockChildren(column).length ? <Blocks blocks={getBlockChildren(column)} /> : null}
+              {getBlockChildren(column).length ? <Blocks blocks={getBlockChildren(column)} currentSlug={currentSlug} /> : null}
             </div>
           ))}
         </div>
@@ -632,17 +855,17 @@ export async function renderBlockAsync(block: NotionBlock): Promise<ReactNode> {
   }
 }
 
-export async function Blocks({ blocks }: { blocks: NotionBlock[] }) {
+export async function Blocks({ blocks, currentSlug }: { blocks: NotionBlock[]; currentSlug?: string }) {
   const grouped = groupLists(blocks);
 
   const rendered = await Promise.all(
     grouped.map(async (block) => {
       if (isGroupedListBlock(block)) {
         const firstId = block.items[0]?.id ?? "list";
-        return <div key={`${block.type}-${firstId}`}>{renderGrouped(block)}</div>;
+        return <div key={`${block.type}-${firstId}`}>{renderGrouped(block, currentSlug)}</div>;
       }
       const notionBlock = block as NotionBlock;
-      const content = await renderBlockAsync(notionBlock);
+      const content = await renderBlockAsync(notionBlock, currentSlug);
       return <div key={notionBlock.id}>{content}</div>;
     })
   );

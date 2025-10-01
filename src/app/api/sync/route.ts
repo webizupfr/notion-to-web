@@ -15,6 +15,7 @@ import type { NotionBlock } from '@/lib/notion';
 import { mirrorRemoteImage } from '@/lib/media';
 import { fetchRecordMap } from '@/lib/notion-record';
 import { extractHints } from '@/lib/record-hints';
+import { extractCollectionBundles } from '@/lib/collection-extractor';
 import {
   getPageBundle,
   setPageBundle,
@@ -46,6 +47,11 @@ type SyncStats = {
   imageMirrored: number;
   imageFallbacks: ImageFallback[];
   missingBlocks: Set<string>;
+  recordMapPages: number;
+  buttonsConverted: number;
+  buttonSources: Array<{ slug: string; pageId: string; blockId: string }>;
+  unsupportedBlocks: Array<{ slug: string; pageId: string; blockId: string }>;
+  databaseChildrenSynced: number;
 };
 
 async function notifySyncFailure(payload: Record<string, unknown>) {
@@ -251,9 +257,22 @@ async function syncPage(
     return existing.meta;
   }
 
+  const handledDatabases = new Set<string>();
+
   const blocks = await pageBlocksDeep(page.id, 100, {
-    onMissingBlock: (id) => opts.stats.missingBlocks.add(id),
+    onMissingBlock: (id) => opts.stats.missingBlocks.add(`${slug}:${id}`),
   });
+  const collectUnsupported = (nodes: NotionBlock[] | undefined) => {
+    if (!nodes) return;
+    for (const node of nodes) {
+      if (node.type === 'unsupported') {
+        opts.stats.unsupportedBlocks.push({ slug, pageId: page.id, blockId: node.id });
+      }
+      const children = (node as AugmentedBlock).__children;
+      if (children?.length) collectUnsupported(children as NotionBlock[]);
+    }
+  };
+  collectUnsupported(blocks as NotionBlock[]);
   const processedBlocks = await processBlocksMedia(blocks, {
     slug,
     pageId: page.id,
@@ -262,12 +281,46 @@ async function syncPage(
 
   const recordMap = await fetchRecordMap(page.id);
   if (recordMap) {
+    opts.stats.recordMapPages += 1;
     const hints = extractHints(recordMap);
     console.log('[recordMap] hints', {
       columns: Object.keys(hints.columns).length,
       images: Object.keys(hints.images).length,
       buttons: Object.keys(hints.buttons).length,
     });
+
+  const registerButton = (blockId: string) => {
+    if (opts.stats.buttonSources.some((entry) => entry.blockId === blockId)) return;
+    opts.stats.buttonSources.push({ slug, pageId: page.id, blockId });
+    opts.stats.buttonsConverted += 1;
+    const normalized = normalizeId(blockId);
+    opts.stats.unsupportedBlocks = opts.stats.unsupportedBlocks.filter((entry) => {
+      const entryNormalized = normalizeId(entry.blockId);
+      return entry.blockId !== blockId && entryNormalized !== normalized;
+    });
+  };
+
+  const normalizeId = (value: string | undefined | null) =>
+    value ? value.replace(/-/g, '') : undefined;
+
+    const getHint = <T,>(collection: Record<string, T>, id: string): T | undefined => {
+      const direct = collection[id];
+      if (direct !== undefined) return direct;
+      const normalized = normalizeId(id);
+      return normalized ? collection[normalized] : undefined;
+    };
+
+    const findBlockById = (items: NotionBlock[] | undefined, targetId: string): NotionBlock | null => {
+      if (!items?.length) return null;
+      const normalizedTarget = normalizeId(targetId);
+      for (const item of items) {
+        const normalizedItem = normalizeId(item.id);
+        if (normalizedItem && normalizedItem === normalizedTarget) return item;
+        const child = findBlockById((item as AugmentedBlock).__children, targetId);
+        if (child) return child;
+      }
+      return null;
+    };
 
     if (Object.keys(hints.columns).length) {
       for (const listBlock of processedBlocks) {
@@ -277,7 +330,7 @@ async function syncPage(
         let hasExplicit = false;
 
         for (const column of columns) {
-          const hint = hints.columns[column.id];
+          const hint = getHint(hints.columns, column.id);
           if (hint?.ratio !== undefined) {
             ratios.push(Math.max(Number(hint.ratio) || 0.01, 0.01));
             hasExplicit = true;
@@ -287,7 +340,7 @@ async function syncPage(
         }
 
         if (!hasExplicit) {
-          const widthHints = columns.map((column) => hints.columns[column.id]?.widthPx ?? 0);
+          const widthHints = columns.map((column) => getHint(hints.columns, column.id)?.widthPx ?? 0);
           if (widthHints.some((w) => w > 0)) {
             const totalWidth = widthHints.reduce((acc, val) => acc + (val > 0 ? val : 0), 0) || 1;
             const normalized = widthHints.map((w) => (w > 0 ? w / totalWidth : 1 / columns.length));
@@ -307,7 +360,7 @@ async function syncPage(
     if (Object.keys(hints.images).length) {
       const applyImageHints = (block: NotionBlock) => {
         if (block.type === 'image') {
-          const hint = hints.images[block.id];
+          const hint = getHint(hints.images, block.id);
           if (hint) {
             const meta = ((block as unknown as Record<string, unknown>).__image_meta ||= {}) as {
               width?: number;
@@ -328,11 +381,12 @@ async function syncPage(
     if (Object.keys(hints.buttons).length) {
       const applyButtonHints = (block: NotionBlock) => {
         if (block.type === 'unsupported') {
-          const hint = hints.buttons[block.id];
+          const hint = getHint(hints.buttons, block.id);
           if (hint) {
             const augmented = block as unknown as Record<string, unknown>;
             augmented.type = 'button';
             augmented.button = hint;
+            registerButton(block.id);
             return;
           }
         }
@@ -340,6 +394,120 @@ async function syncPage(
         children?.forEach(applyButtonHints);
       };
       processedBlocks.forEach(applyButtonHints);
+
+      for (const [blockId, hint] of Object.entries(hints.buttons)) {
+        const existing = findBlockById(processedBlocks, blockId);
+        if (existing) continue;
+
+        const normalizedId = normalizeId(blockId) ?? blockId;
+        const recordEntry = recordMap.block?.[normalizedId];
+        const parentIdRaw = (recordEntry as { value?: { parent_id?: string } } | undefined)?.value?.parent_id;
+        const parent = parentIdRaw ? findBlockById(processedBlocks, parentIdRaw) : null;
+
+        const synthetic: NotionBlock = {
+          object: 'block',
+          id: blockId,
+          type: 'button',
+          has_children: false,
+          button: hint,
+        } as NotionBlock;
+
+        if (parent) {
+          const augmentedParent = parent as AugmentedBlock;
+          (augmentedParent.__children ||= []).push(synthetic);
+        } else {
+          processedBlocks.push(synthetic);
+        }
+
+        registerButton(blockId);
+        console.log('[recordMap] injected button', { slug, pageId: page.id, blockId });
+      }
+    }
+
+    const buttonEntries = Object.values(recordMap.block ?? {})
+      .map((entry) => (entry as { value?: { type?: string } } | undefined)?.value)
+      .filter((value): value is { id: string; type?: string; properties?: Record<string, unknown>; format?: Record<string, unknown>; parent_id?: string } =>
+        Boolean(value && value.type === 'button')
+      );
+
+    if (buttonEntries.length) {
+      const getPlainText = (prop: unknown): string => {
+        if (!prop) return '';
+        if (Array.isArray(prop)) {
+          return (
+            prop
+              .map((segment) => {
+                if (Array.isArray(segment)) {
+                  const text = segment[0];
+                  return typeof text === 'string' ? text : '';
+                }
+                return '';
+              })
+              .join('') || ''
+          ).trim();
+        }
+        return '';
+      };
+
+      const styleFromFormat = (format: Record<string, unknown> | undefined): 'primary' | 'ghost' => {
+        const raw = String(
+          (format?.button_style ?? (format?.button as { style?: string } | undefined)?.style ?? '')
+        ).toLowerCase();
+        if (raw.includes('ghost') || raw.includes('secondary') || raw.includes('outline')) return 'ghost';
+        return 'primary';
+      };
+
+      const urlFromFormat = (format: Record<string, unknown> | undefined): string => {
+        const primary = typeof format?.button_url === 'string' ? format.button_url : undefined;
+        const nested = ((format?.button as { url?: string } | undefined)?.url ?? '') as string;
+        return (primary ?? nested ?? '').trim();
+      };
+
+      for (const value of buttonEntries) {
+        const blockId = value.id;
+        if (opts.stats.buttonSources.some((entry) => entry.blockId === blockId)) continue;
+        const label = getPlainText((value.properties as Record<string, unknown> | undefined)?.title);
+        const url = urlFromFormat(value.format as Record<string, unknown> | undefined);
+        if (!label || !url) continue;
+        const style = styleFromFormat(value.format as Record<string, unknown> | undefined);
+
+        const parentIdRaw = value.parent_id;
+        const parent = parentIdRaw ? findBlockById(processedBlocks, parentIdRaw) : null;
+
+        const synthetic: NotionBlock = {
+          object: 'block',
+          id: blockId,
+          type: 'button',
+          has_children: false,
+          button: { label, url, style },
+        } as NotionBlock;
+
+        if (parent) {
+          const augmentedParent = parent as AugmentedBlock;
+          (augmentedParent.__children ||= []).push(synthetic);
+        } else {
+          processedBlocks.push(synthetic);
+        }
+
+        registerButton(blockId);
+        console.log('[recordMap] synthesized button', { slug, pageId: page.id, blockId });
+      }
+    }
+
+    const collectionBundles = extractCollectionBundles(recordMap);
+    if (collectionBundles.length) {
+      const syncedAtIso = new Date().toISOString();
+      for (const collection of collectionBundles) {
+        if (!collection.databaseId) continue;
+        handledDatabases.add(collection.databaseId);
+        await setDbBundleCache({
+          databaseId: collection.databaseId,
+          cursor: collection.viewId || '_',
+          bundle: collection.bundle,
+          syncedAt: syncedAtIso,
+        });
+        await revalidateTag(`db:${collection.databaseId}`);
+      }
     }
   }
 
@@ -398,6 +566,7 @@ async function syncPage(
 
   const linkedDbIds = await collectLinkedDatabaseIds(blocks);
   for (const databaseId of linkedDbIds) {
+    if (handledDatabases.has(databaseId)) continue;
     const mirroredBundle = await mirrorDatabaseBundle(databaseId, {
       slug,
       stats: opts.stats,
@@ -409,9 +578,98 @@ async function syncPage(
       syncedAt: new Date().toISOString(),
     });
     await revalidateTag(`db:${databaseId}`);
+
+    // Synchroniser les pages enfants de la database
+    await syncDatabaseChildren(databaseId, slug, opts);
   }
 
   return meta;
+}
+
+/**
+ * Synchronise les pages enfants d'une database pour qu'elles soient accessibles individuellement
+ * Par exemple: si la page "sprint" contient une database avec l'item "cas-client-adecco",
+ * cette fonction va créer une page accessible à "/sprint/cas-client-adecco"
+ */
+async function syncDatabaseChildren(
+  databaseId: string,
+  parentSlug: string,
+  opts: { type: 'page' | 'post'; stats: SyncStats; force?: boolean }
+) {
+  try {
+    // Récupérer toutes les pages de la database
+    const dbPages = await collectDatabasePages(databaseId);
+    
+    console.log(`[sync] Found ${dbPages.length} children in database ${databaseId} for parent "${parentSlug}"`);
+
+    for (const dbPage of dbPages) {
+      // Extraire le slug de la page enfant
+      const childSlugRaw = firstRichText(dbPage.properties.slug);
+      if (!childSlugRaw) {
+        console.warn(`[sync] Skipping database child ${dbPage.id} - no slug property`);
+        continue;
+      }
+
+      // Construire le slug complet
+      // Si le slug commence déjà par le parent (ex: "/sprint/cas-client"), l'utiliser tel quel
+      // Sinon, le combiner avec le parent
+      let fullSlug: string;
+      if (childSlugRaw.startsWith('/')) {
+        // Le slug est absolu (ex: "/sprint/cas-client-adecco")
+        fullSlug = childSlugRaw.substring(1); // Enlever le "/" initial
+      } else if (childSlugRaw.includes('/')) {
+        // Le slug contient déjà le chemin (ex: "sprint/cas-client-adecco")
+        fullSlug = childSlugRaw;
+      } else {
+        // Le slug est relatif (ex: "cas-client-adecco"), le combiner avec le parent
+        fullSlug = `${parentSlug}/${childSlugRaw}`;
+      }
+
+      console.log(`[sync] Syncing database child: ${fullSlug} (page ${dbPage.id})`);
+
+      // Synchroniser la page enfant comme une page normale
+      try {
+        // Créer un objet page modifié avec le slug complet
+        const modifiedPage = structuredClone(dbPage);
+        
+        // Mettre à jour la propriété slug pour qu'elle reflète le chemin complet
+        if (modifiedPage.properties.slug && 'rich_text' in modifiedPage.properties.slug) {
+          modifiedPage.properties.slug.rich_text = [
+            {
+              type: 'text' as const,
+              text: { content: fullSlug, link: null },
+              plain_text: fullSlug,
+              href: null,
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: 'default' as const,
+              },
+            },
+          ];
+        }
+
+        await syncPage(modifiedPage, { ...opts, type: 'page' });
+        opts.stats.databaseChildrenSynced += 1;
+        
+        // Revalider le chemin de la page enfant
+        await revalidatePath(`/${fullSlug}`, 'page');
+      } catch (error) {
+        console.error(`[sync] Failed to sync database child ${fullSlug}:`, error);
+      }
+    }
+  } catch (error) {
+    const err = error as { status?: number; code?: string; message?: string };
+    // Si on n'a pas accès à la database, on log juste l'erreur sans bloquer
+    if (err?.status === 404 || err?.code === 'object_not_found') {
+      console.warn(`[sync] Cannot access database ${databaseId} for syncing children`);
+    } else {
+      console.error(`[sync] Error syncing database children for ${databaseId}:`, error);
+    }
+  }
 }
 
 export async function GET(request: Request) {
@@ -436,6 +694,11 @@ export async function GET(request: Request) {
     imageMirrored: 0,
     imageFallbacks: [],
     missingBlocks: new Set<string>(),
+    recordMapPages: 0,
+    buttonsConverted: 0,
+    buttonSources: [],
+    unsupportedBlocks: [],
+    databaseChildrenSynced: 0,
   };
   const startedAt = Date.now();
   let pagesProcessed = 0;
@@ -482,9 +745,13 @@ export async function GET(request: Request) {
       pagesSynced: syncedPages.length,
       postsProcessed,
       postsSynced: postsIndex.length,
+      databaseChildrenSynced: stats.databaseChildrenSynced,
       imageMirrored: stats.imageMirrored,
       imageFallbacks: stats.imageFallbacks.length,
       missingBlocks: Array.from(stats.missingBlocks),
+      recordMapPages: stats.recordMapPages,
+      buttonsConverted: stats.buttonsConverted,
+      unsupportedBlocks: stats.unsupportedBlocks,
     };
 
     console.info('[sync] summary', summary);
@@ -497,6 +764,7 @@ export async function GET(request: Request) {
       posts: postsIndex.length,
       metrics: summary,
       imageFallbackSamples: fallbackSamples,
+      buttonSamples: stats.buttonSources.slice(0, 10),
     });
   } catch (error) {
     const durationMs = Date.now() - startedAt;
@@ -506,6 +774,8 @@ export async function GET(request: Request) {
       durationMs,
       imageFallbacks: stats.imageFallbacks.slice(0, 10),
       missingBlocks: Array.from(stats.missingBlocks),
+      buttonsConverted: stats.buttonsConverted,
+      unsupportedBlocks: stats.unsupportedBlocks,
     });
     return NextResponse.json({ message: 'Sync failed' }, { status: 500 });
   }

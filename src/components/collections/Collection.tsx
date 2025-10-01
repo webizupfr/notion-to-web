@@ -20,7 +20,6 @@ export async function Collection({
   pageSize = 24,
   cursor,
   forceView,
-  title,
 }: CollectionProps) {
   try {
     const cursorKey = cursor ?? '_';
@@ -30,20 +29,17 @@ export async function Collection({
 
     return (
       <section className="collection space-y-5">
-        <header className="collection-header flex flex-wrap items-end justify-between gap-4">
-          <h3 className="collection-title text-xl font-semibold">
-            {title ?? bundle.name}
-          </h3>
-
-          {bundle.hasMore && bundle.nextCursor && (
+        {/* Titre masqué par défaut - peut être réactivé si besoin */}
+        {bundle.hasMore && bundle.nextCursor && (
+          <div className="flex justify-end">
             <Link
               href={`?cursor=${encodeURIComponent(bundle.nextCursor)}`}
               className="collection-more link-more text-sm underline underline-offset-4"
             >
               Voir plus
             </Link>
-          )}
-        </header>
+          </div>
+        )}
 
         {view === "gallery" ? (
           <GalleryView items={bundle.items} basePath={basePath} />
@@ -61,7 +57,7 @@ export async function Collection({
   }
 }
 
-function CollectionNoAccess({ id }: { id: string }) {
+export function CollectionNoAccess({ id }: { id: string }) {
   const prettyId = id.replace(/-/g, "");
   const notionUrl = `https://www.notion.so/${prettyId}`;
 
@@ -96,7 +92,7 @@ function asHref(item: DbItem, basePath: string): string {
   return item.url ?? "#";
 }
 
-function Tags({ tags }: { tags?: string[] }) {
+export function Tags({ tags }: { tags?: string[] }) {
   if (!tags?.length) return null;
   return (
     <div className="mt-2 flex flex-wrap gap-2">
@@ -109,33 +105,34 @@ function Tags({ tags }: { tags?: string[] }) {
   );
 }
 
-function ListView({ items, basePath }: { items: DbItem[]; basePath: string }) {
+export function ListView({ items, basePath }: { items: DbItem[]; basePath: string }) {
   return (
-    <ul className="collection-list grid gap-4 md:grid-cols-2">
+    <ul className="collection-list flex flex-col gap-3">
       {items.map((item) => (
-        <li key={item.id} className="h-full">
+        <li key={item.id}>
           <Link
             href={asHref(item, basePath)}
-            className="group flex h-full flex-col gap-4 rounded-[20px] border px-6 py-5 transition hover:-translate-y-0.5 hover:shadow-lg"
+            className="group flex items-center justify-between gap-4 rounded-xl border px-5 py-3.5 transition hover:bg-[var(--background-soft)]"
           >
-            {item.cover ? (
-              <div className="relative aspect-[4/3] overflow-hidden rounded-[18px] bg-[var(--background-soft)]">
-                <Image
-                  src={mapImageUrl(item.cover)}
-                  alt=""
-                  fill
-                  sizes="(min-width: 1024px) 320px, 50vw"
-                  className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
-                />
-              </div>
-            ) : null}
-            <div className="space-y-2">
-              <h4 className="item-title text-[1.05rem] font-semibold leading-[1.4]">{item.title}</h4>
-              {item.excerpt ? (
-                <p className="item-excerpt text-[0.95rem] leading-[1.6] text-balance line-clamp-3">{item.excerpt}</p>
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              {item.cover ? (
+                <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-md bg-[var(--background-soft)]">
+                  <Image
+                    src={mapImageUrl(item.cover)}
+                    alt=""
+                    fill
+                    sizes="40px"
+                    className="object-cover"
+                  />
+                </div>
               ) : null}
-              <Tags tags={item.tags} />
+              <h4 className="item-title text-[0.95rem] font-medium leading-[1.4] truncate">
+                {item.title}
+              </h4>
             </div>
+            <span className="flex-shrink-0 text-[0.85rem] text-[var(--muted-soft)] opacity-70 group-hover:opacity-100 transition">
+              En savoir plus →
+            </span>
           </Link>
         </li>
       ))}
@@ -143,7 +140,7 @@ function ListView({ items, basePath }: { items: DbItem[]; basePath: string }) {
   );
 }
 
-function GalleryView({ items, basePath }: { items: DbItem[]; basePath: string }) {
+export function GalleryView({ items, basePath }: { items: DbItem[]; basePath: string }) {
   return (
     <div className="collection-grid grid gap-5 sm:grid-cols-2">
       {items.map((item) => (
@@ -152,7 +149,7 @@ function GalleryView({ items, basePath }: { items: DbItem[]; basePath: string })
           href={asHref(item, basePath)}
           className="collection-card group flex h-full flex-col overflow-hidden rounded-[20px] border bg-white transition hover:-translate-y-0.5 hover:shadow-lg"
         >
-          <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--background-soft)]">
+          <div className="relative h-48 w-full overflow-hidden bg-[var(--background-soft)]">
             {item.cover ? (
               <Image
                 src={mapImageUrl(item.cover)}

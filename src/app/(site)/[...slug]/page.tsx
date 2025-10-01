@@ -9,11 +9,12 @@ export default async function Page({
   params,
   searchParams,
 }: {
-  params: Promise<{ slug: string }> | { slug: string };
+  params: Promise<{ slug: string[] }> | { slug: string[] };
   searchParams?: Promise<Record<string, string>> | Record<string, string>;
 }) {
-  const { slug } = await (params as Promise<{ slug: string }>);
-  const bundle = await unstable_cache(
+  const resolvedParams = await (params as Promise<{ slug: string[] }>);
+  const slugSegments = Array.isArray(resolvedParams.slug) ? resolvedParams.slug : [resolvedParams.slug];
+  const slug = slugSegments.join("/");  const bundle = await unstable_cache(
     async () => await getPageBundle(slug),
     [`page-bundle:${slug}`],
     { tags: [`page:${slug}`], revalidate: 60 }
@@ -41,7 +42,7 @@ export default async function Page({
 
   return (
     <section className={wrapperClass}>
-      <Blocks blocks={blocks} />
+      <Blocks blocks={blocks} currentSlug={slug} />
     </section>
   );
 }

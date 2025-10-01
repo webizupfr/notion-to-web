@@ -196,6 +196,7 @@ export type NotionButtonBlock = {
   id: string;
   type: 'button';
   button?: { label: string; url: string; style?: 'primary' | 'ghost' };
+  has_children?: boolean;
 } & Record<string, unknown>;
 
 export type NotionBlock = BlockObjectResponse | NotionButtonBlock;

@@ -79,7 +79,7 @@ export function extractHints(recordMap: ExtendedRecordMap): BlockHints {
           align: normalizedAlign,
         };
       }
-    } else if ((type as string) === 'button') {
+    } else if ((type as string) === 'button' || ((type as string) === 'unsupported' && isButtonLike(format))) {
       const label = getPlainText((block as Block & { properties?: Record<string, unknown> }).properties?.title) ?? '';
       const buttonUrl = (format as { button_url?: unknown; button?: { url?: string } }).button_url;
       const secondaryUrl = (format as { button?: { url?: string } }).button?.url;
@@ -101,4 +101,16 @@ export function extractHints(recordMap: ExtendedRecordMap): BlockHints {
   }
 
   return hints;
+}
+
+function isButtonLike(format: Record<string, unknown> | undefined): boolean {
+  if (!format) return false;
+  const typed = format as {
+    button_url?: unknown;
+    button?: { url?: string };
+    button_actions?: unknown;
+  };
+  const primary = typeof typed.button_url === 'string' ? typed.button_url.trim() : '';
+  const nested = typeof typed.button?.url === 'string' ? typed.button.url.trim() : '';
+  return Boolean(primary) || Boolean(nested) || typed.button_actions !== undefined;
 }
