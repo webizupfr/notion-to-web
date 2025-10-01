@@ -29,7 +29,6 @@ async function loadCachedBundle(databaseId: string, cursor: string): Promise<DbC
 export async function NotionCollectionView({
   databaseId,
   viewId,
-  title,
   basePath = "",
   forceView,
 }: NotionCollectionViewProps) {
@@ -57,7 +56,6 @@ export async function NotionCollectionView({
   }
 
   const viewMode = forceView ?? bundle.view ?? "list";
-  const headerTitle = title?.trim() ? title : bundle.name;
 
   return (
     <section className="collection space-y-5">

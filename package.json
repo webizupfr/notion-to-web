@@ -6,10 +6,15 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sync": "curl \"http://localhost:3000/api/sync/trigger?secret=${CRON_SECRET}\"",
+    "sync:force": "curl \"http://localhost:3000/api/sync/trigger?secret=${CRON_SECRET}&force=1\"",
+    "sync:prod": "curl \"${NEXT_PUBLIC_SITE_URL}/api/sync/trigger?secret=${CRON_SECRET}\"",
+    "sync:prod:force": "curl \"${NEXT_PUBLIC_SITE_URL}/api/sync/trigger?secret=${CRON_SECRET}&force=1\""
   },
   "dependencies": {
     "@notionhq/client": "^2.3.0",
+    "@upstash/qstash": "^2.8.3",
     "@upstash/redis": "^1.35.4",
     "@vercel/blob": "^2.0.0",
     "@vercel/kv": "^0.2.4",

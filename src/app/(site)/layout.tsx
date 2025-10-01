@@ -8,8 +8,12 @@ export default function SitesLayout({ children }: { children: ReactNode }) {
   return (
     <div className="relative isolate flex min-h-dvh flex-col">
       {/* pas de fond ici : on hérite du root */}
+      {/* Skip link pour l'accessibilité */}
+      <a href="#main-content" className="skip-to-content">
+        Aller au contenu principal
+      </a>
       <Header />
-      <main className="flex-1 px-6 pb-20 sm:px-8">
+      <main id="main-content" className="flex-1 px-6 pb-20 sm:px-8">
         {children}
         <SpeedInsights />
       </main>

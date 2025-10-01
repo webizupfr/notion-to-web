@@ -495,22 +495,54 @@ function renderMedia({
     figureStyle.marginInlineEnd = '0';
   }
 
+  // Détection intelligente : l'image doit-elle avoir un fond ?
+  const shouldHaveBackground = (imageUrl: string, imageCaption?: string | null): boolean => {
+    // Si le caption contient {no-bg} ou {nobg}, pas de fond
+    if (imageCaption?.toLowerCase().includes('{no-bg}') || imageCaption?.toLowerCase().includes('{nobg}')) {
+      return false;
+    }
+    
+    // Si c'est un SVG, probablement un logo (pas de fond)
+    if (imageUrl.toLowerCase().endsWith('.svg')) {
+      return false;
+    }
+    
+    // Si l'URL contient "logo", "icon", ou "badge" (pas de fond)
+    if (/logo|icon|badge/i.test(imageUrl)) {
+      return false;
+    }
+    
+    // Par défaut, avec fond pour les photos
+    return true;
+  };
+
+  const hasBackground = shouldHaveBackground(url, caption);
+  
+  // Classes conditionnelles selon le type d'image
+  const figureClass = hasBackground
+    ? "media-figure media-figure-with-bg inline-block max-w-full overflow-hidden rounded-[22px] border"
+    : "media-figure media-figure-clean inline-block max-w-full rounded-[22px]";
+
+  // Nettoyer le caption des tokens {no-bg} avant affichage
+  const cleanCaption = caption?.replace(/\{no-?bg\}/gi, '').trim() || null;
+
   return (
-    <figure
-      className="media-figure inline-block max-w-full overflow-hidden rounded-[22px] border p-0"
-      style={figureStyle}
-    >
+    <figure className={figureClass} style={figureStyle}>
       <Image
         src={url}
-        alt={caption ?? ""}
+        alt={cleanCaption ?? ""}
         width={naturalWidth ?? 1600}
         height={naturalHeight ?? 900}
         sizes="100vw"
-        className="object-contain"
+        className={hasBackground ? "object-contain" : "object-contain w-full h-auto"}
         style={{ width: '100%', height: 'auto', display: 'block' }}
         loading="lazy"
       />
-      {caption ? <figcaption className="px-6 pb-4 pt-3 text-sm text-[0.95rem]">{caption}</figcaption> : null}
+      {cleanCaption ? (
+        <figcaption className={hasBackground ? "px-6 pb-4 pt-3 text-sm text-[0.95rem]" : "mt-3 text-center text-sm text-[0.95rem] text-muted-soft"}>
+          {cleanCaption}
+        </figcaption>
+      ) : null}
     </figure>
   );
 }

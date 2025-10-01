@@ -1,4 +1,5 @@
 import { Blocks } from "@/components/notion/Blocks";
+import { PageSidebar } from "@/components/layout/PageSidebar";
 import { getPageBundle } from "@/lib/content-store";
 import { unstable_cache } from "next/cache";
 import { notFound, redirect } from "next/navigation";
@@ -14,11 +15,14 @@ export default async function Page({
 }) {
   const resolvedParams = await (params as Promise<{ slug: string[] }>);
   const slugSegments = Array.isArray(resolvedParams.slug) ? resolvedParams.slug : [resolvedParams.slug];
-  const slug = slugSegments.join("/");  const bundle = await unstable_cache(
+  const slug = slugSegments.join("/");
+  
+  const bundle = await unstable_cache(
     async () => await getPageBundle(slug),
     [`page-bundle:${slug}`],
     { tags: [`page:${slug}`], revalidate: 60 }
   )();
+  
   if (!bundle) return notFound();
 
   const { meta, blocks } = bundle;
@@ -36,6 +40,30 @@ export default async function Page({
     return notFound();
   }
 
+  // Déterminer si on affiche avec sidebar (full-width + child pages)
+  const hasChildPages = meta.childPages && meta.childPages.length > 0;
+  const showSidebar = meta.fullWidth && hasChildPages;
+
+  if (showSidebar) {
+    // Layout avec sidebar pour pages full-width avec navigation
+    return (
+      <div className="mx-auto flex w-full max-w-[1800px] gap-12">
+        {/* Sidebar gauche */}
+        <PageSidebar
+          parentTitle={meta.title}
+          parentSlug={slug}
+          childPages={meta.childPages || []}
+        />
+        
+        {/* Contenu principal */}
+        <section className="flex-1 min-w-0">
+          <Blocks blocks={blocks} currentSlug={slug} />
+        </section>
+      </div>
+    );
+  }
+
+  // Layout classique (avec ou sans full-width)
   const wrapperClass = meta.fullWidth
     ? "mx-auto flex w-full max-w-[1800px] flex-col gap-12"
     : "mx-auto flex w-full max-w-4xl flex-col gap-12";
