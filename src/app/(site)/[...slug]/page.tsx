@@ -40,19 +40,30 @@ export default async function Page({
     return notFound();
   }
 
-  // Déterminer si on affiche avec sidebar (full-width + child pages)
-  const hasChildPages = meta.childPages && meta.childPages.length > 0;
-  const showSidebar = meta.fullWidth && hasChildPages;
+  // Déterminer si on affiche avec sidebar
+  // Cas 1: Page parent avec navigation
+  const hasNavigation = meta.navigation && meta.navigation.length > 0;
+  const isParentWithNav = meta.fullWidth && hasNavigation;
+  
+  // Cas 2: Child page avec info du parent
+  const isChildWithParent = meta.parentSlug && meta.parentNavigation;
+  
+  const showSidebar = isParentWithNav || isChildWithParent;
 
   if (showSidebar) {
+    // Déterminer quelle navigation et quel parent afficher
+    const navTitle = isChildWithParent ? meta.parentTitle! : meta.title;
+    const navSlug = isChildWithParent ? meta.parentSlug! : slug;
+    const navigation = isChildWithParent ? meta.parentNavigation! : meta.navigation!;
+    
     // Layout avec sidebar pour pages full-width avec navigation
     return (
       <div className="mx-auto flex w-full max-w-[1800px] gap-12">
         {/* Sidebar gauche */}
         <PageSidebar
-          parentTitle={meta.title}
-          parentSlug={slug}
-          childPages={meta.childPages || []}
+          parentTitle={navTitle}
+          parentSlug={navSlug}
+          navigation={navigation}
         />
         
         {/* Contenu principal */}

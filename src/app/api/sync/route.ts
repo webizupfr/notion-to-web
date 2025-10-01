@@ -23,7 +23,7 @@ import {
   setPostsIndex,
   type PageBundle,
 } from '@/lib/content-store';
-import type { PageMeta, PostMeta } from '@/lib/types';
+import type { PageMeta, PostMeta, NavItem } from '@/lib/types';
 import type { DbBundle } from '@/lib/db-render';
 import { fetchDatabaseBundle } from '@/lib/db-render';
 import { resolveDatabaseIdFromBlock, type LinkedDatabaseBlock } from '@/lib/resolve-db-id';
@@ -543,12 +543,19 @@ async function syncPage(
     console.log(`[sync] RecordMap has blocks:`, !!recordMap?.block);
     
     if (recordMap?.block) {
-      const normalizedId = page.id.replace(/-/g, '');
       console.log(`[sync] Page ID:`, page.id);
-      console.log(`[sync] Normalized ID:`, normalizedId);
       console.log(`[sync] RecordMap block keys:`, Object.keys(recordMap.block).slice(0, 5));
       
-      const pageBlock = recordMap.block[normalizedId];
+      // Essayer d'abord avec l'ID tel quel (avec tirets)
+      let pageBlock = recordMap.block[page.id];
+      
+      // Si pas trouvé, essayer sans tirets
+      if (!pageBlock) {
+        const normalizedId = page.id.replace(/-/g, '');
+        pageBlock = recordMap.block[normalizedId];
+        console.log(`[sync] Tried normalized ID:`, normalizedId);
+      }
+      
       console.log(`[sync] Page block found:`, !!pageBlock);
       
       if (pageBlock) {
@@ -618,6 +625,10 @@ async function syncPage(
     console.log(`[sync] ⏸️  Database children sync temporarily disabled to avoid rate limits`);
   }
 
+  // Construire la structure de navigation (sections + child pages)
+  console.log(`[sync] 🧭 Building navigation structure for "${slug}"...`);
+  const navigation = buildNavigationStructure(blocks, slug);
+  
   // Synchroniser les pages enfants (child_page blocks)
   // Avec délais pour respecter les rate limits de Notion (3 req/sec)
   console.log(`[sync] 🔍 Checking for child pages in "${slug}"...`);
@@ -627,29 +638,146 @@ async function syncPage(
   const blockTypes = blocks.map(b => b.type);
   console.log(`[sync] Block types found:`, blockTypes);
   
-  const syncedChildren = await syncChildPages(slug, page.id, blocks, opts);
+  const syncedChildren = await syncChildPages(slug, page.id, blocks, opts, {
+    parentTitle: meta.title,
+    parentSlug: slug,
+    parentNavigation: navigation
+  });
   
   console.log(`[sync] 📄 Child pages synced for "${slug}": ${syncedChildren.length}`);
   if (syncedChildren.length > 0) {
     console.log(`[sync] Child pages:`, syncedChildren.map(c => c.title).join(', '));
   }
   
-  // Ajouter les child pages aux métadonnées si présentes
-  if (syncedChildren.length > 0) {
-    meta.childPages = syncedChildren;
-    // Mettre à jour le bundle avec les child pages
+  // Ajouter la navigation et les child pages aux métadonnées
+  if (navigation.length > 0) {
+    meta.navigation = navigation;
+    meta.childPages = syncedChildren; // Pour compatibilité
+    
+    // Mettre à jour le bundle avec la navigation
     const updatedBundle: PageBundle = {
       meta,
       blocks: plainBlocks,
       syncedAt: new Date().toISOString(),
     };
     await setPageBundle(slug, updatedBundle);
-    console.log(`[sync] ✅ Updated bundle with ${syncedChildren.length} child pages`);
+    console.log(`[sync] ✅ Updated bundle with navigation (${navigation.length} items, ${syncedChildren.length} child pages)`);
   } else {
-    console.log(`[sync] ⚠️  No child pages found for "${slug}"`);
+    console.log(`[sync] ⚠️  No navigation structure found for "${slug}"`);
   }
 
   return meta;
+}
+
+/**
+ * Construit une structure de navigation hiérarchique à partir des blocks :
+ * - Les callouts avec 📌 deviennent des sections
+ * - Les child pages sont groupées sous leur section
+ * Note: Les slugs seront ajoutés après la sync des child pages
+ */
+function buildNavigationStructure(
+  blocks: NotionBlock[], 
+  parentSlug: string
+): NavItem[] {
+  const navigation: NavItem[] = [];
+  let currentSection: NavItem | null = null;
+  
+  console.log(`[buildNavigation] 🔍 Building navigation from ${blocks.length} blocks`);
+  
+  function traverse(blockList: NotionBlock[], depth = 0) {
+    const indent = '  '.repeat(depth);
+    
+    for (const block of blockList) {
+      // Détecter les callouts avec 📌 (punaise) comme sections
+      if (block.type === 'callout') {
+        const calloutBlock = block as Extract<NotionBlock, { type: 'callout' }>;
+        const richTextArray = calloutBlock.callout?.rich_text || [];
+        const text = richTextArray.map((rt: { plain_text: string }) => rt.plain_text).join('');
+        const icon = calloutBlock.callout?.icon;
+        const iconEmoji = icon && 'emoji' in icon ? icon.emoji : '';
+        
+        // Si le callout a l'emoji 📌, c'est une section
+        if (iconEmoji === '📌') {
+          console.log(`${indent}  ✅ Found section callout: "${text}"`);
+          
+          // Sauvegarder la section précédente si elle existe
+          if (currentSection && currentSection.children && currentSection.children.length > 0) {
+            navigation.push(currentSection);
+          }
+          
+          // Créer une nouvelle section
+          currentSection = {
+            type: 'section',
+            title: text,
+            children: []
+          };
+        }
+      }
+      
+      // Détecter les child pages
+      if (block.type === 'child_page') {
+        const childPageBlock = block as Extract<NotionBlock, { type: 'child_page' }>;
+        const pageTitle = childPageBlock.child_page.title;
+        console.log(`${indent}  ✅ Found child page: "${pageTitle}"`);
+        
+        // Créer un slug pour cette child page
+        const titleSlug = pageTitle
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '') // Remove accents
+          .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
+          .replace(/\s+/g, '-') // Spaces to hyphens
+          .replace(/-+/g, '-') // Multiple hyphens to single
+          .replace(/^-|-$/g, ''); // Trim hyphens
+        
+        const fullSlug = `${parentSlug}/${titleSlug}`;
+        
+        // Ajouter à la section courante ou comme page standalone
+        if (currentSection && currentSection.children) {
+          currentSection.children.push({
+            id: block.id,
+            title: pageTitle,
+            slug: fullSlug
+          });
+        } else {
+          // Page sans section
+          navigation.push({
+            type: 'page',
+            title: pageTitle,
+            id: block.id,
+            slug: fullSlug
+          });
+        }
+      }
+      
+      // Parcourir les enfants
+      const children = (block as AugmentedBlock).__children;
+      if (children?.length) {
+        traverse(children, depth + 1);
+      }
+    }
+  }
+  
+  traverse(blocks);
+  
+  // Ajouter la dernière section si elle existe
+  if (currentSection) {
+    const section = currentSection as NavItem;
+    if (section.children && section.children.length > 0) {
+      navigation.push(section);
+    }
+  }
+  
+  console.log(`[buildNavigation] ✅ Built navigation with ${navigation.length} items`);
+  navigation.forEach((item, idx) => {
+    if (item.type === 'section' && item.children) {
+      console.log(`  ${idx + 1}. Section: "${item.title}" (${item.children.length} pages)`);
+    } else {
+      console.log(`  ${idx + 1}. Page: "${item.title}"`);
+    }
+  });
+  
+  return navigation;
 }
 
 /**
@@ -695,13 +823,14 @@ function collectChildPageBlocks(blocks: NotionBlock[]): Array<{ id: string; titl
  * Par exemple: si la page "documentation" contient des child pages,
  * elles seront accessibles à "/documentation/getting-started", etc.
  * 
- * OPTIMISÉ: Synchronise en parallèle avec concurrence limitée pour éviter les timeouts
+ * OPTIMISÉ: Synchronise séquentiellement avec délais pour respecter les rate limits
  */
 async function syncChildPages(
   parentSlug: string,
   parentPageId: string,
   blocks: NotionBlock[],
-  opts: { type: 'page' | 'post'; stats: SyncStats; force?: boolean }
+  opts: { type: 'page' | 'post'; stats: SyncStats; force?: boolean },
+  parentInfo?: { parentTitle: string; parentSlug: string; parentNavigation: NavItem[] }
 ) {
   try {
     console.log(`[syncChildPages] 🔍 Collecting child pages from ${blocks.length} blocks...`);
@@ -828,6 +957,18 @@ async function syncChildPages(
             
             // Synchroniser sans récursion pour éviter les timeouts
             await syncPage(modifiedPage, { ...opts, type: 'page', force: false });
+            
+            // Ajouter les infos du parent dans le bundle de la child page
+            if (parentInfo) {
+              const childBundle = await getPageBundle(fullSlug);
+              if (childBundle) {
+                childBundle.meta.parentSlug = parentInfo.parentSlug;
+                childBundle.meta.parentTitle = parentInfo.parentTitle;
+                childBundle.meta.parentNavigation = parentInfo.parentNavigation;
+                await setPageBundle(fullSlug, childBundle);
+                console.log(`[syncChildPages] ✅ Added parent info to child page "${fullSlug}"`);
+              }
+            }
             
             await revalidatePath(`/${fullSlug}`, 'page');
             
