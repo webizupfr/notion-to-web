@@ -620,9 +620,10 @@ async function syncPage(
     });
     await revalidateTag(`db:${databaseId}`);
 
-    // TEMPORAIREMENT DÉSACTIVÉ : Synchroniser les pages enfants de la database
-    // Pour éviter les rate limits, on désactive temporairement cette fonctionnalité
-    console.log(`[sync] ⏸️  Database children sync temporarily disabled to avoid rate limits`);
+    // Synchroniser les pages enfants de la database
+    // Avec délais séquentiels pour respecter les rate limits de Notion
+    console.log(`[sync] 🔄 Syncing database children for ${databaseId}...`);
+    await syncDatabaseChildren(databaseId, slug, opts);
   }
 
   // Construire la structure de navigation (sections + child pages)
@@ -1017,7 +1018,17 @@ async function syncDatabaseChildren(
     
     console.log(`[sync] Found ${dbPages.length} children in database ${databaseId} for parent "${parentSlug}"`);
 
+    // Synchroniser SÉQUENTIELLEMENT avec délais pour éviter les rate limits
+    const DELAY_MS = 400; // 400ms = 2.5 requêtes/seconde (sous la limite)
+    let syncedCount = 0;
+
     for (const dbPage of dbPages) {
+      // Attendre avant chaque requête (sauf la première)
+      if (syncedCount > 0) {
+        console.log(`[syncDatabaseChildren] ⏳ Waiting ${DELAY_MS}ms to respect Notion rate limits...`);
+        await new Promise(resolve => setTimeout(resolve, DELAY_MS));
+      }
+
       // Extraire le slug de la page enfant
       const childSlugRaw = firstRichText(dbPage.properties.slug);
       if (!childSlugRaw) {
@@ -1069,13 +1080,17 @@ async function syncDatabaseChildren(
 
         await syncPage(modifiedPage, { ...opts, type: 'page' });
         opts.stats.databaseChildrenSynced += 1;
+        syncedCount += 1;
         
         // Revalider le chemin de la page enfant
         await revalidatePath(`/${fullSlug}`, 'page');
+        console.log(`[syncDatabaseChildren] ✅ Synced database child: ${fullSlug}`);
       } catch (error) {
         console.error(`[sync] Failed to sync database child ${fullSlug}:`, error);
       }
     }
+    
+    console.log(`[syncDatabaseChildren] ✅ Total database children synced: ${syncedCount}`);
   } catch (error) {
     const err = error as { status?: number; code?: string; message?: string };
     // Si on n'a pas accès à la database, on log juste l'erreur sans bloquer
