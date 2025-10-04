@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 
 // Navigation item : section ou page
 type NavItem = {
@@ -20,12 +21,37 @@ type PageSidebarProps = {
 
 export function PageSidebar({ parentTitle, parentSlug, navigation }: PageSidebarProps) {
   const pathname = usePathname();
+  const [isOpen, setIsOpen] = useState(false);
   
   // Enlever le "/" initial pour comparer
   const currentPath = pathname.startsWith('/') ? pathname.substring(1) : pathname;
   
   return (
-    <aside className="sticky top-0 h-screen w-full max-w-xs border-r-2 border-primary/20 bg-background-soft/30 backdrop-blur-sm shadow-lg">
+    <>
+      {/* Bouton toggle mobile */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="fixed top-4 left-4 z-50 lg:hidden flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg shadow-lg hover:bg-primary/90 transition-colors"
+      >
+        <span className="text-lg">📖</span>
+        <span className="font-medium">{parentTitle}</span>
+        <span className="text-lg">{isOpen ? '✕' : '☰'}</span>
+      </button>
+
+      {/* Overlay mobile */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`
+        fixed lg:sticky top-0 h-screen w-full max-w-xs border-r-2 border-primary/20 bg-background-soft/30 backdrop-blur-sm shadow-lg z-50
+        transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
       <nav className="flex h-full flex-col overflow-y-auto px-6 py-8">
         {/* Titre principal avec lien vers la page parent */}
         <div className="mb-8 pb-6 border-b border-border/30">
@@ -36,6 +62,7 @@ export function PageSidebar({ parentTitle, parentSlug, navigation }: PageSidebar
                 ? 'text-primary'
                 : 'text-foreground hover:text-primary hover:translate-x-1'
             }`}
+            onClick={() => setIsOpen(false)} // Fermer sur mobile après clic
           >
             <span className={`text-2xl transition-transform ${
               currentPath === parentSlug ? 'scale-110' : 'group-hover:scale-110'
@@ -74,6 +101,7 @@ export function PageSidebar({ parentTitle, parentSlug, navigation }: PageSidebar
                                   ? 'bg-primary/10 text-primary shadow-sm'
                                   : 'text-muted hover:bg-background-soft hover:text-foreground hover:translate-x-1'
                               }`}
+                              onClick={() => setIsOpen(false)} // Fermer sur mobile après clic
                             >
                               {/* Indicateur gauche pour page active */}
                               <span className={`absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full transition-all ${
@@ -118,6 +146,7 @@ export function PageSidebar({ parentTitle, parentSlug, navigation }: PageSidebar
                           ? 'bg-primary/10 text-primary shadow-sm'
                           : 'text-muted hover:bg-background-soft hover:text-foreground hover:translate-x-1'
                       }`}
+                      onClick={() => setIsOpen(false)} // Fermer sur mobile après clic
                     >
                       <span className={`absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full transition-all ${
                         isActive ? 'bg-primary' : 'bg-transparent group-hover:bg-primary/30'
@@ -146,7 +175,8 @@ export function PageSidebar({ parentTitle, parentSlug, navigation }: PageSidebar
           </p>
         )}
       </nav>
-    </aside>
+      </aside>
+    </>
   );
 }
 

@@ -59,15 +59,26 @@ export default async function Page({
     // Layout avec sidebar pour pages full-width avec navigation
     return (
       <div className="mx-auto flex w-full max-w-[1800px] gap-12">
-        {/* Sidebar gauche */}
-        <PageSidebar
-          parentTitle={navTitle}
-          parentSlug={navSlug}
-          navigation={navigation}
-        />
+        {/* Sidebar gauche - cachée sur mobile */}
+        <div className="hidden lg:block lg:flex-shrink-0">
+          <PageSidebar
+            parentTitle={navTitle}
+            parentSlug={navSlug}
+            navigation={navigation}
+          />
+        </div>
+        
+        {/* Sidebar mobile - toujours présente mais cachée par défaut */}
+        <div className="lg:hidden">
+          <PageSidebar
+            parentTitle={navTitle}
+            parentSlug={navSlug}
+            navigation={navigation}
+          />
+        </div>
         
         {/* Contenu principal */}
-        <section className="flex-1 min-w-0">
+        <section className="flex-1 min-w-0 lg:ml-0">
           <Blocks blocks={blocks} currentSlug={slug} />
         </section>
       </div>
