@@ -698,6 +698,12 @@ export async function renderBlockAsync(block: NotionBlock, currentSlug?: string)
 
     case "callout": {
       const icon = block.callout.icon?.type === "emoji" ? block.callout.icon.emoji : null;
+      
+      // Masquer les callouts avec 📌 (utilisés pour structurer la sidebar)
+      if (icon === "📌") {
+        return null;
+      }
+      
       const tone = notionColorTone(block.callout.color);
       const colorAttr = notionColorAttr(block.callout.color);
       return (
