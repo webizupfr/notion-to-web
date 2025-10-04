@@ -25,35 +25,42 @@ export function PageSidebar({ parentTitle, parentSlug, navigation }: PageSidebar
   const currentPath = pathname.startsWith('/') ? pathname.substring(1) : pathname;
   
   return (
-    <aside className="sticky top-20 h-fit w-full max-w-xs">
-      <nav className="surface-card rounded-3xl p-6">
+    <aside className="sticky top-0 h-screen w-full max-w-xs border-r border-border/40 bg-background-soft/30 backdrop-blur-sm">
+      <nav className="flex h-full flex-col overflow-y-auto px-6 py-8">
         {/* Titre principal avec lien vers la page parent */}
-        <div className="mb-6">
+        <div className="mb-8 pb-6 border-b border-border/30">
           <Link 
             href={`/${parentSlug}`}
-            className={`block text-lg font-semibold transition-colors ${
+            className={`group flex items-center gap-2 text-xl font-bold transition-all ${
               currentPath === parentSlug
                 ? 'text-primary'
-                : 'text-foreground hover:text-primary'
+                : 'text-foreground hover:text-primary hover:translate-x-1'
             }`}
           >
+            <span className={`text-2xl transition-transform ${
+              currentPath === parentSlug ? 'scale-110' : 'group-hover:scale-110'
+            }`}>📖</span>
             {parentTitle}
           </Link>
         </div>
 
         {/* Navigation hiérarchique */}
         {navigation.length > 0 && (
-          <ul className="space-y-4">
+          <ul className="flex-1 space-y-6">
             {navigation.map((item, idx) => {
               if (item.type === 'section' && item.children) {
                 return (
                   <li key={`section-${idx}`}>
-                    {/* Titre de la section (non cliquable) */}
-                    <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-soft">
-                      {item.title}
+                    {/* Titre de la section avec style premium */}
+                    <div className="mb-3 flex items-center gap-2">
+                      <div className="h-px flex-1 bg-gradient-to-r from-border/40 to-transparent"></div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-primary/70">
+                        {item.title}
+                      </span>
+                      <div className="h-px flex-1 bg-gradient-to-l from-border/40 to-transparent"></div>
                     </div>
                     
-                    {/* Pages sous cette section */}
+                    {/* Pages sous cette section avec indicateur */}
                     <ul className="space-y-1">
                       {item.children.map((child) => {
                         const isActive = currentPath === child.slug;
@@ -62,13 +69,33 @@ export function PageSidebar({ parentTitle, parentSlug, navigation }: PageSidebar
                           <li key={child.id}>
                             <Link
                               href={`/${child.slug}`}
-                              className={`block rounded-xl px-4 py-2.5 text-sm transition-all ${
+                              className={`group relative flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all ${
                                 isActive
-                                  ? 'bg-primary/10 font-semibold text-primary'
-                                  : 'text-muted hover:bg-background-soft hover:text-foreground'
+                                  ? 'bg-primary/10 text-primary shadow-sm'
+                                  : 'text-muted hover:bg-background-soft hover:text-foreground hover:translate-x-1'
                               }`}
                             >
-                              {child.title}
+                              {/* Indicateur gauche pour page active */}
+                              <span className={`absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full transition-all ${
+                                isActive 
+                                  ? 'bg-primary' 
+                                  : 'bg-transparent group-hover:bg-primary/30'
+                              }`}></span>
+                              
+                              {/* Icône */}
+                              <span className={`text-lg transition-transform ${
+                                isActive ? 'scale-110' : 'group-hover:scale-110'
+                              }`}>
+                                {isActive ? '📄' : '📃'}
+                              </span>
+                              
+                              {/* Titre */}
+                              <span className="flex-1">{child.title}</span>
+                              
+                              {/* Flèche pour page active */}
+                              {isActive && (
+                                <span className="text-primary">→</span>
+                              )}
                             </Link>
                           </li>
                         );
@@ -86,13 +113,22 @@ export function PageSidebar({ parentTitle, parentSlug, navigation }: PageSidebar
                   <li key={item.id || `page-${idx}`}>
                     <Link
                       href={`/${item.slug}`}
-                      className={`block rounded-xl px-4 py-2.5 text-sm transition-all ${
+                      className={`group relative flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all ${
                         isActive
-                          ? 'bg-primary/10 font-semibold text-primary'
-                          : 'text-muted hover:bg-background-soft hover:text-foreground'
+                          ? 'bg-primary/10 text-primary shadow-sm'
+                          : 'text-muted hover:bg-background-soft hover:text-foreground hover:translate-x-1'
                       }`}
                     >
-                      {item.title}
+                      <span className={`absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full transition-all ${
+                        isActive ? 'bg-primary' : 'bg-transparent group-hover:bg-primary/30'
+                      }`}></span>
+                      <span className={`text-lg transition-transform ${
+                        isActive ? 'scale-110' : 'group-hover:scale-110'
+                      }`}>
+                        {isActive ? '📄' : '📃'}
+                      </span>
+                      <span className="flex-1">{item.title}</span>
+                      {isActive && <span className="text-primary">→</span>}
                     </Link>
                   </li>
                 );
