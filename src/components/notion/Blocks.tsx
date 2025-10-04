@@ -770,9 +770,32 @@ export async function renderBlockAsync(block: NotionBlock, currentSlug?: string)
     }
 
     case "column_list": {
-      const columns = getBlockChildren(block).filter(
+      const allColumns = getBlockChildren(block).filter(
         (child): child is NotionBlock & { type: "column" } => child.type === "column"
       );
+      
+      // Fonction pour vérifier si une colonne contient du contenu visible
+      const hasVisibleContent = (column: NotionBlock): boolean => {
+        const children = getBlockChildren(column);
+        if (children.length === 0) return false;
+        
+        // Vérifier si tous les enfants sont des callouts 📌 (masqués)
+        const allHiddenCallouts = children.every((child) => {
+          if (child.type === 'callout') {
+            const icon = child.callout.icon?.type === "emoji" ? child.callout.icon.emoji : null;
+            return icon === "📌";
+          }
+          return false;
+        });
+        
+        return !allHiddenCallouts;
+      };
+      
+      // Filtrer pour ne garder que les colonnes avec contenu visible
+      const columns = allColumns.filter(hasVisibleContent);
+      
+      // Si aucune colonne visible, ne rien rendre
+      if (columns.length === 0) return null;
 
       const getNumeric = (input: unknown): number | null => {
         if (typeof input === "number" && Number.isFinite(input) && input > 0) {
