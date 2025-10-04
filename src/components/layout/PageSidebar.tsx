@@ -25,7 +25,7 @@ export function PageSidebar({ parentTitle, parentSlug, navigation }: PageSidebar
   const currentPath = pathname.startsWith('/') ? pathname.substring(1) : pathname;
   
   return (
-    <aside className="sticky top-0 h-screen w-full max-w-xs border-r border-border/40 bg-background-soft/30 backdrop-blur-sm">
+    <aside className="sticky top-0 h-screen w-full max-w-xs border-r-2 border-primary/20 bg-background-soft/30 backdrop-blur-sm shadow-lg">
       <nav className="flex h-full flex-col overflow-y-auto px-6 py-8">
         {/* Titre principal avec lien vers la page parent */}
         <div className="mb-8 pb-6 border-b border-border/30">
