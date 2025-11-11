@@ -1,13 +1,25 @@
-import Image from "next/image";
 import type { CSSProperties, ReactNode } from "react";
 import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 
 import { NotionCollectionView } from "@/components/notion/CollectionView";
+import { renderWidget } from "@/components/widgets/renderWidget";
+import { H1 } from "@/components/ui/H1";
+import { SectionTitle } from "@/components/ui/SectionTitle";
+import { InfoCard, resolveCalloutVariant } from "@/components/ui/InfoCard";
+import { Accordion } from "@/components/ui/Accordion";
+import { CodePanel } from "@/components/ui/CodePanel";
+import { MediaFrame } from "@/components/ui/MediaFrame";
+import { PullQuote } from "@/components/ui/PullQuote";
+import { StepItem } from "@/components/ui/StepItem";
 import { resolveDatabaseIdFromBlock } from "@/lib/resolve-db-id";
 import type { LinkedDatabaseBlock } from "@/lib/resolve-db-id";
+import { parseWidget } from "@/lib/widget-parser";
+import { TodoBlock } from "@/components/notion/TodoBlock";
 
 import type { NotionBlock } from "@/lib/notion";
 import { groupLists, type GroupedListBlock, type ListBlock, type RenderableBlock } from "./utils";
+import { LinkCard } from "@/components/notion/LinkCard";
+import { TallyEmbed } from "@/components/embeds/Tally";
 
 /**
  * 🔧 Hooks CSS (pilotés par globals.css)
@@ -83,6 +95,112 @@ function extractPlainText(value: unknown): string | null {
     return text || null;
   }
   return null;
+}
+
+function parseYouTube(url: string): { embed: string } | null {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, '');
+    const params = new URLSearchParams();
+    params.set('rel', '0');
+    params.set('modestbranding', '1');
+    params.set('playsinline', '1');
+
+    const toSeconds = (t: string): number => {
+      if (!t) return 0;
+      if (/^\d+$/.test(t)) return Number(t);
+      const m = /(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?/i.exec(t);
+      if (!m) return 0;
+      const h = Number(m[1] || 0);
+      const mnt = Number(m[2] || 0);
+      const s = Number(m[3] || 0);
+      return h * 3600 + mnt * 60 + s;
+    };
+
+    // t param can appear either in query or hash
+    const tParam = u.searchParams.get('t') || (u.hash ? new URLSearchParams(u.hash.replace(/^#/, '')).get('t') : null);
+    if (tParam) {
+      const start = toSeconds(tParam);
+      if (start > 0) params.set('start', String(start));
+    }
+
+    const base = 'https://www.youtube-nocookie.com/embed/';
+    // youtu.be/<id>
+    if (host === 'youtu.be') {
+      const id = u.pathname.replace(/^\//, '');
+      if (id) return { embed: `${base}${id}?${params.toString()}` };
+    }
+    // youtube.com/watch?v=<id>
+    if (host.endsWith('youtube.com')) {
+      if (u.pathname.startsWith('/watch')) {
+        const id = u.searchParams.get('v');
+        if (id) return { embed: `${base}${id}?${params.toString()}` };
+      }
+      if (u.pathname.startsWith('/shorts/')) {
+        const id = u.pathname.split('/')[2];
+        if (id) return { embed: `${base}${id}?${params.toString()}` };
+      }
+      if (u.pathname.startsWith('/embed/')) {
+        const id = u.pathname.split('/')[2] || '';
+        return { embed: `${base}${id}?${params.toString()}` };
+      }
+    }
+  } catch {/* ignore */}
+  return null;
+}
+
+function parseTally(url: string): { embed: string } | null {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, '');
+    if (host !== 'tally.so') return null;
+    // Support links like /r/<id> or /embed/<id>
+    const parts = u.pathname.split('/').filter(Boolean);
+    const id = parts.length >= 2 ? parts[1] : parts[0];
+    if (!id) return null;
+    const qs = new URLSearchParams(u.search);
+    // default helpful params
+    if (!qs.has('transparentBackground')) qs.set('transparentBackground', '1');
+    if (!qs.has('hideTitle')) qs.set('hideTitle', '1');
+    if (!qs.has('dynamicHeight')) qs.set('dynamicHeight', '1');
+    const embed = `https://tally.so/embed/${id}?${qs.toString()}`;
+    return { embed };
+  } catch { return null; }
+}
+
+function TallyFigure({ url, caption }: { url: string; caption?: string | null }) {
+  const cleanCaption = caption?.trim() || null;
+  return (
+    <figure className="mx-auto w-full max-w-4xl rounded-[22px] border">
+      <TallyEmbed url={url} />
+      {cleanCaption ? (
+        <figcaption className="px-4 pb-4 pt-3 text-center text-sm text-[0.95rem] text-muted-soft">{cleanCaption}</figcaption>
+      ) : null}
+    </figure>
+  );
+}
+
+function YouTubeEmbed({ url, caption }: { url: string; caption?: string | null }) {
+  const parsed = parseYouTube(url);
+  if (!parsed) return null;
+  const cleanCaption = caption?.trim() || null;
+  return (
+    <figure className="media-figure inline-block w-full max-w-4xl overflow-hidden rounded-[22px] border">
+      <div className="relative w-full pt-[56.25%]">
+        <iframe
+          className="absolute inset-0 h-full w-full"
+          src={parsed.embed}
+          title={cleanCaption ?? 'YouTube video'}
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowFullScreen
+          loading="lazy"
+        />
+      </div>
+      {cleanCaption ? (
+        <figcaption className="px-4 pb-4 pt-3 text-center text-sm text-[0.95rem] text-muted-soft">{cleanCaption}</figcaption>
+      ) : null}
+    </figure>
+  );
 }
 
 function extractCollectionIds(record: AnyRecord): string[] {
@@ -268,6 +386,12 @@ async function resolveCollectionContext(block: NotionBlock): Promise<{
 async function renderCollectionBlock(block: NotionBlock, currentSlug?: string) {
   const context = await resolveCollectionContext(block);
   if (!context.databaseId) return null;
+  // Hide learning databases (Jour / Activité) from raw rendering; handled by hub UI
+  const t = (context.title || '').toLowerCase();
+  const normalized = t.normalize('NFD').replace(/\p{Diacritic}/gu, '');
+  if (/(^|\W)\[?jour\]?/i.test(context.title || '') || normalized.includes('activite') || normalized.includes('[activite]')) {
+    return null;
+  }
   return (
     <div className="my-8">
       <NotionCollectionView
@@ -330,11 +454,12 @@ function blockTextLength(block: NotionBlock): number {
         countRichTextCharacters(block.bulleted_list_item.rich_text) +
         (getBlockChildren(block).reduce((acc, child) => acc + blockTextLength(child), 0) ?? 0)
       );
-    case "numbered_list_item":
+    case "numbered_list_item": {
       return (
         countRichTextCharacters(block.numbered_list_item.rich_text) +
         (getBlockChildren(block).reduce((acc, child) => acc + blockTextLength(child), 0) ?? 0)
       );
+    }
     case "to_do":
       return (
         countRichTextCharacters(block.to_do.rich_text) +
@@ -443,30 +568,38 @@ function parseButtonFromRichText(items: RichTextItemResponse[] | undefined):
 }
 
 function renderListItems(items: ListBlock[], currentSlug?: string): ReactNode {
-  return items.map((item) => (
+  return items.map((item, idx) => (
     <li key={item.id} className="space-y-2.5 text-[0.98rem] leading-[1.65]">
-      <div>
-        {renderRichText(
-          item.type === "bulleted_list_item"
-            ? item.bulleted_list_item.rich_text
-            : item.numbered_list_item.rich_text
-        )}
-      </div>
-      {getBlockChildren(item as NotionBlock).length ? (
-        <div className="pl-5 text-[0.92rem]">
-          <Blocks blocks={getBlockChildren(item as NotionBlock)} currentSlug={currentSlug} />
+      {item.type === "numbered_list_item" ? (
+        <StepItem index={idx + 1}>
+          {renderRichText(item.numbered_list_item.rich_text)}
+          {getBlockChildren(item as NotionBlock).length ? (
+            <div className="pl-3 text-[0.93rem]">
+              <Blocks blocks={getBlockChildren(item as NotionBlock)} currentSlug={currentSlug} />
+            </div>
+          ) : null}
+        </StepItem>
+      ) : (
+        <div>
+          <div>{renderRichText(item.bulleted_list_item.rich_text)}</div>
+          {getBlockChildren(item as NotionBlock).length ? (
+            <div className="pl-5 text-[0.92rem]">
+              <Blocks blocks={getBlockChildren(item as NotionBlock)} currentSlug={currentSlug} />
+            </div>
+          ) : null}
         </div>
-      ) : null}
+      )}
     </li>
   ));
 }
 
 function renderGrouped(block: GroupedListBlock, currentSlug?: string): ReactNode {
-  const Component = (block.type === "bulleted_list_group" ? "ul" : "ol") as "ul" | "ol";
-  const markerClass = block.type === "bulleted_list_group" ? "list-disc" : "list-decimal";
+  const isBulleted = block.type === "bulleted_list_group";
+  const Component = (isBulleted ? "ul" : "ol") as "ul" | "ol";
+  const markerClass = isBulleted ? "list-disc" : "list-none";
 
   return (
-    <Component className={`space-y-2.5 pl-6 ${markerClass} text-[0.98rem] leading-[1.65]`}>
+    <Component className={`space-y-3 pl-6 text-[0.98rem] leading-[1.65] ${markerClass}`}>
       {renderListItems(block.items, currentSlug)}
     </Component>
   );
@@ -481,69 +614,34 @@ function renderMedia({
   caption?: string | null;
   size?: { width?: number; height?: number; maxWidthPx?: number; align?: 'left' | 'center' | 'right' };
 }): ReactNode {
-  const naturalWidth = size?.width;
-  const naturalHeight = size?.height;
+  const cleanCaption = caption?.replace(/\{no-?bg\}/gi, '').trim() || null;
+  const naturalWidth = size?.width ?? null;
+  const naturalHeight = size?.height ?? null;
   const maxWidthPx = size?.maxWidthPx ?? naturalWidth ?? 720;
   const align = size?.align ?? 'center';
 
-  const figureStyle: React.CSSProperties = { maxWidth: `${maxWidthPx}px` };
-  if (align === 'left') {
-    figureStyle.marginInlineStart = '0';
-    figureStyle.marginInlineEnd = 'auto';
-  } else if (align === 'right') {
-    figureStyle.marginInlineStart = 'auto';
-    figureStyle.marginInlineEnd = '0';
-  }
-
-  // Détection intelligente : l'image doit-elle avoir un fond ?
   const shouldHaveBackground = (imageUrl: string, imageCaption?: string | null): boolean => {
-    // Si le caption contient {no-bg} ou {nobg}, pas de fond
     if (imageCaption?.toLowerCase().includes('{no-bg}') || imageCaption?.toLowerCase().includes('{nobg}')) {
       return false;
     }
-    
-    // Si c'est un SVG, probablement un logo (pas de fond)
-    if (imageUrl.toLowerCase().endsWith('.svg')) {
-      return false;
-    }
-    
-    // Si l'URL contient "logo", "icon", ou "badge" (pas de fond)
-    if (/logo|icon|badge/i.test(imageUrl)) {
-      return false;
-    }
-    
-    // Par défaut, avec fond pour les photos
+    if (imageUrl.toLowerCase().endsWith('.svg')) return false;
+    if (/logo|icon|badge/i.test(imageUrl)) return false;
     return true;
   };
 
-  const hasBackground = shouldHaveBackground(url, caption);
-  
-  // Classes conditionnelles selon le type d'image
-  const figureClass = hasBackground
-    ? "media-figure media-figure-with-bg inline-block max-w-full overflow-hidden rounded-[22px] border"
-    : "media-figure media-figure-clean inline-block max-w-full rounded-[22px]";
-
-  // Nettoyer le caption des tokens {no-bg} avant affichage
-  const cleanCaption = caption?.replace(/\{no-?bg\}/gi, '').trim() || null;
+  const withBackground = shouldHaveBackground(url, caption);
 
   return (
-    <figure className={figureClass} style={figureStyle}>
-      <Image
-        src={url}
-        alt={cleanCaption ?? ""}
-        width={naturalWidth ?? 1600}
-        height={naturalHeight ?? 900}
-        sizes="100vw"
-        className={hasBackground ? "object-contain" : "object-contain w-full h-auto"}
-        style={{ width: '100%', height: 'auto', display: 'block' }}
-        loading="lazy"
-      />
-      {cleanCaption ? (
-        <figcaption className={hasBackground ? "px-6 pb-4 pt-3 text-sm text-[0.95rem]" : "mt-3 text-center text-sm text-[0.95rem] text-muted-soft"}>
-          {cleanCaption}
-        </figcaption>
-      ) : null}
-    </figure>
+    <MediaFrame
+      src={url}
+      alt={cleanCaption}
+      caption={cleanCaption}
+      width={naturalWidth}
+      height={naturalHeight}
+      maxWidthPx={maxWidthPx}
+      align={align}
+      withBackground={withBackground}
+    />
   );
 }
 
@@ -589,81 +687,54 @@ export async function renderBlockAsync(block: NotionBlock, currentSlug?: string)
     }
 
     case "heading_1":
-      return (
-        <h1 className="text-[2.25rem] font-semibold leading-[1.2] tracking-[-0.015em]">
-          {renderRichText(block.heading_1.rich_text)}
-        </h1>
-      );
+      return <H1>{renderRichText(block.heading_1.rich_text)}</H1>;
 
     case "heading_2":
-      return (
-        <h2 className="text-[1.75rem] font-semibold leading-[1.28] tracking-[-0.01em]">
-          {renderRichText(block.heading_2.rich_text)}
-        </h2>
-      );
+      return <SectionTitle as="h2">{renderRichText(block.heading_2.rich_text)}</SectionTitle>;
 
     case "heading_3":
-      return (
-        <h3 className="text-[1.45rem] font-semibold leading-[1.28] tracking-[-0.01em]">
-          {renderRichText(block.heading_3.rich_text)}
-        </h3>
-      );
+      return <SectionTitle as="h3">{renderRichText(block.heading_3.rich_text)}</SectionTitle>;
 
-    case "quote":
-      return (
-        <blockquote className="quote text-[1.05rem] leading-[1.7] italic">
-          {renderRichText(block.quote.rich_text)}
-        </blockquote>
-      );
+    case "quote": {
+      const author = block.quote.caption?.[0]?.plain_text ?? null;
+      return <PullQuote author={author}>{renderRichText(block.quote.rich_text)}</PullQuote>;
+    }
 
     case "to_do": {
       const tone = notionColorTone(block.to_do.color);
       const colorAttr = notionColorAttr(block.to_do.color);
+      const storageKey = `${currentSlug ?? "root"}::${block.id}`;
       return (
-        <label
-          className="todo flex items-start gap-3 rounded-[20px] border px-5 py-4 text-[0.98rem] leading-[1.6]"
-          data-todo-color={colorAttr}
-          data-todo-tone={tone}
+        <TodoBlock
+          storageKey={storageKey}
+          initialChecked={Boolean(block.to_do.checked)}
+          tone={tone}
+          colorAttr={colorAttr}
         >
-          <span
-            className={`mt-1 inline-flex h-5 w-5 items-center justify-center rounded-md border text-[0.75rem] font-semibold`}
-            data-checked={block.to_do.checked ? "true" : "false"}
-          >
-            {block.to_do.checked ? <span aria-hidden>✓</span> : null}
-          </span>
-          <span className={block.to_do.checked ? "line-through opacity-55" : undefined}>
-            {renderRichText(block.to_do.rich_text)}
-          </span>
+          {renderRichText(block.to_do.rich_text)}
           {getBlockChildren(block).length ? (
-            <div className="mt-3 w-full space-y-3 text-[0.92rem]">
-              <Blocks blocks={getBlockChildren(block)} currentSlug={currentSlug} />
-            </div>
+            <Blocks blocks={getBlockChildren(block)} currentSlug={currentSlug} />
           ) : null}
-        </label>
+        </TodoBlock>
       );
     }
 
     case "toggle": {
+      const titleText = (block.toggle.rich_text || [])
+        .map((r) => r.plain_text)
+        .join("")
+        .trim();
+      if (/^config\b/i.test(titleText)) return null;
+
       const tone = notionColorTone(block.toggle.color);
-      const colorAttr = notionColorAttr(block.toggle.color);
+      const variant = resolveCalloutVariant(tone);
+
       return (
-        <details
-          className="toggle group rounded-[20px] border px-5 py-4 transition"
-          data-toggle-color={colorAttr}
-          data-toggle-tone={tone}
-        >
-          <summary className="flex cursor-pointer items-center justify-between gap-4 text-[0.98rem] font-medium leading-[1.6]">
-            <span>{renderRichText(block.toggle.rich_text)}</span>
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full border text-sm transition group-open:rotate-45">
-              +
-            </span>
-          </summary>
+        <Accordion title={renderRichText(block.toggle.rich_text)} variant={variant}>
           {getBlockChildren(block).length ? (
-            <div className="mt-4 space-y-3 text-[0.95rem]">
-              <Blocks blocks={getBlockChildren(block)} currentSlug={currentSlug} />
-            </div>
+            <Blocks blocks={getBlockChildren(block)} currentSlug={currentSlug} />
           ) : null}
-        </details>
+        </Accordion>
       );
     }
 
@@ -680,8 +751,14 @@ export async function renderBlockAsync(block: NotionBlock, currentSlug?: string)
     case "video": {
       const video = block.video;
       const src = video.type === "external" ? video.external.url : video.file.url;
+      // If YouTube → use iframe embed for better UX (controls, preview)
+      const yt = parseYouTube(src);
+      if (yt) {
+        const caption = video.caption?.[0]?.plain_text ?? null;
+        return <YouTubeEmbed url={src} caption={caption} />;
+      }
       return (
-        <div className="media-figure mx-auto max-w-3xl overflow-hidden rounded-[22px] border">
+        <div className="media-figure mx-auto max-w-4xl overflow-hidden rounded-[22px] border">
           <video controls className="h-auto w-full" src={src} preload="metadata">
             {video.caption?.[0]?.plain_text ?? "Votre navigateur ne supporte pas les vidéos intégrées."}
           </video>
@@ -689,41 +766,113 @@ export async function renderBlockAsync(block: NotionBlock, currentSlug?: string)
       );
     }
 
-    case "code":
-      return (
-        <pre className="code-block rounded-[22px] border px-6 py-5 text-[0.95rem] leading-[1.5]">
-          <code>{block.code.rich_text?.[0]?.plain_text}</code>
-        </pre>
-      );
-
-    case "callout": {
-      const icon = block.callout.icon?.type === "emoji" ? block.callout.icon.emoji : null;
-      
-      // Masquer les callouts avec 📌 (utilisés pour structurer la sidebar)
-      if (icon === "📌") {
-        return null;
+    case "embed": {
+      const url = (block.embed?.url ?? '') as string;
+      if (!url) return null;
+      const yt = parseYouTube(url);
+      if (yt) {
+        const caption = block.embed?.caption?.[0]?.plain_text ?? null;
+        return <YouTubeEmbed url={url} caption={caption} />;
       }
-      
-      const tone = notionColorTone(block.callout.color);
-      const colorAttr = notionColorAttr(block.callout.color);
+      // Tally forms
+      if (/tally\.so\//i.test(url)) {
+        const caption = block.embed?.caption?.[0]?.plain_text ?? null;
+        return <TallyFigure url={url} caption={caption} />;
+      }
+      // Fallback: generic iframe
       return (
-        <div
-          className="callout rounded-[22px] border px-6 py-5"
-          data-callout-color={colorAttr}
-          data-callout-tone={tone}
-        >
-          <div className="flex items-start gap-3">
-            {icon ? (
-              <span className="text-2xl" aria-hidden>
-                {icon}
-              </span>
-            ) : null}
-            <div className="space-y-3 text-[0.98rem] leading-[1.6]">
-              <div>{renderRichText(block.callout.rich_text)}</div>
-              {getBlockChildren(block).length ? <Blocks blocks={getBlockChildren(block)} currentSlug={currentSlug} /> : null}
-            </div>
+        <div className="media-figure mx-auto max-w-4xl overflow-hidden rounded-[22px] border">
+          <div className="relative w-full pt-[56.25%]">
+            <iframe
+              className="absolute inset-0 h-full w-full"
+              src={url}
+              title={(block.embed?.caption?.[0]?.plain_text as string) || 'Embed'}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              allowFullScreen
+              loading="lazy"
+            />
           </div>
         </div>
+      );
+    }
+
+    case "bookmark": {
+      const url = (block.bookmark?.url ?? '') as string;
+      if (!url) return null;
+      const yt = parseYouTube(url);
+      if (yt) {
+        const caption = block.bookmark?.caption?.[0]?.plain_text ?? null;
+        return <YouTubeEmbed url={url} caption={caption} />;
+      }
+      if (/tally\.so\//i.test(url)) {
+        const caption = block.bookmark?.caption?.[0]?.plain_text ?? null;
+        return <TallyFigure url={url} caption={caption} />;
+      }
+      const title = block.bookmark?.caption?.[0]?.plain_text ?? url;
+      return <LinkCard href={url} title={title} />;
+    }
+
+    case "code": {
+      const rich = block.code.rich_text ?? [];
+      const codeText = rich.map((r) => r.plain_text ?? "").join("\n");
+      const widget = parseWidget(codeText);
+      if (widget) {
+        const storageKey = `${currentSlug ?? "root"}::${block.id}`;
+        const element = renderWidget(widget, { storageKey });
+        if (element) return element;
+      }
+      const caption = block.code.caption?.[0]?.plain_text ?? null;
+      return <CodePanel code={codeText} language={block.code.language} footer={caption} />;
+    }
+
+    case "callout": {
+      const iconEmoji = block.callout.icon?.type === "emoji" ? block.callout.icon.emoji : null;
+      if (iconEmoji === "📌") return null; // sidebar structuration
+
+      const tone = notionColorTone(block.callout.color);
+      const variant = resolveCalloutVariant(tone);
+      const richText = renderRichText(block.callout.rich_text);
+
+      // Harmonized defaults: neutral surface, accent bar for variants
+      let frame: 'none'|'solid'|'dotted' | undefined = 'none';
+      let density: 'compact'|'comfy' = 'compact';
+      let accentBar: boolean | undefined;
+      let labelOverride: string | null | undefined;
+      let bgColorOverride: string | null | undefined;
+      // Use professional icons (lucide-style) instead of Notion emojis
+      let iconOverride: ReactNode | null | undefined = undefined;
+
+      if (variant === 'neutral' || variant === 'grey') {
+        accentBar = false;
+        labelOverride = null;
+        iconOverride = null;
+      } else if (variant === 'connector') {
+        accentBar = true;
+        labelOverride = null;
+        iconOverride = undefined; // default chevron icon
+      } else {
+        accentBar = true;
+        iconOverride = undefined;
+      }
+
+      return (
+        <InfoCard
+          variant={variant}
+          icon={iconOverride}
+          frame={frame}
+          density={density}
+          accentBar={accentBar}
+          labelOverride={labelOverride}
+          bgColorOverride={bgColorOverride}
+          headerBand={false}
+        >
+          <div className="space-y-3 w-full">
+            <div>{richText}</div>
+            {getBlockChildren(block).length ? (
+              <div className="w-full"><Blocks blocks={getBlockChildren(block)} currentSlug={currentSlug} /></div>
+            ) : null}
+          </div>
+        </InfoCard>
       );
     }
 
@@ -892,17 +1041,42 @@ export async function renderBlockAsync(block: NotionBlock, currentSlug?: string)
 
       if (!rows?.length) return null;
 
+      const hasColumnHeader = Boolean((block as Extract<NotionBlock, { type: "table" }>).table?.has_column_header);
+      const hasRowHeader = Boolean((block as Extract<NotionBlock, { type: "table" }>).table?.has_row_header);
+
+      const headerRow = hasColumnHeader ? rows[0] : null;
+      const bodyRows = hasColumnHeader ? rows.slice(1) : rows;
+
       return (
-        <div className="table-wrap overflow-hidden rounded-[20px] border">
-          <table className="min-w-full divide-y text-[0.95rem]">
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id} className="divide-x">
-                  {row.table_row.cells.map((cell, index) => (
-                    <td key={`${row.id}-${index}`} className="px-5 py-3.5 align-top">
+        <div className={`table-wrap ui-table overflow-hidden rounded-[20px] border ${hasColumnHeader ? "ui-table--has-header" : ""}`}>
+          <table className="min-w-full text-[0.95rem]">
+            {headerRow ? (
+              <thead>
+                <tr>
+                  {headerRow.table_row.cells.map((cell, index) => (
+                    <th key={`${headerRow.id}-${index}`} scope="col" className="px-5 py-3.5 text-left text-[0.85rem] font-semibold uppercase tracking-wide text-slate-500">
                       {renderRichText(cell)}
-                    </td>
+                    </th>
                   ))}
+                </tr>
+              </thead>
+            ) : null}
+            <tbody>
+              {bodyRows.map((row) => (
+                <tr key={row.id}>
+                  {row.table_row.cells.map((cell, index) => {
+                    const isRowHeader = hasRowHeader && index === 0;
+                    const Component = isRowHeader ? "th" : "td";
+                    return (
+                      <Component
+                        key={`${row.id}-${index}`}
+                        scope={isRowHeader ? "row" : undefined}
+                        className="px-5 py-3.5 align-top text-[0.95rem] text-slate-700"
+                      >
+                        {renderRichText(cell)}
+                      </Component>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>

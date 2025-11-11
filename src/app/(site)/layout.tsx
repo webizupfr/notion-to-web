@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next"
 
 
 export default function SitesLayout({ children }: { children: ReactNode }) {
+  const size: "narrow" | "wide" = "wide"; // default to wide for visual consistency on full-width pages
   return (
     <div className="relative isolate flex min-h-dvh flex-col">
       {/* pas de fond ici : on hérite du root */}
@@ -12,12 +13,12 @@ export default function SitesLayout({ children }: { children: ReactNode }) {
       <a href="#main-content" className="skip-to-content">
         Aller au contenu principal
       </a>
-      <Header />
+      <Header size={size} />
       <main id="main-content" className="flex-1 px-6 pb-20 sm:px-8">
         {children}
         <SpeedInsights />
       </main>
-      <Footer />
+      <Footer size={size} />
     </div>
   );
 }

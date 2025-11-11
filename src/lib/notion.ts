@@ -101,23 +101,42 @@ async function collectChildrenSafe(
   pageSize: number,
   onMissing?: (id: string) => void
 ): Promise<BlockObjectResponse[]> {
-  try {
-    const res = await listChildren(blockId, pageSize);
-    return res.filter(
-      (child): child is BlockObjectResponse => child.object === 'block' && 'type' in child
-    );
-  } catch (error) {
-    const err = error as { status?: number; code?: string };
-    if (err?.status === 404 || err?.code === 'object_not_found') {
-      onMissing?.(blockId);
-      return [];
+  const MAX_RETRIES = 3;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt += 1) {
+    try {
+      const res = await listChildren(blockId, pageSize);
+      return res.filter(
+        (child): child is BlockObjectResponse => child.object === 'block' && 'type' in child
+      );
+    } catch (error) {
+      const err = error as { status?: number; code?: string; message?: string };
+      if (err?.status === 404 || err?.code === 'object_not_found') {
+        onMissing?.(blockId);
+        return [];
+      }
+      if (err?.status === 429) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        continue;
+      }
+      const code = (err?.code ?? '').toString().toLowerCase();
+      const message = (err?.message ?? '').toLowerCase();
+      const isTransient =
+        code.includes('ecconnreset') ||
+        code.includes('etimedout') ||
+        message.includes('ecconnreset') ||
+        message.includes('etimedout') ||
+        message.includes('socket hang up');
+      if (attempt < MAX_RETRIES && isTransient) {
+        const delay = 500 * (attempt + 1);
+        console.warn(`[notion] transient error while fetching children for ${blockId}, retrying in ${delay}ms`, err);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+      throw error;
     }
-    if (err?.status === 429) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      return await collectChildrenSafe(blockId, pageSize, onMissing);
-    }
-    throw error;
   }
+  // Should not reach here, but return empty to satisfy type system.
+  return [];
 }
 
 async function withChildrenParallel(

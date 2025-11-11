@@ -1,0 +1,53 @@
+widget: prompt_template
+title: Agent de veille — Template universel
+template: |
+  Build an agent that, every day at {RUN_TIME} ({TIMEZONE}), searches the web for the last {LOOKBACK_WINDOW} of {LANGUAGE}-language news relevant to:
+  - Domain(s): {DOMAINS} 
+  - Audience/Targets: {TARGETS}
+  - Region priority: {REGIONS_PRIORITY} (prioritise these regions in results)
+
+  Use focused boolean queries like:
+  {QUERIES_BLOCK}
+  # Example format (replace with your own):
+  # ("{KEYWORD_1}" OR "{KEYWORD_2}") AND ({INDUSTRY_1} OR {INDUSTRY_2}) 
+  # ({TOPIC_A} OR {TOPIC_B}) AND ({REGION_A} OR {REGION_B})
+  # "{EXACT_PHRASE}" -{EXCLUSIONS}
+
+  Quality & filtering rules:
+  - Deduplicate near-identical stories and ignore low-credibility sources.
+  - Prefer reputable outlets and original reporting.
+  - Exclude paywalled summaries unless a public source exists.
+  - Skip content older than {MAX_AGE}.
+
+  Summarise the top {N_ITEMS} updates concisely in {LANGUAGE} (~{SUMMARY_WORDS} words total) using this structure:
+  - 📰 What happened (fact-based, 1–2 lines)
+  - 💡 Why it matters for {BRAND_OR_TEAM} ({VALUE_LENS}: impact, opportunity, risk)
+  - 🚀 Next step (1 concrete action or question)
+
+  Include source link(s) for each update. 
+  If no credible updates match the criteria, send: "{NOTHING_TO_REPORT_TEXT}".
+
+  Delivery:
+  - Channel: {DELIVERY_CHANNEL} (e.g., Email to {EMAIL_RECIPIENTS} or Slack DM to @{SLACK_USER})
+  - Schedule: daily at {RUN_TIME} ({TIMEZONE})
+
+  Language & tone:
+  - Write in {LANGUAGE}, tone: {TONE} (e.g., concise, professional, actionable).
+  - Use bullet points and clear headings. No fluff.
+
+  Optional (enable if provided):
+  - Category tags per item: {TAGS_LIST} (e.g., policy, product, funding, academic, case study)
+  - Risk/Opportunity label per item.
+  - Confidence level (High/Medium/Low) based on source credibility and corroboration.
+
+  Output format:
+  - Title: "{REPORT_TITLE} — {DATE}"
+  - Body: sections as above, then a “Quick Scan” one-liner (TL;DR) at the top.
+
+# Optional explicit field config (to override auto-detection)
+# fields:
+#   - name: QUERIES_BLOCK
+#     label: Queries (boolean)
+#     type: textarea
+#     placeholder: |
+#       ("AI" OR "Artificial Intelligence") AND (France OR EU)

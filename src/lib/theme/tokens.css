@@ -1,0 +1,37 @@
+/* Design tokens (aliasés sur les variables déjà en place) */
+
+:root {
+  /* Couleurs brand/ink/muted/bg */
+  --brand-amber: var(--primary);
+  --brand-amber-strong: var(--primary-strong);
+  --ink: var(--foreground);
+  --ink-2: color-mix(in oklab, var(--foreground) 92%, #4b5563);
+  --muted-ink: var(--muted);
+  --bg: var(--background);
+  --bg-soft: var(--background-soft);
+  --surface: color-mix(in oklab, var(--background-soft) 94%, #ffffff);
+  --surface-elevated: color-mix(in oklab, var(--background) 88%, #ffffff);
+  --surface-hover: color-mix(in oklab, var(--background-soft) 80%, #ffffff);
+
+  /* Espacements (px) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 40px;
+  --space-8: 48px;
+  --space-9: 56px;
+  --space-10: 64px;
+
+  /* Radii */
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-xl: 24px;
+
+  /* Ombres */
+  --shadow-soft: 0 8px 20px rgba(0,0,0,0.06);
+  --shadow-elevated: 0 20px 50px rgba(0,0,0,0.13);
+  --shadow-subtle: 0 4px 16px rgba(15, 23, 42, 0.08);
+}

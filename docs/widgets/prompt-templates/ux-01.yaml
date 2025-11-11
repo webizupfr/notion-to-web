@@ -1,0 +1,15 @@
+widget: prompt_template
+title: "UX · Intégration de fonctionnalité"
+template: |
+  Intègre {{FONCTIONNALITE}} pour fluidifier l’expérience utilisateur et renforcer la conversion.
+
+  Détails d’implémentation:
+  - Emplacement précis (section + position): {EMPLACEMENT}
+  - libellé/texte d’action: {LIBELLE}
+  - Comportements (état hover, focus, success): {COMPORTEMENTS}
+
+  Suivi et validation:
+  - Événement de mesure (analytics): {EVENT}
+  - Scénario de test utilisateur: {TEST_SCENARIO}
+  - Copy d’erreur/success: {COPIES_BLOCK}
+

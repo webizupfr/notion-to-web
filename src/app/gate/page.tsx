@@ -1,22 +1,6 @@
-"use client";
-
-import { Suspense, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-function GateInner() {
-  const [token, setToken] = useState("");
-  const searchParams = useSearchParams();
-  const next = searchParams.get("next") || "/";
-  const error = searchParams.get("e");
-  const router = useRouter();
-
-  const pushWithToken = () => {
-    // on passe ?key=... pour déverrouiller les pages protégées
-    const sep = next.includes("?") ? "&" : "?";
-    router.push(`${next}${sep}key=${encodeURIComponent(token)}`);
-  };
-
+function Content({ next, error }: { next: string; error?: string | null }) {
   return (
     <div className="relative min-h-dvh overflow-hidden">
       {/* Fond animé cohérent (blobs + noise + vignette) */}
@@ -44,36 +28,13 @@ function GateInner() {
           </div>
 
           {/* Message d'erreur (optionnel) */}
-          {error && (
+          {error ? (
             <p className="rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-2 text-sm text-rose-700">
               Clé invalide. Réessayez ou contactez votre interlocuteur.
             </p>
-          )}
+          ) : null}
 
-          {/* Champ + bouton */}
-          <div className="space-y-3">
-            <label htmlFor="access-token" className="text-xs font-semibold uppercase tracking-wider text-slate-600">
-              Clé d’accès
-            </label>
-            <input
-              id="access-token"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              placeholder="Collez votre clé"
-              autoComplete="one-time-code"
-              inputMode="text"
-              className="w-full rounded-2xl border border-white/60 bg-white/55 px-4 py-3 text-base text-slate-900 placeholder:text-slate-400 outline-none transition focus:border-amber-400"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  pushWithToken();
-                }
-              }}
-            />
-            <button onClick={pushWithToken} className="btn btn-primary w-full">
-              Déverrouiller
-            </button>
-          </div>
+          <GateForm next={next} />
 
           {/* Aide */}
           <div className="text-xs text-slate-600 text-center">
@@ -95,10 +56,11 @@ function GateInner() {
   );
 }
 
-export default function Gate() {
-  return (
-    <Suspense fallback={<div className="min-h-dvh flex items-center justify-center">Chargement…</div>}>
-      <GateInner />
-    </Suspense>
-  );
+import { GateForm } from "./GateForm";
+
+// Server page (no suspense, stable SSR)
+export default function Gate({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
+  const nextRaw = (searchParams?.next as string | undefined) || "/";
+  const error = (searchParams?.e as string | undefined) || null;
+  return <Content next={nextRaw} error={error} />;
 }

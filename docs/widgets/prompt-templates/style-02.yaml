@@ -1,0 +1,19 @@
+widget: prompt_template
+title: "Style visuel · Esthétique premium"
+template: |
+  Crée une esthétique claire et cohérente inspirée d’un studio d’innovation.
+
+  Mots‑clés de style: {STYLE_MOTS}
+  Références visuelles: {REFERENCES_BLOCK}
+  Micro‑interactions souhaitées (subtiles): {INTERACTIONS}
+
+  Principes à appliquer:
+  - Minimaliste, lumineux, structuré
+  - Cohésion des couleurs et respiration visuelle
+  - Accessibilité (contrastes AA au minimum)
+
+  Zones test:
+  - Header/Hero: {HEADER_TEST}
+  - Sections de contenu: {SECTIONS_TEST}
+  - Footer/contact: {FOOTER_TEST}
+

@@ -1,0 +1,18 @@
+widget: prompt_template
+title: "Contenu · Ton & crédibilité"
+template: |
+  Rends la tonalité plus {{TONALITE}} (humaine, inspirante, sans jargon) tout en renforçant la crédibilité.
+
+  Cible principale: {PUBLIC_CIBLE}
+  Objection à lever: {OBJECTION}
+
+  Règles d’écriture:
+  - Phrase courte, verbe d’action, voix active
+  - Éviter le superlatif et le flou; préférer des bénéfices mesurables
+  - Chaque phrase doit valoriser la valeur ajoutée sans paraître promotionnelle
+
+  À produire:
+  - Titre + sous‑titre: {TITRAGE_BLOCK}
+  - Paragraphe principal (max 5 lignes): {PARAGRAPHE_BLOCK}
+  - Exemples/preuves (3 items): {PREUVES_BLOCK}
+

@@ -1,0 +1,19 @@
+widget: plan_table
+title: "✅ PM Checklist — 3 questions"
+alias: pm-checklist
+rows:
+  - title: "1️⃣ Fonctionnalité cœur (UNE)"
+    info: "Quelle est l’action ou capacité centrale ? 7–10 mots max, verbe d’action + objet."
+    placeholder: "Un minuteur de 25 minutes."
+    multiline: false
+
+  - title: "2️⃣ Résultat pour l’utilisateur (quand ça marche)"
+    info: "Que peut faire / obtenir l’utilisateur quand c’est réussi ? Décris le résultat observable."
+    placeholder: "Lancer le minuteur et être notifié quand il se termine."
+    multiline: false
+
+  - title: "3️⃣ Version la plus simple possible (MVP thinking)"
+    info: "Implémentation minimale livrable en 1–2 jours (2–3 étapes max, pas de cas bord)."
+    placeholder: "Le minuteur démarre, compte à rebours, affiche “Temps écoulé !”."
+    multiline: true
+

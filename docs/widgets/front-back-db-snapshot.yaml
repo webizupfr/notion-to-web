@@ -1,0 +1,49 @@
+widget: tabs_form
+title: "🧩 Front/Back/DB — Snapshot"
+outputTitle: "Front/Back/DB — Snapshot"
+sections:
+  - id: frontend
+    label: "1. Frontend (ce que je vois et clique)"
+    help: "Liste 3 éléments visuels dans ton prototype (bouton, carte, champ, onglet…)."
+    fields:
+      - name: FRONT_ELEMENT_1
+        label: Élément #1
+        placeholder: "Le bouton vert “Submit”"
+      - name: FRONT_ELEMENT_2
+        label: Élément #2
+        placeholder: "Carte “Tâche du jour”"
+      - name: FRONT_ELEMENT_3
+        label: Élément #3
+        placeholder: "Champ de recherche en haut"
+  - id: backend
+    label: "2. Backend (ce qui se passe quand je clique)"
+    help: "Liste 2 actions automatiques déclenchées par une interaction."
+    fields:
+      - name: BACK_ACTION_1
+        label: Action #1
+        placeholder: "Au clic sur “Add Task”, créer une nouvelle tâche"
+      - name: BACK_ACTION_2
+        label: Action #2
+        placeholder: "Au clic sur “Generate”, produire un contenu et l’afficher"
+  - id: database
+    label: "3. Database (ce qui est sauvegardé)"
+    help: "Ton app garde-t-elle une trace de quelque chose ? Où et comment ?"
+    fields:
+      - name: DB_ANSWER
+        label: Réponse
+        type: textarea
+        placeholder: "Oui, la liste de tâches est stockée dans localStorage"
+
+template: |
+  ## Frontend (UI visibles)
+  - {FRONT_ELEMENT_1}
+  - {FRONT_ELEMENT_2}
+  - {FRONT_ELEMENT_3}
+
+  ## Backend (actions automatiques)
+  - {BACK_ACTION_1}
+  - {BACK_ACTION_2}
+
+  ## Données / Persistance
+  - {DB_ANSWER}
+

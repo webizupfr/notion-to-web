@@ -1,0 +1,21 @@
+widget: prompt_template
+title: "Structure · Optimisation d’une section"
+template: |
+  Optimise la section {{SECTION_CIBLE}} pour la rendre plus claire, engageante et immédiatement compréhensible.
+
+  Objectif de la section: {OBJECTIF_SECTION}
+  Message principal à faire passer: {MESSAGE_CLE}
+
+  Actions à réaliser:
+  - Donner plus de rythme visuel (titres, sous‑titres, respirations)
+  - Réorganiser le contenu en 3 blocs simples: {PLAN_1_2_3}
+  - Ajouter un équilibre entre texte, visuels et appels à l’action (CTA)
+
+  Spécifications:
+  - CTA principal (libellé + position): {CTA_PRINCIPAL}
+  - Éléments visuels à intégrer (icônes, images, cartes): {ELEMENTS_VISUELS}
+  - Micro‑contenus (légendes, labels, badges): {MICRO_COPY}
+
+  Exemple attendu (wireframe textuel):
+  {WIREFRAME_BLOCK}
+

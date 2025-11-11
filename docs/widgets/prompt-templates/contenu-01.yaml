@@ -1,0 +1,18 @@
+widget: prompt_template
+title: "Contenu · Mise en avant d’une preuve"
+template: |
+  Retravaille la section {{SECTION}} pour mieux mettre en avant {{PREUVE_TYPE}} auprès de {{PUBLIC_CIBLE}}.
+
+  Objectif de persuasion: {OBJECTIF}
+  Preuve choisie (cas, compétence, expertise): {PREUVE}
+
+  Consignes de rédaction:
+  - Écrire avec des formulations concrètes, actives et orientées résultats
+  - Inclure chiffres/avant‑après quand possible
+  - Conclure par un bénéfice clair pour {{PUBLIC_CIBLE}}
+
+  Éléments à produire:
+  - Titre accrocheur: {TITRE}
+  - Paragraphe synthèse (3–4 lignes): {SYNTHESE_BLOCK}
+  - 3 bullet points “preuves”: {BULLETS_BLOCK}
+  - CTA contextualisé: {CTA}

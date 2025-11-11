@@ -1,0 +1,8 @@
+widget: time_calc
+title: Calculateur d’économies de temps
+description: Renseigne tes tâches répétitives pour estimer le temps récupéré chaque mois.
+# Optionnels:
+# weeksPerMonth: 4.3
+# currency: "€"
+# hourlyRate: 80
+

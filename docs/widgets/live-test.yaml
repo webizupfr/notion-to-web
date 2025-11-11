@@ -1,0 +1,17 @@
+widget: live_test
+title: Agent Fit Test
+description: Coche les cases pour évaluer si ta tâche est un bon candidat pour un agent/automation.
+questions:
+  - Is it repetitive? (Do you do the exact same steps each time?)
+  - Is it rule-based? (Could you write down the exact process someone else could follow?)
+  - Is it time-consuming? (Takes more than 15 minutes OR happens daily?)
+rules:
+  - minYes: 3
+    label: Strong Agent Candidate (automate now)
+    color: violet
+  - minYes: 2
+    label: Good Agent Candidate (automate after you finish the strong ones)
+    color: green
+  - minYes: 1
+    label: Human Task (keep doing it yourself for now)
+    color: slate

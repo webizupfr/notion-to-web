@@ -1,0 +1,11 @@
+widget: simple_checklist
+title: Checklist de test
+showBoxes: false # mettre true pour cases à cocher interactives
+items:
+  - "Peux-tu <strong>ajouter une tâche</strong> dans la to-do ?"
+  - "Peux-tu <strong>supprimer une tâche</strong> ?"
+  - "Le <strong>Pomodoro</strong> démarre et s’arrête bien ?"
+  - "Le <strong>suivi d’habitudes</strong> s’affiche correctement ?"
+  - "Peux-tu <strong>cocher, modifier ou supprimer</strong> une habitude ?"
+  - "Peux-tu <strong>ajouter ou supprimer une note</strong> ?"
+

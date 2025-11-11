@@ -1,0 +1,36 @@
+widget: prompt_template
+title: "Prompt — Product Manager (simple)"
+fields:
+  - name: APP_NAME
+    label: Nom de l’app
+    placeholder: Ice‑Breaker Generator
+  - name: FEATURE_CORE
+    label: Idée centrale (fonctionnalité principale)
+    type: textarea
+    placeholder: "Un générateur d’ice‑breakers pour équipes à distance."
+  - name: USER_RESULT
+    label: Résultat utilisateur (ce que l’utilisateur doit pouvoir faire)
+    type: textarea
+    placeholder: "Lancer la génération et copier le résultat."
+  - name: NOTES
+    label: Notes complémentaires (facultatif)
+    type: textarea
+    placeholder: "Contexte, contraintes, public cible…"
+template: |
+  Agis comme un Product Manager. Aide-moi à planifier une application appelée "{APP_NAME}".
+
+  Idée centrale :
+  {FEATURE_CORE}
+
+  L’utilisateur doit pouvoir :
+  {USER_RESULT}
+
+  Merci de créer :
+  - Une définition claire du MVP (ce qu’il faut construire en premier)
+  - Une décomposition des fonctionnalités (MVP vs évolutions futures)
+  - Des user stories simples pour le MVP
+  - Les exigences techniques de base
+
+  Notes complémentaires :
+  {NOTES}
+

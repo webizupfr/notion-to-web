@@ -1,0 +1,19 @@
+widget: plan_table
+title: Plan de ton agent
+rows:
+  - title: "Trigger (Déclencheur)"
+    info: "Ce qui démarre ton agent : email, formulaire, horaire planifié, webhook"
+    placeholder: "Message chat reçu"
+  - title: "AI Node (Cerveau IA)"
+    info: "Choisis ton modèle (GPT, Claude, etc.) et rédige ton system prompt avec : rôle, tâche, règles, exemple d’entrée/sortie"
+    placeholder: "Cerveau de l’assistant agenda"
+  - title: "Data Sources (Sources de données)"
+    info: "Ajoute les nœuds pour aller chercher les infos (base, spreadsheet, API)"
+    placeholder: "Connexion Google Calendar via API"
+  - title: "Quality Control (Contrôle qualité)"
+    info: "Ajoute une étape de vérification humaine si nécessaire"
+    placeholder: "Vérification des conflits d’agenda"
+  - title: "Action (Sortie finale)"
+    info: "Ce que l’agent fait après traitement : envoi, création, mise à jour…"
+    placeholder: "Crée ou propose un créneau"
+

@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { Container } from "@/components/layout/Container";
 
-export function Footer() {
+type ContainerSize = "narrow" | "wide" | "fluid";
+
+export function Footer({ size = "narrow" }: { size?: ContainerSize }) {
   return (
     <footer className="border-t border-black/5 bg-white/35 backdrop-blur-md">
-      <Container className="flex flex-col sm:flex-row justify-between gap-8 py-8 text-sm text-slate-700/80">
+      <Container size={size} className="flex flex-col sm:flex-row justify-between gap-8 py-8 text-sm text-slate-700/80">
         {/* Bloc gauche : logo + baseline */}
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-2 font-medium text-slate-800/90">
@@ -43,7 +45,7 @@ export function Footer() {
       </Container>
 
       {/* Navigation légale */}
-      <Container className="border-t border-black/5 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500/80">
+      <Container size={size} className="border-t border-black/5 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500/80">
         <nav className="flex flex-wrap gap-4">
           <Link href="/mentions-legales" className="hover:text-slate-900 transition">
             Mentions légales

@@ -1,0 +1,18 @@
+widget: prompt_template
+title: "Style visuel · Axe prioritaire"
+template: |
+  Améliore la direction visuelle en priorisant l’axe {{AXE_PRINCIPAL}}.
+
+  Intentions:
+  - Contraste: {CONTRASTE}
+  - Typographie (hiérarchie, tailles, interlignage): {TYPOGRAPHIE}
+  - Espacements (marges, paddings, rythme vertical): {ESPACEMENTS}
+
+  Cohérence de marque:
+  - Palette/Couleurs d’accent: {PALETTE}
+  - Trait d’iconographie/illustration: {ICONOGRAPHIE}
+
+  Livrables:
+  - Guide rapide (variables + usages)
+  - Check visuel avant/après: {CHECKLIST_BLOCK}
+

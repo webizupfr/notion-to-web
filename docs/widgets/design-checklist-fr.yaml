@@ -1,0 +1,28 @@
+widget: simple_checklist
+title: "Checklist design — revue rapide"
+showBoxes: true
+items:
+  - text: "🎨 <strong>1. Vérification des couleurs</strong>"
+    heading: true
+  - text: "J’utilise 4 couleurs ou moins (1 couleur principale, fond neutre, couleurs de signal)."
+  - text: "Les significations des couleurs sont cohérentes (rouge = erreur, vert = succès, bleu = action)."
+
+  - text: "📐 <strong>2. Espacements</strong>"
+    heading: true
+  - text: "Rien n’est à l’étroit (le texte ne touche pas les bords, les boutons ne sont pas écrasés)."
+  - text: "Espacement consistant (mêmes paddings pour cartes, même marge entre boutons)."
+
+  - text: "✏️ <strong>3. Texte</strong>"
+    heading: true
+  - text: "Les titres sont les plus grands, le corps est lisible."
+  - text: "Polices et hiérarchie cohérentes."
+
+  - text: "🔘 <strong>4. Boutons</strong>"
+    heading: true
+  - text: "Les boutons ont l’air cliquables (couleur, effet hover, légère profondeur)."
+  - text: "Le bouton d’action principal ressort plus que les autres."
+
+  - text: "💬 <strong>5. Feedback</strong>"
+    heading: true
+  - text: "Après un clic, l’utilisateur sait que ça a marché (spinner, message de succès, etc.)."
+

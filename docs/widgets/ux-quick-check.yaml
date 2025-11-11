@@ -1,0 +1,23 @@
+widget: plan_table
+title: "Test rapide UX — 4 checks"
+rows:
+  - title: "🎯 First Impression"
+    info: "Je comprends immédiatement ce que c’est."
+    placeholder: "✅ Compréhension immédiate / ❌ Clarifier le titre"
+    multiline: true
+
+  - title: "🧪 Usability"
+    info: "Je peux accomplir l’action principale sans blocage."
+    placeholder: "✅ Parcours fluide / ❌ Étape confuse à corriger"
+    multiline: true
+
+  - title: "💼 Professional Look"
+    info: "Ça donne une impression de clarté et de sérieux."
+    placeholder: "✅ Propre / ❌ Ajuster contraste, tailles, alignements"
+    multiline: true
+
+  - title: "📱 Mobile Check"
+    info: "Tout s’affiche bien et fonctionne sur mobile."
+    placeholder: "✅ OK / ❌ Bouton hors écran, revoir la grille"
+    multiline: true
+

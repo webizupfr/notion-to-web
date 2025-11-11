@@ -1,0 +1,132 @@
+widget: tabs_form
+title: Prompt Lovable — Générateur guidé
+outputTitle: "Lovable Project Prompt"
+sections:
+  - id: idee
+    label: Étape 1 · Ton idée
+    help: "Décris l’idée en une phrase et pour qui c’est utile."
+    fields:
+      - name: NAME
+        label: Nom du projet (facultatif)
+        placeholder: Ice‑Breaker Generator
+      - name: IDEA_ONE_LINE
+        label: Idée (1 phrase)
+        placeholder: "Un générateur d’ice‑breakers pour équipes à distance"
+      - name: AUDIENCE
+        label: Audience / utilisateur cible
+        placeholder: Managers d’équipes hybrides (8–20 personnes)
+      - name: VALUE_PROPOSITION
+        label: Objectif / valeur apportée
+        placeholder: Démarrer une réunion avec une question ludique et pertinente
+
+  - id: interface
+    label: Étape 2 · Interface principale
+    help: "Quelle action clé réalise l’utilisateur ? Quel bouton principal ?"
+    fields:
+      - name: PRIMARY_ACTION
+        label: Action clé (bouton principal)
+        placeholder: "Generate Ice‑Breaker"
+      - name: UI_MAIN
+        label: Description rapide de l’interface
+        placeholder: « Une grande zone de résultat au centre + un bouton principal + un petit panneau d’options »
+
+  - id: features
+    label: Étape 3 · Fonctionnalités
+    help: "Liste les actions prioritaires. Sépare par des points‑virgules."
+    fields:
+      - name: FEATURES
+        label: Fonctionnalités (liste courte)
+        placeholder: Catégories; favoris; copier; partager lien
+      - name: MUST_HAVE
+        label: Must‑have (MVP)
+        placeholder: Filtres de catégories; bouton Copier
+      - name: NICE_TO_HAVE
+        label: Nice‑to‑have (plus tard)
+        placeholder: Historique; score popularité; mode plein écran
+
+  - id: structure
+    label: Étape 4 · Structure de page
+    help: "Quels éléments fixes ? (sidebar, header, footer…)"
+    fields:
+      - name: PAGE_STRUCTURE
+        label: Structure et navigation
+        placeholder: Header minimal; sidebar pour Favoris; footer discret
+      - name: LAYOUT_NOTES
+        label: Notes de layout / responsive
+        placeholder: Mobile first; grille simple; zones généreuses pour la lecture
+
+  - id: donnees
+    label: Étape 5 · Données affichées
+    help: "Quelles infos accompagnent le contenu principal ?"
+    fields:
+      - name: DATA_DISPLAY
+        label: Infos utiles à afficher
+        placeholder: Temps estimé; taille du groupe; catégorie actuelle
+      - name: CONTENT_SOURCES
+        label: Sources / génération
+        placeholder: Génération IA locale, pas d’API externe
+
+  - id: style
+    label: Étape 6 · Design & ton visuel
+    help: "Ambiance générale, couleurs, personnalité."
+    fields:
+      - name: DESIGN_STYLE
+        label: Style visuel
+        placeholder: Moderne, chaleureux, minimal
+      - name: COLORS
+        label: Couleurs / accents
+        placeholder: Coral & bleu; contrastes lisibles
+      - name: TONE
+        label: Ton & personnalité
+        placeholder: Fun, encourageant, sans jargon
+
+  - id: ux
+    label: Étape 7 · Expérience utilisateur
+    help: "Quelle sensation veut‑on donner ? Micro‑interactions utiles ?"
+    fields:
+      - name: UX_FEEL
+        label: Ressenti souhaité
+        placeholder: Fluide, rapide, satisfaisant
+      - name: INTERACTIONS
+        label: Micro‑interactions
+        placeholder: Léger hover; animation du bouton au clic; transition douce du résultat
+
+template: |
+  You are Lovable. Build a small, clean project from the following brief.
+
+  Project name: {NAME}
+  One‑line idea: {IDEA_ONE_LINE}
+  Audience: {AUDIENCE}
+  Value proposition: {VALUE_PROPOSITION}
+
+  Primary interface & action:
+  - Main action/button: {PRIMARY_ACTION}
+  - UI description: {UI_MAIN}
+
+  Features:
+  - Key features: {FEATURES}
+  - Must‑have (MVP): {MUST_HAVE}
+  - Nice‑to‑have (later): {NICE_TO_HAVE}
+
+  Page structure & navigation:
+  - Structure: {PAGE_STRUCTURE}
+  - Layout/responsive notes: {LAYOUT_NOTES}
+
+  Data & content:
+  - Displayed info: {DATA_DISPLAY}
+  - Content generation/sources: {CONTENT_SOURCES}
+
+  Visual style & tone:
+  - Style: {DESIGN_STYLE}
+  - Colors: {COLORS}
+  - Tone: {TONE}
+
+  UX feeling & interactions:
+  - Feeling: {UX_FEEL}
+  - Micro interactions: {INTERACTIONS}
+
+  Requirements:
+  - Keep it minimal, readable and responsive.
+  - Provide a clear call‑to‑action for the main action (“{PRIMARY_ACTION}”).
+  - Avoid unnecessary complexity — this is a focused MVP.
+

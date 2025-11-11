@@ -21,9 +21,21 @@ import {
   setPageBundle,
   setDbBundleCache,
   setPostsIndex,
+  setHubsIndex,
+  setWorkshopBundle,
+  setWorkshopsIndex,
+  setSprintBundle,
+  setSprintsIndex,
+  getSprintsIndex,
   type PageBundle,
+  type WorkshopBundle,
+  type WorkshopsIndex,
+  type SprintBundle,
 } from '@/lib/content-store';
-import type { PageMeta, PostMeta, NavItem } from '@/lib/types';
+import { parseYaml } from '@/lib/meta';
+import { WorkshopMetaSchema, SprintMetaSchema, ModuleMetaSchema } from '@/lib/meta-schemas';
+import type { PageMeta, PostMeta, NavItem, HubMeta, LearningPath, DayEntry, ActivityStep, SprintSettings } from '@/lib/types';
+import { notion } from '@/lib/notion';
 import type { DbBundle } from '@/lib/db-render';
 import { fetchDatabaseBundle } from '@/lib/db-render';
 import { resolveDatabaseIdFromBlock, type LinkedDatabaseBlock } from '@/lib/resolve-db-id';
@@ -33,6 +45,9 @@ export const maxDuration = 60; // Limite pour appel direct (backup)
 
 const PAGES_DB = process.env.NOTION_PAGES_DB;
 const POSTS_DB = process.env.NOTION_POSTS_DB;
+const HUBS_DB = process.env.NOTION_HUBS_DB;
+const WORKSHOPS_DB = process.env.NOTION_WORKSHOPS_DB;
+const SPRINTS_DB = process.env.NOTION_SPRINTS_DB;
 const CRON_SECRET = process.env.CRON_SECRET;
 const SYNC_FAILURE_WEBHOOK = process.env.SYNC_FAILURE_WEBHOOK;
 
@@ -55,6 +70,73 @@ type SyncStats = {
   databaseChildrenSynced: number;
   childPagesSynced: number;
   pagesSkipped: number;
+  hubsSynced: number;
+  workshopsSynced: number;
+  sprintsSynced: number;
+};
+
+const DEFAULT_CHILD_MAX_DEPTH = 2;
+
+const canonicalId = (value: string | null | undefined) =>
+  value ? value.replace(/-/g, '').toLowerCase() : undefined;
+
+const findTitleProperty = (properties: PageObjectResponse['properties']): PageObjectResponse['properties'][string] | undefined => {
+  for (const key of Object.keys(properties ?? {})) {
+    const prop = properties[key];
+    if (prop && prop.type === 'title') return prop;
+  }
+  return undefined;
+};
+
+const findPropByName = (
+  properties: PageObjectResponse['properties'],
+  names: string[]
+): PageObjectResponse['properties'][string] | undefined => {
+  const candidates = names.map((name) => name.toLowerCase());
+  for (const key of Object.keys(properties ?? {})) {
+    const lower = key.toLowerCase();
+    if (candidates.includes(lower)) return properties[key];
+  }
+  return undefined;
+};
+
+const getMultiSelect = (property: PageObjectResponse['properties'][string] | undefined): string[] => {
+  if (!property) return [];
+  if (property.type === 'multi_select') return property.multi_select?.map((tag) => tag.name) ?? [];
+  return [];
+};
+
+const getRelationIds = (property: PageObjectResponse['properties'][string] | undefined): string[] => {
+  if (!property || property.type !== 'relation') return [];
+  return (property.relation ?? []).map((rel) => rel.id);
+};
+
+const computeRelativeIso = (startIso: string | null, offsetDays: number | null, time: string | null): string | null => {
+  if (!startIso) return null;
+  const base = new Date(startIso);
+  if (!Number.isFinite(offsetDays)) {
+    // keep base date
+  } else if (offsetDays) {
+    base.setUTCDate(base.getUTCDate() + Number(offsetDays));
+  }
+  if (time && /^\d{1,2}:\d{2}$/.test(time)) {
+    const [h, m] = time.split(':').map((v) => Number(v));
+    base.setUTCHours(h, m, 0, 0);
+  }
+  return base.toISOString();
+};
+
+type ChildContext = {
+  maxDepth: number;
+  currentDepth: number;
+};
+
+type SyncOptions = {
+  type: 'page' | 'post';
+  stats: SyncStats;
+  force?: boolean;
+  childContext?: ChildContext;
+  metaOverrides?: Partial<PageBundle['meta']>;
 };
 
 async function notifySyncFailure(payload: Record<string, unknown>) {
@@ -68,6 +150,459 @@ async function notifySyncFailure(payload: Record<string, unknown>) {
   } catch (error) {
     console.error('[sync] failure webhook error', error);
   }
+}
+
+type HubReference = {
+  slug: string;
+  title: string;
+  notionId: string;
+};
+
+type LoadedModule = {
+  id: string;
+  slug: string;
+  title: string;
+  description?: string | null;
+  order: number;
+  duration?: number | null;
+  tags: string[];
+  dayIndex?: number | null;
+  unlockAt?: string | null;
+  unlockOffsetDays?: number | null;
+  unlockTime?: string | null;
+  settings: ModuleSettings | null;
+  activityIds: string[];
+};
+
+type LoadedActivity = {
+  id: string;
+  slug: string;
+  title: string;
+  type?: string | null;
+  duration?: number | null;
+  summary?: string | null;
+  tags: string[];
+  widgetYaml?: string | null;
+  order?: number | null;
+};
+
+async function syncWorkshops(
+  opts: { stats: SyncStats; force?: boolean },
+  hubMap: Map<string, HubReference>,
+  initialPages?: PageObjectResponse[]
+) {
+  if (!WORKSHOPS_DB) return;
+
+  const workshopPages = initialPages ?? (await collectDatabasePagesSafe(WORKSHOPS_DB, 'workshops'));
+
+  if (!workshopPages.length) {
+    await setWorkshopsIndex({ items: [], syncedAt: new Date().toISOString() });
+    return;
+  }
+
+  const workshopIndex: WorkshopsIndex['items'] = [];
+  const hubBundleCache = new Map<string, PageBundle | null>();
+
+  for (const workshop of workshopPages) {
+    try {
+      const properties = workshop.properties ?? {};
+      const title = extractTitle(findTitleProperty(properties));
+      let slug = firstRichText(findPropByName(properties, ['slug'])) ?? null;
+      if (!slug) {
+        // derive a slug from title as a fallback
+        const base = (title || '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+        slug = base || (canonicalId(workshop.id) ?? workshop.id);
+        console.warn('[workshop] missing slug -> derived', { pageId: workshop.id, slug });
+      }
+
+      const hubProp = findPropByName(properties, ['derived_from_hub', 'hub']);
+      const hubRelationId = hubProp?.type === 'relation' ? hubProp.relation?.[0]?.id ?? null : null;
+      const canonicalHubId = canonicalId(hubRelationId ?? undefined) ?? hubRelationId ?? undefined;
+      const hubInfo = canonicalHubId ? hubMap.get(canonicalHubId) : undefined;
+      if (!hubInfo) {
+        console.warn('[workshop] hub not found', { slug, hubRelationId });
+        continue;
+      }
+
+      let hubBundle = hubBundleCache.get(hubInfo.slug);
+      if (hubBundle === undefined) {
+        hubBundle = await getPageBundle(hubInfo.slug);
+        hubBundleCache.set(hubInfo.slug, hubBundle);
+      }
+      if (!hubBundle) {
+        console.warn('[workshop] hub bundle missing', { slug, hub: hubInfo.slug });
+        continue;
+      }
+
+      const rawDays = hubBundle.meta.learningPath?.days ?? [];
+      const dayMap = new Map<string, DayEntry>();
+      rawDays.forEach((day) => {
+        const id = canonicalId(day.id) ?? day.id;
+        if (id) dayMap.set(id, day);
+      });
+
+      const daysProp = findPropByName(properties, ['days_selected', 'days']);
+      const dayIds =
+        daysProp?.type === 'relation'
+          ? (daysProp.relation ?? []).map((rel) => canonicalId(rel.id) ?? rel.id).filter(Boolean)
+          : [];
+
+      const selectedDays = (dayIds.length ? dayIds : rawDays.map((day) => canonicalId(day.id) ?? day.id))
+        .map((id) => (id ? dayMap.get(id) : undefined))
+        .filter((day): day is DayEntry => Boolean(day))
+        .map((day) => ({ ...day }));
+
+      const description = firstRichText(findPropByName(properties, ['description', 'desc', 'summary']));
+      const visibilityRaw = (selectValue(findPropByName(properties, ['visibility'])) ?? 'public').toLowerCase();
+      const visibility: 'public' | 'private' = visibilityRaw === 'private' ? 'private' : 'public';
+      const password = firstRichText(findPropByName(properties, ['password', 'passcode']));
+
+      const metaRaw = firstRichText(findPropByName(properties, ['meta', 'settings', 'config']));
+      const { data: settings, error: metaError } = parseYaml(metaRaw, WorkshopMetaSchema);
+      if (metaError) {
+        console.warn('[workshop] meta parse error', { slug, metaError });
+      }
+
+      const bundle: WorkshopBundle = {
+        slug,
+        title,
+        description,
+        visibility,
+        password: password ?? null,
+        derivedHub: {
+          slug: hubInfo.slug,
+          title: hubInfo.title,
+          notionId: hubInfo.notionId,
+        },
+        days: selectedDays,
+        settings: settings ?? null,
+        syncedAt: new Date().toISOString(),
+      };
+
+      await setWorkshopBundle(bundle);
+      workshopIndex.push({ slug, title, visibility, hubSlug: hubInfo.slug });
+      opts.stats.workshopsSynced += 1;
+      await revalidateTag(`page:workshop:${slug}`);
+      await revalidatePath(`/atelier/${slug}`, 'page');
+    } catch (error) {
+      console.error('[workshop] failed to sync', { pageId: workshop.id, error });
+    }
+  }
+
+  await setWorkshopsIndex({ items: workshopIndex, syncedAt: new Date().toISOString() });
+  await revalidateTag('page:workshop:index');
+  await revalidatePath('/atelier', 'page');
+}
+
+async function loadModule(pageId: string, cache: Map<string, LoadedModule | null>): Promise<LoadedModule | null> {
+  const key = canonicalId(pageId) ?? pageId;
+  if (cache.has(key)) return cache.get(key) ?? null;
+
+  try {
+    const page = (await notion.pages.retrieve({ page_id: pageId })) as PageObjectResponse;
+    const properties = page.properties ?? {};
+    const slug = firstRichText(findPropByName(properties, ['slug'])) ?? (canonicalId(pageId) ?? pageId);
+    const title = extractTitle(findTitleProperty(properties));
+    const description = firstRichText(findPropByName(properties, ['description', 'summary']));
+    const order = numberValue(findPropByName(properties, ['order', 'ordre', 'index'])) ?? 0;
+    const duration = numberValue(findPropByName(properties, ['duration', 'durée']));
+    const dayIndex = numberValue(findPropByName(properties, ['day', 'jour', 'sprint_day', 'dayindex', 'day_index']));
+    const tags = getMultiSelect(findPropByName(properties, ['tags', 'tag']));
+    const unlockAt = dateValue(findPropByName(properties, ['unlock_at', 'unlockat', 'unlock']));
+    const unlockOffsetDays = numberValue(findPropByName(properties, ['unlock_offset_days', 'offsetdays', 'offset']));
+    const unlockTime = firstRichText(findPropByName(properties, ['unlock_time', 'time']));
+    const metaRaw = firstRichText(findPropByName(properties, ['meta', 'settings', 'config']));
+    const { data: settings, error } = parseYaml(metaRaw, ModuleMetaSchema);
+    if (error) {
+      console.warn('[sprint] module meta parse error', { moduleId: pageId, error });
+    }
+    // Support various naming conventions from Notion (e.g., "DB Activites", "DB Activités")
+    const activityIds = getRelationIds(
+      findPropByName(properties, [
+        'activities',
+        'activity',
+        'db activites',
+        'db activités',
+        'db activities',
+        'activites',
+        'activités',
+      ])
+    );
+
+    const loaded: LoadedModule = {
+      id: pageId,
+      slug,
+      title,
+      description,
+      order,
+      duration,
+      tags,
+      dayIndex,
+      unlockAt,
+      unlockOffsetDays,
+      unlockTime,
+      settings: settings ?? null,
+      activityIds,
+    };
+    cache.set(key, loaded);
+    return loaded;
+  } catch (error) {
+    console.error('[sprint] failed to load module', { moduleId: pageId, error });
+    cache.set(key, null);
+    return null;
+  }
+}
+
+async function loadActivity(pageId: string, cache: Map<string, LoadedActivity | null>): Promise<LoadedActivity | null> {
+  const key = canonicalId(pageId) ?? pageId;
+  if (cache.has(key)) return cache.get(key) ?? null;
+  try {
+    const page = (await notion.pages.retrieve({ page_id: pageId })) as PageObjectResponse;
+    const properties = page.properties ?? {};
+    const slug = firstRichText(findPropByName(properties, ['slug'])) ?? (canonicalId(pageId) ?? pageId);
+    const title = extractTitle(findTitleProperty(properties));
+    const typeValue = selectValue(findPropByName(properties, ['type', 'category'])) ?? null;
+    const duration = numberValue(findPropByName(properties, ['duration', 'durée']));
+    const order = numberValue(findPropByName(properties, ['order', 'ordre', 'index']));
+    const summary = firstRichText(findPropByName(properties, ['summary', 'resume', 'description']));
+    const tags = getMultiSelect(findPropByName(properties, ['tags', 'tag']));
+    const widgetYaml = firstRichText(findPropByName(properties, ['widget', 'template']));
+
+    const loaded: LoadedActivity = {
+      id: pageId,
+      slug,
+      title,
+      type: typeValue,
+      duration,
+      summary,
+      tags,
+      widgetYaml,
+      order,
+    };
+    cache.set(key, loaded);
+    return loaded;
+  } catch (error) {
+    console.error('[sprint] failed to load activity', { activityId: pageId, error });
+    cache.set(key, null);
+    return null;
+  }
+}
+
+function resolveModuleUnlock(
+  module: LoadedModule,
+  sprintSettings: SprintSettings | null,
+  sprintStartIso: string | null
+): { unlockAtISO: string | null; isLocked: boolean } {
+  const now = Date.now();
+  const moduleConfig = module.settings?.unlock;
+  const mode = moduleConfig?.mode ?? sprintSettings?.unlock_strategy ?? 'none';
+
+  let unlockAtISO: string | null = null;
+
+  if (mode === 'none') {
+    unlockAtISO = null;
+  } else if (mode === 'absolute') {
+    const candidate = moduleConfig?.at ?? module.unlockAt ?? null;
+    if (candidate) {
+      const parsed = new Date(candidate);
+      if (!Number.isNaN(parsed.getTime())) unlockAtISO = parsed.toISOString();
+    }
+  } else if (mode === 'relative') {
+    const offset = moduleConfig?.offsetDays ?? module.unlockOffsetDays ?? 0;
+    const time = moduleConfig?.time ?? module.unlockTime ?? null;
+    unlockAtISO = computeRelativeIso(sprintStartIso, offset ?? 0, time);
+  }
+
+  if (!unlockAtISO && module.unlockAt) {
+    const parsed = new Date(module.unlockAt);
+    if (!Number.isNaN(parsed.getTime())) unlockAtISO = parsed.toISOString();
+  }
+
+  if (!unlockAtISO && sprintSettings?.unlock_strategy === 'relative') {
+    const offset = module.unlockOffsetDays ?? 0;
+    const time = module.unlockTime ?? null;
+    unlockAtISO = computeRelativeIso(sprintStartIso, offset, time);
+  }
+
+  const isLocked = unlockAtISO ? new Date(unlockAtISO).getTime() > now : false;
+  return { unlockAtISO, isLocked };
+}
+
+async function syncSprints(opts: { stats: SyncStats; force?: boolean }, initialPages?: PageObjectResponse[]) {
+  if (!SPRINTS_DB) return;
+
+  const sprintPages = initialPages ?? (await collectDatabasePagesSafe(SPRINTS_DB, 'sprints'));
+
+  if (!sprintPages.length) {
+    // Si c'est une sync partielle (initialPages défini), ne pas écraser l'index global
+    if (!initialPages) {
+      await setSprintsIndex({ items: [], syncedAt: new Date().toISOString() });
+    }
+    return;
+  }
+
+  const sprintIndex: SprintsIndex['items'] = [];
+  const moduleCache = new Map<string, LoadedModule | null>();
+  const activityCache = new Map<string, LoadedActivity | null>();
+
+  for (const sprint of sprintPages) {
+    try {
+      const properties = sprint.properties ?? {};
+      const slug = firstRichText(findPropByName(properties, ['slug'])) ?? null;
+      if (!slug) {
+        console.warn('[sprint] missing slug', { pageId: sprint.id });
+        continue;
+      }
+
+      const title = extractTitle(findTitleProperty(properties));
+      const description = firstRichText(findPropByName(properties, ['description', 'summary']));
+      const visibilityRaw = (selectValue(findPropByName(properties, ['visibility'])) ?? 'public').toLowerCase();
+      const visibility: 'public' | 'private' = visibilityRaw === 'private' ? 'private' : 'public';
+      const password = firstRichText(findPropByName(properties, ['password', 'passcode']));
+      const timezone = firstRichText(findPropByName(properties, ['timezone', 'time_zone', 'tz'])) ?? 'Europe/Paris';
+
+      const metaRaw = firstRichText(findPropByName(properties, ['meta', 'settings', 'config']));
+      const { data: sprintSettings, error: sprintMetaError } = parseYaml(metaRaw, SprintMetaSchema);
+      if (sprintMetaError) {
+        console.warn('[sprint] meta parse error', { slug, sprintMetaError });
+      }
+      const effectiveTimezone = sprintSettings?.timezone ?? timezone;
+
+      const startIso = dateValue(findPropByName(properties, ['startdatetime', 'start_date', 'start'])) ?? null;
+
+      // Support various naming conventions (e.g., Notion property named "DB Modules")
+      const moduleIds = getRelationIds(
+        findPropByName(properties, [
+          'modules',
+          'module',
+          'db modules',
+          'db module',
+          'db_modules',
+          'dbmodules',
+        ])
+      );
+      const modules: SprintBundle['modules'] = [];
+
+      for (const moduleId of moduleIds) {
+        const loadedModule = await loadModule(moduleId, moduleCache);
+        if (!loadedModule) continue;
+
+        const { unlockAtISO, isLocked } = resolveModuleUnlock(loadedModule, sprintSettings ?? null, startIso);
+
+        const sprintModule = {
+          slug: loadedModule.slug,
+          title: loadedModule.title,
+          order: loadedModule.order,
+          dayIndex: (loadedModule.dayIndex ?? (loadedModule.unlockOffsetDays ?? null)) as number | null,
+          description: loadedModule.description,
+          duration: loadedModule.duration ?? undefined,
+          tags: loadedModule.tags,
+          isLocked,
+          unlockAtISO: unlockAtISO ?? null,
+          settings: loadedModule.settings,
+        } as SprintModule;
+
+        if (!isLocked) {
+          const activities: SprintActivity[] = [];
+          for (const activityId of loadedModule.activityIds) {
+            const loadedActivity = await loadActivity(activityId, activityCache);
+            if (!loadedActivity) continue;
+            activities.push({
+              slug: loadedActivity.slug,
+              title: loadedActivity.title,
+              notionId: activityId,
+              type: loadedActivity.type ?? undefined,
+              duration: loadedActivity.duration ?? undefined,
+              summary: loadedActivity.summary ?? undefined,
+              tags: loadedActivity.tags,
+              widgetYaml: loadedActivity.widgetYaml ?? undefined,
+              order: loadedActivity.order ?? undefined,
+            });
+          }
+          // Tri des activités par ordre si disponible
+          activities.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+          if (activities.length) {
+            sprintModule.activities = activities;
+          }
+        }
+
+        modules.push(sprintModule);
+      }
+
+      modules.sort((a, b) => a.order - b.order);
+
+      let contextBlocks: NotionBlock[] | null = null;
+      let contextNavigation: NavItem[] | null = null;
+      try {
+        const rawBlocks = await pageBlocksDeep(sprint.id, 100);
+        contextBlocks = await processBlocksMedia(rawBlocks, {
+          slug,
+          pageId: sprint.id,
+          stats: opts.stats,
+        });
+        try {
+          contextNavigation = buildNavigationStructure(contextBlocks, `sprint/${slug}`);
+        } catch {
+          contextNavigation = null;
+        }
+        try {
+          await syncChildPages(
+            `sprint/${slug}`,
+            sprint.id,
+            contextBlocks ?? [],
+            { type: 'page', stats: opts.stats, force: opts.force },
+            {
+              parentTitle: title,
+              parentSlug: `sprint/${slug}`,
+              parentNavigation: contextNavigation ?? [],
+              isHub: true,
+              hubDescription: description ?? null,
+            }
+          );
+        } catch (e) {
+          console.warn('[sprint] sync child pages failed', { slug, error: e });
+        }
+      } catch (error) {
+        console.warn('[sprint] context blocks fetch failed', { slug, sprintId: sprint.id, error });
+      }
+
+      const bundle: SprintBundle = {
+        slug,
+        title,
+        description,
+        visibility,
+        password: password ?? null,
+        timezone: effectiveTimezone,
+        settings: sprintSettings ?? null,
+        modules,
+        contextBlocks: contextBlocks ?? null,
+        contextNavigation: contextNavigation ?? null,
+        contextNotionId: sprint.id,
+        syncedAt: new Date().toISOString(),
+      };
+
+      await setSprintBundle(bundle);
+      opts.stats.sprintsSynced += 1;
+      sprintIndex.push({ slug, title, visibility, timezone: effectiveTimezone });
+      await revalidateTag(`page:sprint:${slug}`);
+      await revalidatePath(`/sprint/${slug}`, 'page');
+    } catch (error) {
+      console.error('[sprint] failed to sync sprint', { sprintId: sprint.id, error });
+    }
+  }
+
+  // Si sync complète: on ré-écrit l'index. En partiel: on merge avec l'index existant.
+  if (!initialPages) {
+    await setSprintsIndex({ items: sprintIndex, syncedAt: new Date().toISOString() });
+  } else {
+    const existing = (await getSprintsIndex()) ?? { items: [], syncedAt: new Date().toISOString() };
+    const map = new Map<string, (typeof existing.items)[number]>();
+    for (const item of existing.items) map.set(item.slug, item);
+    for (const item of sprintIndex) map.set(item.slug, item);
+    await setSprintsIndex({ items: Array.from(map.values()), syncedAt: new Date().toISOString() });
+  }
+  await revalidateTag('page:sprint:index');
+  await revalidatePath('/sprint', 'page');
 }
 
 function isFullPage(page: PageObjectResponse | BlockObjectResponse | unknown): page is PageObjectResponse {
@@ -93,6 +628,37 @@ function selectValue(property: PageObjectResponse['properties'][string] | undefi
   return null;
 }
 
+function numberValue(property: PageObjectResponse['properties'][string] | undefined): number | null {
+  if (!property) return null;
+  if (property.type === 'number') return property.number ?? null;
+  if (property.type === 'select') {
+    const raw = property.select?.name ?? '';
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  if (property.type === 'rich_text') {
+    const raw = property.rich_text?.[0]?.plain_text ?? '';
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+function dateValue(property: PageObjectResponse['properties'][string] | undefined): string | null {
+  if (!property) return null;
+  if (property.type === 'date') return property.date?.start ?? null;
+  return null;
+}
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  if (size <= 0) return [items];
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    out.push(items.slice(i, i + size));
+  }
+  return out;
+}
+
 async function collectDatabasePages(databaseId: string): Promise<PageObjectResponse[]> {
   const pages: PageObjectResponse[] = [];
   let cursor: string | undefined;
@@ -109,6 +675,16 @@ async function collectDatabasePages(databaseId: string): Promise<PageObjectRespo
   } while (cursor);
 
   return pages;
+}
+
+async function collectDatabasePagesSafe(databaseId: string | undefined, label: string): Promise<PageObjectResponse[]> {
+  if (!databaseId) return [];
+  try {
+    return await collectDatabasePages(databaseId);
+  } catch (error) {
+    console.warn(`[sync] skip ${label}: inaccessible or missing permissions`, error);
+    return [];
+  }
 }
 
 async function collectLinkedDatabaseIds(blocks: NotionBlock[]): Promise<Set<string>> {
@@ -243,16 +819,14 @@ async function mirrorDatabaseBundle(databaseId: string, context: { slug: string;
   return { ...bundle, items };
 }
 
-async function syncPage(
-  page: PageObjectResponse,
-  opts: { type: 'page' | 'post'; stats: SyncStats; force?: boolean }
-) {
+async function syncPage(page: PageObjectResponse, opts: SyncOptions) {
   const slug = firstRichText(page.properties.slug);
   if (!slug) return null;
 
   const title = extractTitle(page.properties.Title);
   const visibility = (selectValue(page.properties.visibility) as PageMeta['visibility']) ?? 'public';
   const password = firstRichText(page.properties.password);
+  const properties = page.properties as Record<string, PageObjectResponse['properties'][string] | undefined>;
 
   const metaInfo = await getPageMeta(page.id);
   const existing = await getPageBundle(slug);
@@ -267,6 +841,12 @@ async function syncPage(
   console.log(`[sync] 🔄 Syncing "${slug}" (${existing ? 'updated' : 'new'})`);
 
   const handledDatabases = new Set<string>();
+  const childContext = opts.childContext ?? { maxDepth: DEFAULT_CHILD_MAX_DEPTH, currentDepth: 0 };
+  const canSyncChildren = childContext.currentDepth < childContext.maxDepth;
+  const nextChildContext: ChildContext = {
+    maxDepth: childContext.maxDepth,
+    currentDepth: childContext.currentDepth + 1,
+  };
 
   const blocks = await pageBlocksDeep(page.id, 100, {
     onMissingBlock: (id) => opts.stats.missingBlocks.add(`${slug}:${id}`),
@@ -535,6 +1115,13 @@ async function syncPage(
     stats: opts.stats,
   });
 
+  const description = firstRichText(properties.description);
+  const strategyProp = selectValue(properties.sync_strategy);
+  const maxDepthProp = numberValue(properties.max_depth);
+  const syncPriorityProp = numberValue(properties.sync_priority);
+  const universProp = selectValue(properties.univers);
+  const pageTypeProp = selectValue(properties.type);
+
   // Récupérer le full_width depuis le RecordMap (l'API officielle ne le retourne pas)
   let fullWidth = false;
   try {
@@ -590,6 +1177,23 @@ async function syncPage(
     cover,
     fullWidth,
   };
+  if (description !== null) meta.description = description;
+  if (strategyProp) meta.syncStrategy = strategyProp as PageMeta['syncStrategy'];
+  if (universProp) {
+    const u = String(universProp).toLowerCase();
+    meta.univers = (u === 'lab' ? 'lab' : 'studio') as PageMeta['univers'];
+  }
+  if (pageTypeProp) {
+    const t = String(pageTypeProp).toLowerCase();
+    if (t === 'landing' || t === 'article' || t === 'offre' || t === 'programme') {
+      meta.pageType = t as PageMeta['pageType'];
+    }
+  }
+  if (typeof maxDepthProp === 'number') meta.maxDepth = maxDepthProp;
+  if (typeof syncPriorityProp === 'number') meta.syncPriority = syncPriorityProp;
+  if (opts.metaOverrides) {
+    Object.assign(meta, opts.metaOverrides);
+  }
 
   const bundle: PageBundle = {
     meta,
@@ -604,6 +1208,10 @@ async function syncPage(
   } else {
     await revalidatePath(`/${slug}`, 'page');
   }
+
+  // Build navigation structure early so we can pass it to DB children
+  console.log(`[sync] 🧭 Building navigation structure for "${slug}"...`);
+  const navigation = buildNavigationStructure(blocks, slug);
 
   const linkedDbIds = await collectLinkedDatabaseIds(blocks);
   for (const databaseId of linkedDbIds) {
@@ -623,12 +1231,25 @@ async function syncPage(
     // Synchroniser les pages enfants de la database
     // Avec délais séquentiels pour respecter les rate limits de Notion
     console.log(`[sync] 🔄 Syncing database children for ${databaseId}...`);
-    await syncDatabaseChildren(databaseId, slug, opts);
+    await syncDatabaseChildren(
+      databaseId,
+      slug,
+      {
+        type: 'page',
+        stats: opts.stats,
+        force: opts.force,
+        childContext: nextChildContext,
+      },
+      {
+        parentTitle: meta.title,
+        parentSlug: slug,
+        parentNavigation: navigation,
+        isHub: Boolean((meta as PageMeta).isHub),
+        hubDescription: (meta as PageMeta).description ?? null,
+        parentIcon: (meta as PageMeta).icon ?? null,
+      }
+    );
   }
-
-  // Construire la structure de navigation (sections + child pages)
-  console.log(`[sync] 🧭 Building navigation structure for "${slug}"...`);
-  const navigation = buildNavigationStructure(blocks, slug);
   
   // Synchroniser les pages enfants (child_page blocks)
   // Avec délais pour respecter les rate limits de Notion (3 req/sec)
@@ -639,11 +1260,32 @@ async function syncPage(
   const blockTypes = blocks.map(b => b.type);
   console.log(`[sync] Block types found:`, blockTypes);
   
-  const syncedChildren = await syncChildPages(slug, page.id, blocks, opts, {
-    parentTitle: meta.title,
-    parentSlug: slug,
-    parentNavigation: navigation
-  });
+  let syncedChildren: Array<{ id: string; title: string; slug: string }> = [];
+  if (canSyncChildren) {
+    syncedChildren = await syncChildPages(
+      slug,
+      page.id,
+      blocks,
+      {
+        type: 'page',
+        stats: opts.stats,
+        force: opts.force,
+        childContext: nextChildContext,
+      },
+      {
+        parentTitle: meta.title,
+        parentSlug: slug,
+        parentNavigation: navigation,
+        isHub: Boolean(meta.isHub),
+        hubDescription: meta.description ?? null,
+        parentIcon: meta.icon ?? null,
+      }
+    );
+  } else {
+    console.log(
+      `[sync] ⏭️  Skipping child sync for "${slug}" (depth ${childContext.currentDepth}/${childContext.maxDepth})`
+    );
+  }
   
   console.log(`[sync] 📄 Child pages synced for "${slug}": ${syncedChildren.length}`);
   if (syncedChildren.length > 0) {
@@ -668,6 +1310,328 @@ async function syncPage(
   }
 
   return meta;
+}
+
+async function syncHub(
+  hub: PageObjectResponse,
+  opts: { stats: SyncStats; force?: boolean }
+): Promise<HubMeta | null> {
+  const slug = firstRichText(hub.properties.slug);
+  if (!slug) return null;
+
+  const properties = hub.properties as Record<string, PageObjectResponse['properties'][string] | undefined>;
+  const strategy = (selectValue(properties.sync_strategy) as PageMeta['syncStrategy']) ?? 'full';
+  const maxDepthRaw = numberValue(properties.max_depth);
+  const priorityRaw = numberValue(properties.sync_priority);
+  const description = firstRichText(properties.description);
+  const iconSelect = selectValue(properties.icon);
+
+  const baseDepth = typeof maxDepthRaw === 'number' && Number.isFinite(maxDepthRaw) ? Math.max(maxDepthRaw, 0) : 2;
+  const effectiveDepth = strategy === 'deep' ? baseDepth + 1 : baseDepth;
+  const childMaxDepth = strategy === 'shallow' ? 0 : effectiveDepth;
+
+  console.log(
+    `[sync] 🏠 Syncing hub "${slug}" (strategy=${strategy}, maxDepth=${childMaxDepth}, priority=${priorityRaw ?? 'default'})`
+  );
+
+  const metaOverrides: Partial<PageBundle['meta']> = {
+    isHub: true,
+    syncStrategy: strategy,
+    maxDepth: childMaxDepth,
+  };
+  if (typeof priorityRaw === 'number') {
+    metaOverrides.syncPriority = priorityRaw;
+  }
+  if (description !== null) {
+    metaOverrides.description = description;
+  }
+  if (iconSelect) {
+    metaOverrides.icon = iconSelect;
+  }
+
+  const meta = await syncPage(hub, {
+    type: 'page',
+    stats: opts.stats,
+    force: opts.force,
+    childContext: { maxDepth: childMaxDepth, currentDepth: 0 },
+    metaOverrides,
+  });
+  if (!meta) return null;
+
+  // Attempt to detect inline databases for Jour / Activité and build learning path
+  try {
+    const learning = await buildLearningPathFromPage(hub.id, meta.slug);
+    if (learning && learning.days.length) {
+      const enriched = await getPageBundle(meta.slug);
+      if (enriched) {
+        enriched.meta.learningPath = learning;
+        await setPageBundle(meta.slug, enriched);
+        await revalidateTag(`page:${meta.slug}`);
+      }
+    }
+  } catch (e) {
+    console.warn('[sync] learningPath build failed', e);
+  }
+
+  opts.stats.hubsSynced += 1;
+
+  return {
+    slug: meta.slug,
+    title: meta.title,
+    description: meta.description ?? description ?? null,
+    icon: meta.icon ?? iconSelect ?? null,
+    notionId: meta.notionId,
+    visibility: meta.visibility,
+    password: meta.password ?? null,
+    lastEdited: meta.lastEdited,
+    syncStrategy: meta.syncStrategy,
+    maxDepth: meta.maxDepth,
+    syncPriority: meta.syncPriority,
+  };
+}
+
+function normalize(text: string | null | undefined): string {
+  return (text ?? '').toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '');
+}
+
+async function findInlineDatabases(blocks: NotionBlock[]): Promise<string[]> {
+  const ids = new Set<string>();
+  const walk = async (list: NotionBlock[]) => {
+    for (const b of list) {
+      if ((b as { type?: string }).type === 'child_database' || (b as { type?: string }).type === 'link_to_page') {
+        const id = await resolveDatabaseIdFromBlock(b as LinkedDatabaseBlock);
+        if (id) ids.add(id);
+      }
+      const children = (b as { __children?: NotionBlock[] }).__children;
+      if (children?.length) await walk(children);
+    }
+  };
+  await walk(blocks);
+  return Array.from(ids);
+}
+
+async function buildLearningPathFromPage(pageId: string, hubSlug: string): Promise<LearningPath | null> {
+  const blocks = await pageBlocksDeep(pageId, 100);
+  const dbIds = await findInlineDatabases(blocks);
+  if (!dbIds.length) return null;
+
+  let unitDb: { id: string; title: string; kind: 'days' | 'modules'; labels: { singular: string; plural: string }; slugPrefix: string } | null = null;
+  let activiteDb: { id: string; title: string } | null = null;
+
+  const unitPatterns: Array<{
+    test: (value: string) => boolean;
+    kind: 'days' | 'modules';
+    singular: string;
+    plural: string;
+    slugPrefix: string;
+  }> = [
+    {
+      test: (value) => value.includes('jour'),
+      kind: 'days',
+      singular: 'Jour',
+      plural: 'Jours',
+      slugPrefix: 'jour',
+    },
+    {
+      test: (value) => value.includes('module'),
+      kind: 'modules',
+      singular: 'Module',
+      plural: 'Modules',
+      slugPrefix: 'module',
+    },
+    {
+      test: (value) => value.includes('session'),
+      kind: 'modules',
+      singular: 'Session',
+      plural: 'Sessions',
+      slugPrefix: 'session',
+    },
+    {
+      test: (value) => value.includes('phase'),
+      kind: 'modules',
+      singular: 'Phase',
+      plural: 'Phases',
+      slugPrefix: 'phase',
+    },
+    {
+      test: (value) => value.includes('sprint'),
+      kind: 'modules',
+      singular: 'Sprint',
+      plural: 'Sprints',
+      slugPrefix: 'sprint',
+    },
+  ];
+
+  for (const dbId of dbIds) {
+    try {
+      const db = await notion.databases.retrieve({ database_id: dbId });
+      const title = ((db as { title?: Array<{ plain_text?: string }> }).title?.[0]?.plain_text ?? '').trim();
+      const t = normalize(title);
+      if (!unitDb) {
+        const pattern = unitPatterns.find((entry) => entry.test(t));
+        if (pattern) {
+          unitDb = {
+            id: dbId,
+            title,
+            kind: pattern.kind,
+            labels: { singular: pattern.singular, plural: pattern.plural },
+            slugPrefix: pattern.slugPrefix,
+          };
+        }
+      }
+      if (!activiteDb && /activit/.test(t)) activiteDb = { id: dbId, title };
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!unitDb || !activiteDb) return null;
+
+  const days = await queryDb(unitDb.id, { page_size: 100 });
+  const dayPages = (days.results as PageObjectResponse[]).filter((p) => p.object === 'page');
+
+  const activities = await queryDb(activiteDb.id, { page_size: 200 });
+  const activityPages = (activities.results as PageObjectResponse[]).filter((p) => p.object === 'page');
+
+  const getNum = (prop: PageObjectResponse['properties'][string] | undefined): number | null => {
+    if (!prop) return null;
+    if (prop.type === 'number') return prop.number ?? null;
+    if (prop.type === 'rich_text') {
+      const raw = prop.rich_text?.[0]?.plain_text ?? '';
+      const n = Number(raw);
+      return Number.isFinite(n) ? n : null;
+    }
+    return null;
+  };
+  const getText = (prop: PageObjectResponse['properties'][string] | undefined): string | null => {
+    if (!prop) return null;
+    if (prop.type === 'title') return prop.title?.[0]?.plain_text ?? null;
+    if (prop.type === 'rich_text') return prop.rich_text?.[0]?.plain_text ?? null;
+    if (prop.type === 'url') return prop.url ?? null;
+    return null;
+  };
+  const getSelect = (prop: PageObjectResponse['properties'][string] | undefined): string | null => {
+    if (prop?.type === 'select') return prop.select?.name ?? null;
+    if (prop?.type === 'status') return (prop as unknown as { status?: { name?: string } }).status?.name ?? null;
+    return null;
+  };
+  const getDate = (prop: PageObjectResponse['properties'][string] | undefined): string | null => {
+    if (prop?.type === 'date') return prop.date?.start ?? null;
+    return null;
+  };
+  const getRelation = (prop: PageObjectResponse['properties'][string] | undefined): string[] => {
+    if (prop?.type === 'relation') return prop.relation?.map((r) => r.id) ?? [];
+    return [];
+  };
+
+  const findProp = (properties: PageObjectResponse['properties'], names: string[]): PageObjectResponse['properties'][string] | undefined => {
+    const keys = Object.keys(properties);
+    const normalized = keys.map((k) => ({ k, n: normalize(k) }));
+    for (const want of names) {
+      const wn = normalize(want);
+      const hit = normalized.find((x) => x.n.includes(wn));
+      if (hit) return properties[hit.k];
+    }
+    return undefined;
+  };
+
+  const relMap = new Map<string, ActivityStep[]>();
+  for (const a of activityPages) {
+    const props = a.properties;
+    const title = getText(findProp(props, ['titre', 'title', 'name'])) ?? 'Étape';
+    const order = getNum(findProp(props, ['ordre', 'order', 'index'])) ?? 1;
+    // Type can be in a select or status; fallback to text if author used rich_text
+    const type = getSelect(findProp(props, ['type', 'category'])) ?? getText(findProp(props, ['type', 'category']));
+    const duration = getText(findProp(props, ['duree', 'durée', 'duration']));
+    const url = getText(findProp(props, ['lien', 'url']));
+    const instructions = getText(findProp(props, ['instructions', 'contenu', 'content', 'texte']));
+    // Accept relation property pointing to the unit DB (jour/module/phase/sprint)
+    const rel = getRelation(
+      findProp(props, [
+        'relation',
+        'jour',
+        'day',
+        'module',
+        'modules',
+        'db modules',
+        'db module',
+      ])
+    );
+    const step: ActivityStep = { id: a.id, order, title, type, duration, url, instructions };
+    for (const target of rel) {
+      const list = relMap.get(target) ?? [];
+      list.push(step);
+      relMap.set(target, list);
+    }
+  }
+
+  const dayEntries: DayEntry[] = dayPages.map((d) => {
+    const props = d.properties;
+    const title = getText(findProp(props, ['titre', 'title', 'name'])) ?? unitDb!.labels.singular;
+    const order = getNum(findProp(props, ['ordre', 'order', 'index'])) ?? 1;
+    const state = getSelect(findProp(props, ['etat', 'état', 'state', 'status'])) ?? null;
+    const summary = getText(findProp(props, ['resume', 'résumé', 'summary', 'description'])) ?? null;
+    const unlockDate = getDate(findProp(props, ['date_deblocage', 'unlock', 'date'])) ?? null;
+    const unlockOffsetDays = getNum(findProp(props, ['decalage', 'décalage', 'offset', 'unlock_offset']));
+    const slugBaseRaw = getText(findProp(props, ['slug'])) ?? `${unitDb!.slugPrefix}-${String(order).padStart(2, '0')}`;
+    const slugBase = slugBaseRaw.toLowerCase();
+    const slugPart = slugBase
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    const slug = `${hubSlug}/${slugPart}`.replace(/\/{2,}/g, '/');
+    // Keep only real steps in the wizard; exclude activities explicitly marked as "option"
+    const steps = (relMap.get(d.id) ?? [])
+      .filter((s) => {
+        const t = normalize(s.type ?? '');
+        if (!t) return true;
+        // accept 'step', 'etape', 'intro', otherwise exclude 'option'
+        if (/^(step|etape|étape|intro)/.test(t)) return true;
+        if (/option/.test(t)) return false;
+        return true;
+      })
+      .sort((a, b) => a.order - b.order);
+    return {
+      id: d.id,
+      order,
+      slug,
+      title,
+      summary,
+      state,
+      unlockDate,
+      unlockOffsetDays,
+      steps,
+    } satisfies DayEntry;
+  });
+
+  dayEntries.sort((a, b) => a.order - b.order);
+  return {
+    days: dayEntries,
+    kind: unitDb.kind,
+    unitLabelSingular: unitDb.labels.singular,
+    unitLabelPlural: unitDb.labels.plural,
+  } satisfies LearningPath;
+}
+
+async function syncHubsInParallel(
+  hubs: PageObjectResponse[],
+  opts: { stats: SyncStats; force?: boolean }
+): Promise<HubMeta[]> {
+  if (!hubs.length) return [];
+  const batches = chunkArray(hubs, 2);
+  const results: HubMeta[] = [];
+
+  for (let i = 0; i < batches.length; i += 1) {
+    const batch = batches[i];
+    const metas = await Promise.all(batch.map((hub) => syncHub(hub, opts)));
+    results.push(...metas.filter(Boolean) as HubMeta[]);
+    if (i < batches.length - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+  }
+
+  return results;
 }
 
 /**
@@ -719,6 +1683,13 @@ function buildNavigationStructure(
       if (block.type === 'child_page') {
         const childPageBlock = block as Extract<NotionBlock, { type: 'child_page' }>;
         const pageTitle = childPageBlock.child_page.title;
+        const pageIconData = (childPageBlock as unknown as { child_page: { icon?: { type: string; emoji?: string; external?: { url?: string }; file?: { url?: string } } } }).child_page?.icon;
+        let pageIcon: string | null = null;
+        if (pageIconData) {
+          if (pageIconData.type === 'emoji') pageIcon = pageIconData.emoji ?? null;
+          else if (pageIconData.type === 'external') pageIcon = pageIconData.external?.url ?? null;
+          else if (pageIconData.type === 'file') pageIcon = pageIconData.file?.url ?? null;
+        }
         console.log(`${indent}  ✅ Found child page: "${pageTitle}"`);
         
         // Créer un slug pour cette child page
@@ -738,7 +1709,8 @@ function buildNavigationStructure(
           currentSection.children.push({
             id: block.id,
             title: pageTitle,
-            slug: fullSlug
+            slug: fullSlug,
+            icon: pageIcon
           });
         } else {
           // Page sans section
@@ -746,7 +1718,8 @@ function buildNavigationStructure(
             type: 'page',
             title: pageTitle,
             id: block.id,
-            slug: fullSlug
+            slug: fullSlug,
+            icon: pageIcon
           });
         }
       }
@@ -830,10 +1803,29 @@ async function syncChildPages(
   parentSlug: string,
   parentPageId: string,
   blocks: NotionBlock[],
-  opts: { type: 'page' | 'post'; stats: SyncStats; force?: boolean },
-  parentInfo?: { parentTitle: string; parentSlug: string; parentNavigation: NavItem[] }
+  opts: SyncOptions,
+  parentInfo?: {
+    parentTitle: string;
+    parentSlug: string;
+    parentNavigation: NavItem[];
+    maxDepth?: number;
+    isHub?: boolean;
+    hubDescription?: string | null;
+    parentIcon?: string | null;
+  }
 ) {
   try {
+    const context = opts.childContext ?? { maxDepth: DEFAULT_CHILD_MAX_DEPTH, currentDepth: 1 };
+    console.log(
+      `[syncChildPages] 🔍 Syncing children at depth ${context.currentDepth}/${context.maxDepth} for "${parentSlug}"`
+    );
+    if (context.currentDepth > context.maxDepth) {
+      console.log(
+        `[syncChildPages] ⚠️  Depth limit reached for "${parentSlug}" (${context.currentDepth}/${context.maxDepth})`
+      );
+      return [];
+    }
+
     console.log(`[syncChildPages] 🔍 Collecting child pages from ${blocks.length} blocks...`);
     const childPages = collectChildPageBlocks(blocks);
     
@@ -956,8 +1948,28 @@ async function syncChildPages(
               ];
             }
             
-            // Synchroniser sans récursion pour éviter les timeouts
-            await syncPage(modifiedPage, { ...opts, type: 'page', force: false });
+            const targetMaxDepth = parentInfo?.maxDepth ?? context.maxDepth;
+            const childPageContext: ChildContext = {
+              maxDepth: targetMaxDepth,
+              currentDepth: context.currentDepth,
+            };
+
+            const childMetaOverrides: Partial<PageBundle['meta']> = {};
+            if (parentInfo) {
+              childMetaOverrides.parentSlug = parentInfo.parentSlug;
+              childMetaOverrides.parentTitle = parentInfo.parentTitle;
+              childMetaOverrides.parentNavigation = parentInfo.parentNavigation;
+              if (parentInfo.parentIcon) childMetaOverrides.parentIcon = parentInfo.parentIcon;
+              if (parentInfo.isHub) childMetaOverrides.isHub = true;
+            }
+
+            await syncPage(modifiedPage, {
+              type: 'page',
+              stats: opts.stats,
+              force: false,
+              childContext: childPageContext,
+              metaOverrides: Object.keys(childMetaOverrides).length ? childMetaOverrides : undefined,
+            });
             
             // Ajouter les infos du parent dans le bundle de la child page
             if (parentInfo) {
@@ -966,6 +1978,18 @@ async function syncChildPages(
                 childBundle.meta.parentSlug = parentInfo.parentSlug;
                 childBundle.meta.parentTitle = parentInfo.parentTitle;
                 childBundle.meta.parentNavigation = parentInfo.parentNavigation;
+                if (parentInfo.isHub) childBundle.meta.isHub = true;
+                if (parentInfo.hubDescription && !childBundle.meta.description) {
+                  childBundle.meta.description = parentInfo.hubDescription;
+                }
+                if (parentInfo.parentIcon) {
+                  if (!childBundle.meta.parentIcon) {
+                    childBundle.meta.parentIcon = parentInfo.parentIcon;
+                  }
+                  if (!childBundle.meta.icon) {
+                    childBundle.meta.icon = parentInfo.parentIcon;
+                  }
+                }
                 await setPageBundle(fullSlug, childBundle);
                 console.log(`[syncChildPages] ✅ Added parent info to child page "${fullSlug}"`);
               }
@@ -1010,9 +2034,18 @@ async function syncChildPages(
 async function syncDatabaseChildren(
   databaseId: string,
   parentSlug: string,
-  opts: { type: 'page' | 'post'; stats: SyncStats; force?: boolean }
+  opts: SyncOptions,
+  parentInfo?: {
+    parentTitle: string;
+    parentSlug: string;
+    parentNavigation: NavItem[];
+    isHub?: boolean;
+    hubDescription?: string | null;
+    parentIcon?: string | null;
+  }
 ) {
   try {
+    const context = opts.childContext ?? { maxDepth: DEFAULT_CHILD_MAX_DEPTH, currentDepth: 1 };
     // Récupérer toutes les pages de la database
     const dbPages = await collectDatabasePages(databaseId);
     
@@ -1078,7 +2111,33 @@ async function syncDatabaseChildren(
           ];
         }
 
-        await syncPage(modifiedPage, { ...opts, type: 'page' });
+        await syncPage(modifiedPage, {
+          type: 'page',
+          stats: opts.stats,
+          force: opts.force,
+          childContext: context,
+        });
+        if (parentInfo) {
+          const childBundle = await getPageBundle(fullSlug);
+          if (childBundle) {
+            childBundle.meta.parentSlug = parentInfo.parentSlug;
+            childBundle.meta.parentTitle = parentInfo.parentTitle;
+            childBundle.meta.parentNavigation = parentInfo.parentNavigation;
+            if (parentInfo.isHub) childBundle.meta.isHub = true;
+            if (parentInfo.hubDescription && !childBundle.meta.description) {
+              childBundle.meta.description = parentInfo.hubDescription;
+            }
+            if (parentInfo.parentIcon) {
+              if (!childBundle.meta.parentIcon) {
+                childBundle.meta.parentIcon = parentInfo.parentIcon;
+              }
+              if (!childBundle.meta.icon) {
+                childBundle.meta.icon = parentInfo.parentIcon;
+              }
+            }
+            await setPageBundle(fullSlug, childBundle);
+          }
+        }
         opts.stats.databaseChildrenSynced += 1;
         syncedCount += 1;
         
@@ -1107,11 +2166,12 @@ async function syncDatabaseChildren(
  * Exportée pour être utilisée par le worker QStash
  */
 export async function runFullSync(force: boolean = false) {
-  if (!PAGES_DB || !POSTS_DB) {
+  if (!PAGES_DB || !POSTS_DB || !HUBS_DB) {
     throw new Error('Missing Notion database env vars');
   }
 
   const syncedPages: string[] = [];
+  const hubsIndex: HubMeta[] = [];
   const postsIndex: PostMeta[] = [];
   const stats: SyncStats = {
     imageMirrored: 0,
@@ -1124,18 +2184,51 @@ export async function runFullSync(force: boolean = false) {
     databaseChildrenSynced: 0,
     childPagesSynced: 0,
     pagesSkipped: 0,
+    hubsSynced: 0,
+    workshopsSynced: 0,
+    sprintsSynced: 0,
   };
   const startedAt = Date.now();
+  let hubsProcessed = 0;
   let pagesProcessed = 0;
   let postsProcessed = 0;
 
-  const [pages, posts] = await Promise.all([
+  const [hubs, pages, posts] = await Promise.all([
+    collectDatabasePages(HUBS_DB),
     collectDatabasePages(PAGES_DB),
     collectDatabasePages(POSTS_DB),
   ]);
 
+  const [workshopsInput, sprintsInput] = await Promise.all([
+    collectDatabasePagesSafe(WORKSHOPS_DB, 'workshops'),
+    collectDatabasePagesSafe(SPRINTS_DB, 'sprints'),
+  ]);
+
+  hubsProcessed = hubs.length;
   pagesProcessed = pages.length;
   postsProcessed = posts.length;
+
+  const hubMap = new Map<string, HubReference>();
+  for (const hub of hubs) {
+    const slug = firstRichText(findPropByName(hub.properties, ['slug'])) ?? null;
+    const title = extractTitle(findTitleProperty(hub.properties));
+    if (!slug) continue;
+    const info: HubReference = { slug, title, notionId: hub.id };
+    hubMap.set(hub.id, info);
+    const canonical = canonicalId(hub.id);
+    if (canonical) hubMap.set(canonical, info);
+  }
+
+  if (hubs.length) {
+    console.log('[sync] 🚀 Phase 1: Syncing hubs...');
+    const hubMetas = await syncHubsInParallel(hubs, { stats, force });
+    hubsIndex.push(...hubMetas);
+    if (hubMetas.length) {
+      hubMetas.forEach((meta) => syncedPages.push(meta.slug));
+    }
+  } else {
+    console.log('[sync] 🚀 Phase 1: No hubs to sync.');
+  }
 
   for (const page of pages) {
     const meta = await syncPage(page, { type: 'page', stats, force });
@@ -1159,6 +2252,17 @@ export async function runFullSync(force: boolean = false) {
     }
   }
 
+  if (WORKSHOPS_DB) {
+    await syncWorkshops({ stats, force }, hubMap, workshopsInput);
+  }
+  if (SPRINTS_DB) {
+    await syncSprints({ stats, force }, sprintsInput);
+  }
+
+  await setHubsIndex({ items: hubsIndex, syncedAt: new Date().toISOString() });
+  await revalidateTag('hubs:index');
+  await revalidatePath('/hubs', 'page');
+
   await setPostsIndex({ items: postsIndex, syncedAt: new Date().toISOString() });
   await revalidateTag('posts:index');
   await revalidatePath('/blog', 'page');
@@ -1166,11 +2270,15 @@ export async function runFullSync(force: boolean = false) {
   const durationMs = Date.now() - startedAt;
   const summary = {
     durationMs,
+    hubsProcessed,
+    hubsSynced: hubsIndex.length,
     pagesProcessed,
     pagesSynced: syncedPages.length,
     pagesSkipped: stats.pagesSkipped,
     postsProcessed,
     postsSynced: postsIndex.length,
+    workshopsSynced: stats.workshopsSynced,
+    sprintsSynced: stats.sprintsSynced,
     databaseChildrenSynced: stats.databaseChildrenSynced,
     childPagesSynced: stats.childPagesSynced,
     imageMirrored: stats.imageMirrored,
@@ -1187,9 +2295,147 @@ export async function runFullSync(force: boolean = false) {
     ok: true,
     synced: syncedPages.length,
     posts: postsIndex.length,
+    hubs: hubsIndex.length,
     metrics: summary,
     imageFallbackSamples: stats.imageFallbacks.slice(0, 10),
   };
+}
+
+/**
+ * Targeted sync for a single slug (hub/page/post).
+ * Attempts hub first, then standard pages, then posts.
+ */
+export async function runSyncOne(slug: string, force: boolean = false) {
+  if (!PAGES_DB || !POSTS_DB || !HUBS_DB) {
+    throw new Error('Missing Notion database env vars');
+  }
+
+  const stats: SyncStats = {
+    imageMirrored: 0,
+    imageFallbacks: [],
+    missingBlocks: new Set<string>(),
+    recordMapPages: 0,
+    buttonsConverted: 0,
+    buttonSources: [],
+    unsupportedBlocks: [],
+    databaseChildrenSynced: 0,
+    childPagesSynced: 0,
+    pagesSkipped: 0,
+    hubsSynced: 0,
+    workshopsSynced: 0,
+    sprintsSynced: 0,
+  };
+  const startedAt = Date.now();
+  const normalized = slug.replace(/^\//, '');
+
+  const findBySlug = async (dbId: string) => {
+    const res = await queryDb(dbId, { page_size: 2, filter: { property: 'slug', rich_text: { equals: normalized } } });
+    return res.results.find(isFullPage) as PageObjectResponse | undefined;
+  };
+
+  // Try hub
+  let processedType: 'hub' | 'page' | 'post' | 'none' = 'none';
+  const hub = await findBySlug(HUBS_DB);
+  if (hub) {
+    await syncHub(hub, { stats, force });
+    processedType = 'hub';
+  } else {
+    const page = await findBySlug(PAGES_DB);
+    if (page) {
+      await syncPage(page, { type: 'page', stats, force });
+      processedType = 'page';
+    } else {
+      const post = await findBySlug(POSTS_DB);
+      if (post) {
+        await syncPage(post, { type: 'post', stats, force });
+        processedType = 'post';
+      }
+    }
+  }
+
+  const durationMs = Date.now() - startedAt;
+  const summary = {
+    durationMs,
+    processedType,
+    workshopsSynced: stats.workshopsSynced,
+    sprintsSynced: stats.sprintsSynced,
+    databaseChildrenSynced: stats.databaseChildrenSynced,
+    childPagesSynced: stats.childPagesSynced,
+    imageMirrored: stats.imageMirrored,
+    imageFallbacks: stats.imageFallbacks.length,
+    recordMapPages: stats.recordMapPages,
+    buttonsConverted: stats.buttonsConverted,
+  };
+
+  return {
+    ok: true,
+    slug: normalized,
+    processedType,
+    metrics: summary,
+  };
+}
+
+/**
+ * Targeted sync for a single sprint by slug (partial update, merges index).
+ */
+export async function runSyncSprintOne(slug: string, force: boolean = false) {
+  if (!SPRINTS_DB) {
+    throw new Error('Missing NOTION_SPRINTS_DB env var');
+  }
+
+  const stats: SyncStats = {
+    imageMirrored: 0,
+    imageFallbacks: [],
+    missingBlocks: new Set<string>(),
+    recordMapPages: 0,
+    buttonsConverted: 0,
+    buttonSources: [],
+    unsupportedBlocks: [],
+    databaseChildrenSynced: 0,
+    childPagesSynced: 0,
+    pagesSkipped: 0,
+    hubsSynced: 0,
+    workshopsSynced: 0,
+    sprintsSynced: 0,
+  };
+
+  const startedAt = Date.now();
+  const normalized = slug.replace(/^\//, '');
+
+  // Find sprint page by slug
+  const res = await queryDb(SPRINTS_DB, {
+    page_size: 1,
+    filter: { property: 'slug', rich_text: { equals: normalized } },
+  });
+  const page = res.results.find(isFullPage) as PageObjectResponse | undefined;
+  if (!page) {
+    return { ok: false, notFound: true, slug: normalized } as const;
+  }
+
+  await syncSprints({ stats, force }, [page]);
+
+  // Sync the associated Notion page (if exists) so the sprint page can render Blocks + sidebar
+  try {
+    await runSyncOne(`sprint/${normalized}`, force);
+  } catch (e) {
+    // Ignore if page does not exist; sprint page will still render modules
+  }
+
+  const durationMs = Date.now() - startedAt;
+  const summary = {
+    durationMs,
+    sprintsSynced: stats.sprintsSynced,
+    databaseChildrenSynced: stats.databaseChildrenSynced,
+    childPagesSynced: stats.childPagesSynced,
+    imageMirrored: stats.imageMirrored,
+    imageFallbacks: stats.imageFallbacks.length,
+  };
+
+  return {
+    ok: true,
+    slug: normalized,
+    metrics: summary,
+  } as const;
 }
 
 export async function GET(request: Request) {

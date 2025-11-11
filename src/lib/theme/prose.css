@@ -1,0 +1,77 @@
+/* Styles typographiques pour le contenu Notion */
+
+.prose {
+  max-width: 72ch;
+}
+
+.prose.max-w-none,
+.ui-card .prose {
+  max-width: none;
+}
+
+.prose h1 {
+  font-size: clamp(2.5rem, 3.6vw, 2.9rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.prose h2 {
+  font-size: clamp(2rem, 2.9vw, 2.3rem);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+}
+
+.prose h3 {
+  font-size: clamp(1.55rem, 2.1vw, 1.85rem);
+  line-height: 1.28;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+}
+
+.prose p {
+  font-size: clamp(1.05rem, 1.3vw, 1.125rem);
+  line-height: 1.65;
+}
+
+.prose .eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.prose :where(blockquote) {
+  margin: 1.5rem 0;
+  padding: 0;
+  background: none;
+  border-left: none;
+  font-style: inherit;
+}
+
+/* Callouts polymorphes (directives data-* posées par Blocks.tsx) */
+.callout[data-callout-tone="yellow"],
+.callout[data-callout-color*="yellow"] {
+  background: color-mix(in oklab, var(--brand-amber) 10%, #fff);
+  border-color: color-mix(in oklab, var(--brand-amber) 40%, transparent);
+}
+
+.callout[data-callout-tone="blue"],
+.callout[data-callout-color*="blue"] {
+  background: color-mix(in oklab, #60a5fa 10%, #fff);
+  border-color: color-mix(in oklab, #60a5fa 35%, transparent);
+}
+
+.callout[data-callout-tone="red"],
+.callout[data-callout-color*="red"] {
+  background: color-mix(in oklab, #f87171 10%, #fff);
+  border-color: color-mix(in oklab, #f87171 35%, transparent);
+}
+
+.callout[data-callout-tone="green"],
+.callout[data-callout-color*="green"] {
+  background: color-mix(in oklab, #34d399 12%, #fff);
+  border-color: color-mix(in oklab, #34d399 35%, transparent);
+}

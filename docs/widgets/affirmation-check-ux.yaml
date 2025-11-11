@@ -1,0 +1,13 @@
+widget: affirmation_check
+title: "Test rapide UX — Affirmations à cocher"
+showNotes: true
+items:
+  - test: "🎯 First Impression"
+    question: "Je comprends immédiatement ce que c’est."
+  - test: "🧪 Usability"
+    question: "Je peux accomplir l’action principale sans blocage."
+  - test: "💼 Professional Look"
+    question: "Ça donne une impression de clarté et de sérieux."
+  - test: "📱 Mobile Check"
+    question: "Tout s’affiche bien et fonctionne sur mobile."
+

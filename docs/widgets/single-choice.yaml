@@ -1,0 +1,9 @@
+widget: single_choice
+title: Décide ce que tu vas construire aujourd’hui
+question: Choisis une option (tu peux changer plus tard)
+options:
+  - label: "A · Workflow simple"
+    description: "Enchaîne 2–3 étapes claires (déclencheur → traitement → action)."
+  - label: "B · Agent complet"
+    description: "Conçois un agent avec logique, vérification humaine et sources de données."
+

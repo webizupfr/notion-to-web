@@ -1,0 +1,27 @@
+widget: prompt_template
+title: "Structure · Recomposition de la mise en page"
+template: |
+  Recompose la mise en page pour un rendu plus {{STYLE_CIBLE}} destiné à {{PUBLIC_CIBLE}}.
+
+  Objectifs:
+  - Clarifier la hiérarchie d’information (titres, intertitres, micro‑titres)
+  - Introduire une respiration visuelle équilibrée (marges, espacements verticaux)
+  - Fluidifier la lecture sur desktop et mobile
+
+  Contraintes / préférences:
+  - Sections prioritaires: {SECTIONS_PRIORITAIRES}
+  - Ton et image de marque: {TONALITE}
+
+  Détails de mise en page à appliquer:
+  - Grille et alignements: {GRILLE}
+  - Rythme des sections (alternance blocs): {RYTHME}
+  - Comportements responsive (breakpoints): {RESPONSIVE}
+
+  Livrables:
+  - Plan de page restructuré (liste ordonnée des sections)
+  - Liste des composants nécessaires
+  - Notes de design (espacements, tailles de titres)
+
+  Notes complémentaires:
+  {NOTES_BLOCK}
+

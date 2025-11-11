@@ -34,37 +34,50 @@ export default function Home() {
           Studio d’innovation
         </h2>
 
-        {/* Subtexte */}
-        <p className="mt-5 max-w-xl text-base sm:text-lg leading-relaxed text-neutral-600">
-          On passe des idées aux preuves&nbsp;: sprints innovation &amp; défis IA pour
-          prototyper, tester et décider vite. Formats courts, concrets, actionnables.
-        </p>
-
-                {/* CTA ligne 1 : tout noir */}
-        <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row">
-          <Link href="/sprint" className="btn btn-primary">
-            {/* Éclair */}
-            <svg className="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/>
-            </svg>
-            Sprint Innovation
-          </Link>
-
-          <Link href="/challenge" className="btn btn-primary">
-            {/* Icône build/proto = engrenage */}
-            <svg className="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-              <path d="M19.43 12.98l1.77-1.03a.75.75 0 00.28-.97l-1.7-2.94a.75.75 0 00-.95-.3l-2.08.87a6.48 6.48 0 00-1.5-.87l-.31-2.21a.75.75 0 00-.74-.64h-3.4a.75.75 0 00-.74.64l-.31 2.21a6.48 6.48 0 00-1.5.87l-2.08-.87a.75.75 0 00-.95.3l-1.7 2.94a.75.75 0 00.28.97l1.77 1.03a6.62 6.62 0 000 1.74l-1.77 1.03a.75.75 0 00-.28.97l1.7 2.94c.2.35.62.49.95.3l2.08-.87c.45.36.96.65 1.5.87l.31 2.21c.06.36.37.64.74.64h3.4c.37 0 .68-.28.74-.64l.31-2.21c.54-.22 1.05-.51 1.5-.87l2.08.87c.34.19.75.05.95-.3l1.7-2.94a.75.75 0 00-.28-.97l-1.77-1.03c.07-.57.07-1.16 0-1.74zM12 15.5A3.5 3.5 0 1112 8a3.5 3.5 0 010 7.5z"/>
-            </svg>
-            Challenge IA
-          </Link>
+        {/* Subtexte (Version 1 – manifeste percutant) */}
+        <div className="mt-5 max-w-xl text-base sm:text-lg leading-relaxed text-neutral-600">
+          <p>Ni cabinet de conseil.</p>
+          <p>Ni formation théorique.</p>
+          <p className="mt-1 text-neutral-800 font-medium">
+            Un studio d’action où l’on apprend en construisant,<br className="hidden sm:inline" />
+            et où chaque défi devient un moteur d’innovation.
+          </p>
         </div>
 
+          {/* CTA : deux portes (Studio / Lab) */}
+<div className="mt-10 flex flex-col items-center gap-6 sm:flex-row sm:gap-8">
+  {/* Le Studio */}
+  <div className="flex flex-col items-center text-center">
+    <Link href="/studio" className="btn btn-primary flex items-center gap-2">
+      <svg className="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M10 4h4a2 2 0 012 2v1h2a2 2 0 012 2v9a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2h2V6a2 2 0 012-2zm4 3V6h-4v1h4z" />
+      </svg>
+      Le Studio
+    </Link>
+    <p className="mt-2 text-sm text-neutral-500">
+      Équipes & campus
+    </p>
+  </div>
 
-        {/* CTA ligne 2 : accès protégé, style accent + cadenas */}
-        <div className="mt-3">
+  {/* Le Lab */}
+  <div className="flex flex-col items-center text-center">
+    <Link href="/lab" className="btn btn-primary flex items-center gap-2">
+      <svg className="icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M9 3h6v2l-2 3v7a3 3 0 11-6 0V8L9 5V3zm1 9v3a1 1 0 102 0v-3h-2z" />
+      </svg>
+      Le Lab
+    </Link>
+    <p className="mt-2 text-sm text-neutral-500">
+      Entrepreneurs
+    </p>
+  </div>
+</div>
+
+        {/* CTA secondaire : accès protégé (inchangé) */}
+        <div className="mt-6">
           <Link href="/gate?next=/" className="btn btn-accent" title="Accès aux espaces protégés">
             <svg className="icon" viewBox="0 0 24 24" fill="#111" aria-hidden="true">
-              <path d="M12 1a5 5 0 00-5 5v3H6a2 2 0 00-2 2v7a2 2 0 002 2h12a2 2 0 002-2v-7a2 2 0 00-2-2h-1V6a5 5 0 00-5-5zm-3 8V6a3 3 0 016 0v3H9z"/>
+              <path d="M12 1a5 5 0 00-5 5v3H6a2 2 0 00-2 2v7a2 2 0 002 2h12a2 2 0 002-2v-7a2 2 0 00-2-2h-1V6a5 5 0 00-5-5zm-3 8V6a3 3 0 016 0v3H9z" />
             </svg>
             Accès protégé
           </Link>

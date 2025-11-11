@@ -1,0 +1,21 @@
+widget: live_test
+title: "2️⃣ Le test « Agent Ready »"
+description: "Pose-toi ces 3 questions simples"
+questions:
+  - "Est-ce répétitif ? (Tu fais les mêmes étapes à chaque fois)"
+  - "Est-ce basé sur des règles ? (Tu pourrais expliquer à quelqu’un comment faire)"
+  - "Est-ce chronophage ? (+15 minutes OU revient chaque jour)"
+rules:
+  - minYes: 3
+    label: "Fort candidat Agent — à automatiser maintenant"
+    color: violet
+  - minYes: 2
+    label: "Bon candidat — à automatiser ensuite"
+    color: green
+  - minYes: 1
+    label: "Tâche humaine — garde-la manuelle pour l’instant"
+    color: red
+  - minYes: 0
+    label: "Pas encore un candidat"
+    color: gray
+

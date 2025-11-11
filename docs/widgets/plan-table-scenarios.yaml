@@ -1,0 +1,21 @@
+widget: plan_table
+title: Scénarios clés de ton agent
+rows:
+  - title: "Cas de succès"
+    info: |
+      Le cas nominal, quand la demande est claire et réalisable.
+      Indique le résultat attendu étape par étape (ce que l’agent doit faire de bout en bout).
+    placeholder: "Crée l’événement sans erreur (titre, date, participants, lieu)"
+
+  - title: "Cas limite"
+    info: |
+      Demande ambiguë ou incomplète. Écris la relance à poser pour clarifier
+      et la décision à prendre si l’utilisateur ne répond pas.
+    placeholder: "Demande un jour et une heure précis ; si pas de réponse, propose 2 créneaux"
+
+  - title: "Cas d’erreur"
+    info: |
+      Demande non faisable ou interdite. Rédige la réponse polie et
+      l’alternative/solution de repli que l’agent doit proposer.
+    placeholder: "Refuse poliment et propose une alternative (\"Je ne peux pas annuler sans ton accord. Souhaites‑tu que je rédige une demande à la place ?\")"
+

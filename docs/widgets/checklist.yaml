@@ -1,0 +1,18 @@
+widget: checklist
+title: Checklist
+columns: 2
+cta:
+  label: Continuer
+  href: "#"
+items:
+  - label: Process clair (étapes écrites)
+    help: "Note 3 étapes clés pour que ce soit actionnable."
+  - label: Exemple d’entrée (mail, message, formulaire…)
+    help: "Colle 1 exemple concret (ex: email réel reçu)."
+  - label: Exemple de sortie (à quoi ‘terminé’ ressemble)
+    help: "Décris le livrable attendu en 1-2 phrases."
+  - label: Source de données (où l’info est récupérée)
+    help: "Détaille la ou les sources (Notion, CRM, fichiers, API…)."
+  - label: Règles de décision ("Si X → alors Y")
+    help: "Écris 2–3 règles simples qui guideront l’agent."
+

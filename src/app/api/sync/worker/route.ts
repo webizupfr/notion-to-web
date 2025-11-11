@@ -13,6 +13,7 @@ import { NextResponse } from 'next/server';
 
 // PAS de maxDuration = pas de limite de temps ! 🎉
 export const runtime = 'nodejs';
+export const maxDuration = 300;
 
 const PAGES_DB = process.env.NOTION_PAGES_DB;
 const POSTS_DB = process.env.NOTION_POSTS_DB;
@@ -45,6 +46,7 @@ async function POST_HANDLER(request: Request) {
   try {
     const body = await request.json();
     const force = body.force ?? false;
+    const slug: string | undefined = body.slug ?? undefined;
     const triggeredAt = body.triggeredAt;
 
     console.log('[sync-worker] Force mode:', force);
@@ -53,9 +55,9 @@ async function POST_HANDLER(request: Request) {
     // Importer la fonction de sync depuis le module route
     // Cela permet d'exécuter la sync directement en TypeScript
     // SANS passer par HTTP et SANS limitation de temps ! 🎉
-    const { runFullSync } = await import('../route');
+    const { runFullSync, runSyncOne } = await import('../route');
 
-    console.log('[sync-worker] Running full sync directly (no HTTP, no timeout)...');
+    console.log('[sync-worker] Running sync...', { force, slug: slug ?? null });
 
     let result;
     let attempt = 0;
@@ -63,7 +65,12 @@ async function POST_HANDLER(request: Request) {
     
     while (attempt <= maxRetries) {
       try {
-        result = await runFullSync(force);
+        if (slug && typeof slug === 'string' && slug.trim()) {
+          const normalized = slug.replace(/^\//, '');
+          result = await runSyncOne(normalized, force);
+        } else {
+          result = await runFullSync(force);
+        }
         break; // Success, sortir de la boucle
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -88,12 +95,28 @@ async function POST_HANDLER(request: Request) {
     }
 
     console.log('[sync-worker] ✅ Sync completed successfully');
-    console.log('[sync-worker] Result:', {
-      synced: result.synced,
-      posts: result.posts,
-      duration: result.metrics.durationMs,
-      childPagesSynced: result.metrics.childPagesSynced,
-    });
+    const isObject = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+    if (isObject(result) && 'synced' in result) {
+      const metrics = isObject(result.metrics) ? result.metrics : {};
+      console.log('[sync-worker] Result:', {
+        scope: 'full',
+        synced: result.synced as number,
+        posts: (result as Record<string, unknown>).posts,
+        hubs: (result as Record<string, unknown>).hubs,
+        duration: (metrics as Record<string, unknown>).durationMs,
+        childPagesSynced: (metrics as Record<string, unknown>).childPagesSynced,
+      });
+    } else if (isObject(result) && 'slug' in result) {
+      const metrics = isObject(result.metrics) ? result.metrics : {};
+      console.log('[sync-worker] Result:', {
+        scope: 'one',
+        slug: result.slug,
+        type: (result as Record<string, unknown>).processedType,
+        duration: (metrics as Record<string, unknown>).durationMs,
+      });
+    } else {
+      console.log('[sync-worker] Result: (unknown shape)', result);
+    }
 
     return NextResponse.json({
       ok: true,
@@ -130,4 +153,3 @@ export const POST = async (request: Request) => {
   const verify = await verifySignature();
   return verify(POST_HANDLER)(request);
 };
-

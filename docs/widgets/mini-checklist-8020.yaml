@@ -1,0 +1,24 @@
+widget: plan_table
+title: "Ta mini‑checklist 80/20 — Ai‑je assez planifié ?"
+rows:
+  - title: "🩹 Pain Point Check"
+    info: |
+      Peux‑tu expliquer en une phrase quel problème ton app résout ?
+      Si la réponse n’est pas évidente, clarifie AVANT d’ajouter des fonctionnalités.
+    placeholder: "Ex: Aider une équipe à briser la glace en 10s au début des réunions."
+    multiline: true
+
+  - title: "👤 User Check"
+    info: |
+      Sais‑tu exactement pour qui tu construis ?
+      Une app floue pour tout le monde ne sert à personne; cible 1 persona précis.
+    placeholder: "Ex: Managers d’équipes hybrides (8–20 personnes)."
+    multiline: true
+
+  - title: "🔍 Reference Check"
+    info: |
+      As‑tu regardé au moins un bon exemple (produit, site, concurrent) pour t’inspirer ?
+      Ne réinvente pas la roue : améliore‑la.
+    placeholder: "Ex: Inspiration de ‘X’ pour la structure et ‘Y’ pour le style visuel."
+    multiline: true
+

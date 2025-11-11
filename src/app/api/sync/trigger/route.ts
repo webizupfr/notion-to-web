@@ -31,16 +31,10 @@ export async function GET(request: Request) {
     );
   }
 
-  if (!SITE_URL) {
-    return NextResponse.json(
-      { error: 'Missing NEXT_PUBLIC_SITE_URL or VERCEL_URL env var' },
-      { status: 500 }
-    );
-  }
-
   const { searchParams } = new URL(request.url);
   const secret = searchParams.get('secret');
   const force = searchParams.get('force') === '1' || searchParams.get('force') === 'true';
+  const slug = searchParams.get('slug') || undefined;
 
   // Vérifier le secret
   if (secret !== CRON_SECRET) {
@@ -54,19 +48,29 @@ export async function GET(request: Request) {
     });
 
     // Construire l'URL complète du worker
-    const workerUrl = SITE_URL.startsWith('http')
-      ? `${SITE_URL}/api/sync/worker`
-      : `https://${SITE_URL}/api/sync/worker`;
+    const resolvedSiteUrl = SITE_URL ?? (process.env.NODE_ENV !== 'production' ? 'http://localhost:3000' : null);
+    if (!resolvedSiteUrl) {
+      return NextResponse.json(
+        { error: 'Missing NEXT_PUBLIC_SITE_URL or VERCEL_URL env var' },
+        { status: 500 }
+      );
+    }
+
+    const workerUrl = resolvedSiteUrl.startsWith('http')
+      ? `${resolvedSiteUrl}/api/sync/worker`
+      : `https://${resolvedSiteUrl}/api/sync/worker`;
 
     console.log('[sync-trigger] Triggering background sync job');
     console.log('[sync-trigger] Worker URL:', workerUrl);
     console.log('[sync-trigger] Force:', force);
+    if (slug) console.log('[sync-trigger] Slug:', slug);
 
     // Envoyer le job en background
     const result = await qstash.publishJSON({
       url: workerUrl,
       body: {
         force,
+        slug,
         triggeredAt: new Date().toISOString(),
       },
       headers: {
@@ -101,4 +105,3 @@ export async function GET(request: Request) {
     );
   }
 }
-

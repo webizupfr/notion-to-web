@@ -1,0 +1,21 @@
+widget: suggestion_cards
+title: Choisis une piste (optionnel)
+cards:
+  - title: "Quelque chose de rapide et visuel"
+    suggestions:
+      - "Publie une capture d’écran de ton mini-dashboard ou de ton app IA"
+      - "Partage un schéma, un prompt, une note ou ton carnet d’expérimentations"
+      - "Montre ton \"avant / après\" d’un outil que tu as automatisé"
+
+  - title: "Quelque chose de ludique"
+    suggestions:
+      - "Partage un mème ou une image humoristique liée à l’IA ou au challenge"
+      - "Crée un mini quiz ou une devinette (\"Devine combien de temps j’ai gagné grâce à ce prompt ?\")"
+      - "Fais un post en mode \"Fun Fact\" : ce que tu as découvert par surprise"
+
+  - title: "Quelque chose de réfléchi et inspirant"
+    suggestions:
+      - "Raconte ton moment \"aha\" du défi"
+      - "Partage une leçon, une citation ou une conviction née de ton apprentissage"
+      - "Publie un court texte sur \"ce que l’IA m’a appris sur ma façon de penser ou de créer\""
+

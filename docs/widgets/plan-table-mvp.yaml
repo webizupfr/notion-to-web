@@ -1,0 +1,43 @@
+widget: plan_table
+title: MVP — Spécification rapide
+rows:
+  - title: "Core feature (fonction cœur)"
+    info: |
+      L’action principale que l’utilisateur peut accomplir. 
+      Formule simple « verbe d’action + objet » et garde un seul parcours clé.
+    placeholder: "Générer des questions aléatoires au clic sur un bouton"
+
+  - title: "Must‑have (obligatoires)"
+    info: |
+      Fonctionnalités essentielles à livrer DANS le MVP (2–4 éléments). 
+      Liste courte qui rend la valeur utilisable dès J1.
+    placeholder: "Filtres de catégories; bouton Copier"
+    multiline: true
+
+  - title: "Nice‑to‑have (plus tard)"
+    info: |
+      Idées utiles mais non bloquantes. À reporter à une prochaine itération 
+      pour ne pas retarder la mise en production.
+    placeholder: "Favoris; historique"
+    multiline: true
+
+  - title: "Périmètre / Hors‑scope"
+    info: |
+      Ce que le MVP NE fera PAS (ou pas tout de suite). 
+      Permet d’éviter l’extension de périmètre.
+    placeholder: "Pas d’authentification; pas de partage public; aucune personnalisation avancée"
+    multiline: true
+
+  - title: "Critères de succès"
+    info: |
+      Comment juger que le MVP atteint son objectif (quantitatif et/ou qualitatif).
+      1 à 3 critères maximum.
+    placeholder: "≥ 20 personnes utilisent l’outil 1 fois/semaine; 80% des retours positifs sur la clarté"
+    multiline: true
+
+  - title: "Délais & effort"
+    info: |
+      Horizon de livraison, jalons (si besoin) et estimation d’effort (très grossière).
+    placeholder: "Livraison en 1 semaine; 2 itérations prévues; 1/2 journée design, 2 jours dev"
+    multiline: true
+

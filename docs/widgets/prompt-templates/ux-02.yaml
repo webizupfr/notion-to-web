@@ -1,0 +1,18 @@
+widget: prompt_template
+title: "UX · Parcours & cohérence des liens"
+template: |
+  Vérifie la cohérence des liens, ancres et appels à l’action pour un parcours fluide sur mobile et desktop.
+
+  Parcours cible (depuis → jusqu’à): {PARCOURS}
+  Pages/sections clés: {PAGES_CLES}
+  Objectif de conversion: {OBJECTIF}
+
+  Points de contrôle:
+  - Libellés de liens/CTA cohérents: {LIBELLES}
+  - Ancrages et retours en haut de page: {ANCRAGES}
+  - États actifs/visited/focus: {ETATS}
+  - Numéros de téléphone / emails cliquables (mobile): {CLIQUABLES}
+
+  Correctifs à appliquer:
+  {CORRECTIFS_BLOCK}
+
