@@ -149,24 +149,7 @@ function parseYouTube(url: string): { embed: string } | null {
   return null;
 }
 
-function parseTally(url: string): { embed: string } | null {
-  try {
-    const u = new URL(url);
-    const host = u.hostname.replace(/^www\./, '');
-    if (host !== 'tally.so') return null;
-    // Support links like /r/<id> or /embed/<id>
-    const parts = u.pathname.split('/').filter(Boolean);
-    const id = parts.length >= 2 ? parts[1] : parts[0];
-    if (!id) return null;
-    const qs = new URLSearchParams(u.search);
-    // default helpful params
-    if (!qs.has('transparentBackground')) qs.set('transparentBackground', '1');
-    if (!qs.has('hideTitle')) qs.set('hideTitle', '1');
-    if (!qs.has('dynamicHeight')) qs.set('dynamicHeight', '1');
-    const embed = `https://tally.so/embed/${id}?${qs.toString()}`;
-    return { embed };
-  } catch { return null; }
-}
+// (removed unused parseTally helper; use <TallyEmbed />)
 
 function TallyFigure({ url, caption }: { url: string; caption?: string | null }) {
   const cleanCaption = caption?.trim() || null;
@@ -696,8 +679,7 @@ export async function renderBlockAsync(block: NotionBlock, currentSlug?: string)
       return <SectionTitle as="h3">{renderRichText(block.heading_3.rich_text)}</SectionTitle>;
 
     case "quote": {
-      const author = block.quote.caption?.[0]?.plain_text ?? null;
-      return <PullQuote author={author}>{renderRichText(block.quote.rich_text)}</PullQuote>;
+      return <PullQuote>{renderRichText(block.quote.rich_text)}</PullQuote>;
     }
 
     case "to_do": {
@@ -728,9 +710,10 @@ export async function renderBlockAsync(block: NotionBlock, currentSlug?: string)
 
       const tone = notionColorTone(block.toggle.color);
       const variant = resolveCalloutVariant(tone);
+      const accVariant = (variant === 'info' || variant === 'success' || variant === 'warning' || variant === 'danger' || variant === 'neutral') ? variant : 'neutral';
 
       return (
-        <Accordion title={renderRichText(block.toggle.rich_text)} variant={variant}>
+        <Accordion title={renderRichText(block.toggle.rich_text)} variant={accVariant}>
           {getBlockChildren(block).length ? (
             <Blocks blocks={getBlockChildren(block)} currentSlug={currentSlug} />
           ) : null}
@@ -834,8 +817,8 @@ export async function renderBlockAsync(block: NotionBlock, currentSlug?: string)
       const richText = renderRichText(block.callout.rich_text);
 
       // Harmonized defaults: neutral surface, accent bar for variants
-      let frame: 'none'|'solid'|'dotted' | undefined = 'none';
-      let density: 'compact'|'comfy' = 'compact';
+      const frame: 'none'|'solid'|'dotted' | undefined = 'none';
+      const density: 'compact'|'comfy' = 'compact';
       let accentBar: boolean | undefined;
       let labelOverride: string | null | undefined;
       let bgColorOverride: string | null | undefined;

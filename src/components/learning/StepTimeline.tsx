@@ -102,7 +102,7 @@ export function StepTimeline({ steps, basePath, activeIndex, allowManualToggle =
                   <button
                     className={`h-4 w-4 rounded-md border ${isDone ? 'bg-emerald-100 border-emerald-300' : 'bg-white hover:bg-slate-50'}`}
                     onClick={() => toggle(s.id)}
-                    aria-checked={isDone}
+                    aria-pressed={isDone}
                     title={isDone ? 'Marquée comme faite' : 'Marquer comme faite'}
                   >
                     {isDone ? '✓' : ''}

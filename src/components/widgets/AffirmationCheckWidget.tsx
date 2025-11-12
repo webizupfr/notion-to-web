@@ -17,7 +17,6 @@ export function AffirmationCheckWidget({ config, storageKey }: { config: Affirma
         if (Array.isArray(obj.n) && obj.n.length === config.items.length) setNotes(obj.n);
       }
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, config.items.length]);
 
   useEffect(() => {
@@ -74,4 +73,3 @@ export function AffirmationCheckWidget({ config, storageKey }: { config: Affirma
     </section>
   );
 }
-

@@ -88,7 +88,12 @@ export function PersonaBuilderWidget({ config, storageKey }: { config: PersonaBu
   const download = () => {
     const blob = new Blob([output], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `${(config.outputTitle ?? name || 'fiche-persona').replace(/\s+/g,'-').toLowerCase()}.md`; a.click(); URL.revokeObjectURL(url);
+    const a = document.createElement('a');
+    a.href = url;
+    const base = (config.outputTitle ?? (name || 'fiche-persona'));
+    a.download = `${base.replace(/\s+/g,'-').toLowerCase()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
   const reset = () => { setProfile({}); setHypo({}); setName(''); try { localStorage.removeItem(storeKey); } catch {} };
 
@@ -144,4 +149,3 @@ export function PersonaBuilderWidget({ config, storageKey }: { config: PersonaBu
     </section>
   );
 }
-

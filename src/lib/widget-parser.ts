@@ -85,6 +85,19 @@ export type TabsFormWidgetConfig = {
   wide?: boolean;
 };
 
+// Evidence board (tri des données)
+export type EvidenceColumn = {
+  id: string;
+  label: string;
+  help?: string;
+};
+
+export type EvidenceBoardWidgetConfig = {
+  widget: 'evidence_board';
+  title?: string;
+  columns: EvidenceColumn[];
+};
+
 export type WidgetConfig =
   | FormWidgetConfig
   | PromptWidgetConfig

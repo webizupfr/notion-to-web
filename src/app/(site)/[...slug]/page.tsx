@@ -1,6 +1,6 @@
 import { Blocks } from "@/components/notion/Blocks";
 import { PageSidebar } from "@/components/layout/PageSidebar";
-import { getPageBundle } from "@/lib/content-store";
+import { getPageBundle, getDbBundleFromCache } from "@/lib/content-store";
 import { unstable_cache } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { StepWizard } from "@/components/learning/StepWizard";
@@ -127,7 +127,84 @@ export default async function Page({
   if (showSidebar) {
     const navTitle = isChildWithParent ? meta.parentTitle! : meta.title;
     const baseNavigation = isChildWithParent ? meta.parentNavigation! : meta.navigation!;
-    const navigation = baseNavigation.map((item) => {
+
+    // Attempt custom mini-nav for inline DB child pages
+    let customNavigation: typeof baseNavigation | null = null;
+    if (isChildWithParent) {
+      try {
+        // Load parent bundle blocks to detect linked databases
+        const parentBundle = await unstable_cache(
+          async () => await getPageBundle(meta.parentSlug!),
+          ["page-bundle:" + meta.parentSlug!],
+          { tags: ["page:" + meta.parentSlug!], revalidate: 60 }
+        )();
+
+        const parentBlocks = parentBundle?.blocks ?? [];
+
+        // Collect candidate database ids from parent blocks (linked_db, child_database, link_to_page:database_id)
+        const dbIds = new Set<string>();
+        const add = (v?: string | null) => { if (v && v.trim()) dbIds.add(v.trim()); };
+        const visit = (nodes: any[]) => {
+          for (const b of nodes) {
+            // child_database block: use block id as fallback
+            if (b?.type === 'child_database') add(typeof b?.id === 'string' ? b.id : undefined);
+            // link_to_page to database
+            const ltp = (b as any)?.link_to_page;
+            if (ltp && typeof ltp === 'object' && ltp.type === 'database_id') add(ltp.database_id as string);
+            // linked_db shape
+            const ldb = (b as any)?.linked_db;
+            if (ldb && typeof ldb === 'object') add((ldb as any).database_id as string);
+            // collection pointer in format
+            const fmt = (b as any)?.format;
+            const ptr = fmt && typeof fmt === 'object' ? (fmt as any).collection_pointer : null;
+            if (ptr && typeof ptr === 'object') add((ptr as any).id as string);
+
+            const children = (b as any)?.__children;
+            if (Array.isArray(children) && children.length) visit(children);
+          }
+        };
+        visit(parentBlocks as any[]);
+
+        // Find the database bundle that contains the current page notionId
+        const canonical = (s: string | null | undefined) => (s ? s.replace(/-/g, '').toLowerCase() : '');
+        const currentId = canonical(bundle.meta.notionId);
+
+        let matchedItems: Array<{ id: string; title: string; slug: string | null }> | null = null;
+        for (const id of dbIds) {
+          const entry = await getDbBundleFromCache(id, '_');
+          const items = entry?.bundle?.items ?? [];
+          if (!items.length) continue;
+          const hasCurrent = items.some((it) => canonical(it.id) === currentId);
+          if (hasCurrent) {
+            matchedItems = items.map((it) => ({ id: it.id, title: it.title, slug: it.slug ?? null }));
+            break;
+          }
+        }
+
+        if (matchedItems && matchedItems.length) {
+          const parent = meta.parentSlug!;
+          const siblings = matchedItems
+            .filter((it) => it.slug && canonical(it.id) !== currentId)
+            .map((it) => ({ id: it.id, title: it.title, slug: `${parent}/${it.slug!}` }));
+
+          customNavigation = [
+            {
+              type: 'page',
+              title: `← ${meta.parentTitle ?? 'Retour'}`,
+              slug: parent,
+              icon: null,
+            },
+            {
+              type: 'section',
+              title: 'Autres contenus',
+              children: siblings,
+            },
+          ] as typeof baseNavigation;
+        }
+      } catch {}
+    }
+
+    const navigation = (customNavigation ?? baseNavigation).map((item) => {
       if (item.type === 'section' && item.children) {
         return {
           ...item,

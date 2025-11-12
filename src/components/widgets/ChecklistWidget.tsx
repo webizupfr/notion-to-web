@@ -13,7 +13,6 @@ export function ChecklistWidget({ config, storageKey }: { config: ChecklistWidge
       const arr = saved ? (JSON.parse(saved) as boolean[]) : null;
       if (Array.isArray(arr) && arr.length === count) setChecked(arr);
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count, storageKey]);
 
   useEffect(() => {

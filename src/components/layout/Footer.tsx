@@ -18,7 +18,7 @@ export function Footer({ size = "narrow" }: { size?: ContainerSize }) {
             >
               <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
             </svg>
-            <span>Impulsion — Studio d’innovation</span>
+            <span>Impulsion - Studio d’innovation</span>
           </div>
           <p className="text-xs uppercase tracking-wide text-slate-500">
             Stratégie. Design. Action.
@@ -33,7 +33,7 @@ export function Footer({ size = "narrow" }: { size?: ContainerSize }) {
               Contact
             </Link>
             <a
-              href="https://www.linkedin.com/company/impulsion-studio"
+              href="https://www.linkedin.com/company/impulsionstudio"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-slate-900 transition"

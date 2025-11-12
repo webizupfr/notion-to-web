@@ -124,15 +124,14 @@ export function InfoCard({
   const resolvedBar = accentBar ?? defaults.accentBar;
   const showIcon = (icon === null) ? false : (icon ? true : defaults.showIcon);
   const bg = bgColorOverride ?? defaults.bg;
-  const borderColor = defaults.border;
   const label = labelOverride === undefined ? defaults.label : labelOverride;
   const displayIcon = showIcon ? (icon ?? styles.fallbackIcon) : null;
 
   // Variant-aware paddings and elevation
   const basePadding = density === 'compact' ? 'py-3 px-5' : 'py-5 px-6';
   const padding = variant === 'grey' ? 'py-2.5 px-4' : variant === 'neutral' ? 'py-3 px-5' : basePadding;
-  const borderStyle = 'solid';
-  const borderWidth = '1px';
+  const borderStyle = resolvedFrame === 'dotted' ? 'dotted' : 'solid';
+  const borderWidth = resolvedFrame === 'none' ? '0px' : '1px';
   const elevationClass = 'shadow-none';
 
   const backgroundCss = styles.overlay

@@ -187,7 +187,7 @@ export function BrainstormDeckWidget({ config, storageKey }: { config: Brainstor
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<ReturnType<typeof window.setTimeout> | null>(null);
+  const toastTimer = useRef<number | null>(null);
 
   useEffect(() => {
     if (!config.dataset && initialCards.length) {

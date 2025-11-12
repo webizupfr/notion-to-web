@@ -30,11 +30,14 @@ import {
   type PageBundle,
   type WorkshopBundle,
   type WorkshopsIndex,
+  type SprintsIndex,
+  type SprintActivity,
+  type SprintModule,
   type SprintBundle,
 } from '@/lib/content-store';
 import { parseYaml } from '@/lib/meta';
 import { WorkshopMetaSchema, SprintMetaSchema, ModuleMetaSchema } from '@/lib/meta-schemas';
-import type { PageMeta, PostMeta, NavItem, HubMeta, LearningPath, DayEntry, ActivityStep, SprintSettings } from '@/lib/types';
+import type { PageMeta, PostMeta, NavItem, HubMeta, LearningPath, DayEntry, ActivityStep, SprintSettings, ModuleSettings } from '@/lib/types';
 import { notion } from '@/lib/notion';
 import type { DbBundle } from '@/lib/db-render';
 import { fetchDatabaseBundle } from '@/lib/db-render';
@@ -2417,7 +2420,7 @@ export async function runSyncSprintOne(slug: string, force: boolean = false) {
   // Sync the associated Notion page (if exists) so the sprint page can render Blocks + sidebar
   try {
     await runSyncOne(`sprint/${normalized}`, force);
-  } catch (e) {
+  } catch {
     // Ignore if page does not exist; sprint page will still render modules
   }
 

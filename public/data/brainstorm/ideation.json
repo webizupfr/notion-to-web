@@ -4,7 +4,6 @@
   { "id": "img-007", "type": "image", "imageUrl": "https://images.unsplash.com/photo-1702495384099-de961c3d160c?auto=format&fit=crop&q=80&w=2000", "credit": "Unsplash — Alvéole Buzz", "tags": ["biodiversité","toit","pédagogie"] },
   { "id": "img-009", "type": "image", "imageUrl": "https://images.unsplash.com/photo-1505820013142-f86a3439c5b2?auto=format&fit=crop&q=80&w=2000", "credit": "Unsplash — ready made", "tags": ["zéro-déchet","vrac","local"] },
   { "id": "img-010", "type": "image", "imageUrl": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=2000", "credit": "Unsplash — Thomas Tucker", "tags": ["activation","convivial","nocturne"] },
-
   { "id": "img-011", "type": "image", "imageUrl": "https://source.unsplash.com/1600x900/?community,kitchen", "credit": "Unsplash — query: community,kitchen", "tags": ["alimentation","lien_social"] },
   { "id": "img-012", "type": "image", "imageUrl": "https://source.unsplash.com/1600x900/?tool,library", "credit": "Unsplash — query: tool,library", "tags": ["partage","sobriété"] },
   { "id": "img-013", "type": "image", "imageUrl": "https://source.unsplash.com/1600x900/?bike,repair,workshop", "credit": "Unsplash — query: bike,repair", "tags": ["mobilité","DIY"] },
@@ -15,7 +14,6 @@
   { "id": "img-018", "type": "image", "imageUrl": "https://source.unsplash.com/1600x900/?digital,inclusion", "credit": "Unsplash — query: digital,inclusion", "tags": ["numérique","apprentissage"] },
   { "id": "img-019", "type": "image", "imageUrl": "https://source.unsplash.com/1600x900/?green,corridor,trees", "credit": "Unsplash — query: green,corridor", "tags": ["mobilité_douce","climat"] },
   { "id": "img-020", "type": "image", "imageUrl": "https://source.unsplash.com/1600x900/?pop-up,kiosk", "credit": "Unsplash — query: pop-up,kiosk", "tags": ["éphémère","local"] },
-
   { "id": "img-021", "type": "image", "imageUrl": "https://source.unsplash.com/1600x900/?farmers,market", "credit": "Unsplash — query: farmers,market", "tags": ["local","circuits_courts"] },
   { "id": "img-022", "type": "image", "imageUrl": "https://source.unsplash.com/1600x900/?urban,compost", "credit": "Unsplash — query: urban,compost", "tags": ["écologie","communauté"] },
   { "id": "img-023", "type": "image", "imageUrl": "https://source.unsplash.com/1600x900/?street,festival", "credit": "Unsplash — query: street,festival", "tags": ["convivialité","activation"] },

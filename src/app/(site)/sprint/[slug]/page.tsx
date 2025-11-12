@@ -4,7 +4,7 @@ import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
 
 import { getSprintBundle } from "@/lib/content-store";
-import type { NavItem } from "@/lib/types";
+import type { NavItem, DayEntry, ActivityStep } from "@/lib/types";
 import { Blocks } from "@/components/notion/Blocks";
 import { PageSidebar } from "@/components/layout/PageSidebar";
 import { HubFlag } from "@/components/layout/HubFlag";
@@ -12,19 +12,6 @@ import { nowInTimezone } from "@/lib/cohorts";
 import { EmptyState } from "@/components/states/EmptyState";
 
 export const revalidate = 0;
-
-function formatUnlock(dateIso: string | null | undefined, timezone: string) {
-  if (!dateIso) return null;
-  const date = new Date(dateIso);
-  return new Intl.DateTimeFormat("fr-FR", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
 
 function timeUntil(dateIso: string | null | undefined): string | null {
   if (!dateIso) return null;
@@ -138,7 +125,6 @@ export default async function SprintPage({
   const ModulesSection = (
     <div className="grid gap-6 md:grid-cols-2">
       {bundle.modules.map((module, index) => {
-        const unlockLabel = formatUnlock(module.unlockAtISO, timezone);
         const countdown = timeUntil(module.unlockAtISO);
         const number = module.order > 0 ? module.order : index + 1;
         const dayBadge = typeof module.dayIndex === 'number' ? `Jour ${(module.dayIndex ?? 0) + 1}` : null;
@@ -198,13 +184,13 @@ export default async function SprintPage({
   // Si sidebar active: layout "Hub-like" avec Notion Blocks + Modules
   if (showSidebar) {
     // Map modules en liste pour l'accès rapide (mode modules)
-    const releasedModules = bundle.modules.map((m, idx) => ({
+    const releasedModules: DayEntry[] = bundle.modules.map((m, idx) => ({
       id: m.slug,
       order: m.order > 0 ? m.order : idx + 1,
       slug: `sprint/${slug}/${m.slug}`,
       title: m.title,
       summary: m.description ?? null,
-      steps: [],
+      steps: [] as ActivityStep[],
     }));
     return (
       <div className="mx-auto flex w-full max-w-[1800px] gap-10" data-hub={1}>
@@ -216,7 +202,7 @@ export default async function SprintPage({
             navigation={navigation}
             isHub={true}
             hubDescription={bundle.description ?? null}
-            releasedDays={releasedModules as any}
+            releasedDays={releasedModules}
             learningKind={"modules"}
             unitLabelSingular="Module"
             unitLabelPlural="Modules"
@@ -230,7 +216,7 @@ export default async function SprintPage({
             navigation={navigation}
             isHub={true}
             hubDescription={bundle.description ?? null}
-            releasedDays={releasedModules as any}
+            releasedDays={releasedModules}
             learningKind={"modules"}
             unitLabelSingular="Module"
             unitLabelPlural="Modules"

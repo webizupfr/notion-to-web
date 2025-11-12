@@ -16,7 +16,6 @@ export function PlanTableWidget({ config, storageKey }: { config: PlanTableWidge
       const arr = saved ? (JSON.parse(saved) as string[]) : null;
       if (Array.isArray(arr) && arr.length === config.rows.length) setValues(arr);
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.rows.length, storeKey]);
 
   useEffect(() => {

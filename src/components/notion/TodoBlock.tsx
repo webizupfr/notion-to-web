@@ -27,7 +27,6 @@ export function TodoBlock({
       if (saved === "0" || saved === "false") setChecked(false);
     } catch {/* ignore */}
     setMounted(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   useEffect(() => {

@@ -15,7 +15,6 @@ export function SimpleChecklistWidget({ config, storageKey }: { config: SimpleCh
       const arr = saved ? (JSON.parse(saved) as boolean[]) : null;
       if (Array.isArray(arr) && arr.length === config.items.length) setChecked(arr);
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasBoxes, config.items.length, storageKey]);
 
   useEffect(() => {
