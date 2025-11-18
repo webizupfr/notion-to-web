@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { unstable_cache } from "next/cache";
 
 import { Container } from "@/components/layout/Container";
@@ -42,11 +43,29 @@ export default async function HubsIndex() {
             className="group rounded-2xl border border-slate-200/60 bg-white/40 p-6 backdrop-blur transition hover:border-emerald-400/60 hover:bg-white/60"
           >
             <div className="space-y-4">
-              {hub.icon && (
-                <div className="text-3xl" aria-hidden="true">
-                  {hub.icon}
-                </div>
-              )}
+              {hub.visibility === 'private' ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                  <span aria-hidden>🔒</span> Privé
+                </span>
+              ) : null}
+              {hub.icon ? (
+                /^https?:\/\//.test(hub.icon) ? (
+                  <div className="relative h-10 w-10 overflow-hidden rounded-lg border bg-white/70">
+                    <Image
+                      src={hub.icon}
+                      alt=""
+                      fill
+                      sizes="40px"
+                      className="object-contain p-1"
+                      priority={false}
+                    />
+                  </div>
+                ) : (
+                  <div className="text-3xl" aria-hidden="true">
+                    {hub.icon}
+                  </div>
+                )
+              ) : null}
               <div>
                 <h2 className="text-lg font-semibold text-slate-900 transition group-hover:text-emerald-600">
                   {hub.title}

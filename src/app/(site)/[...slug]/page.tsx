@@ -1,6 +1,7 @@
 import { Blocks } from "@/components/notion/Blocks";
 import { PageSidebar } from "@/components/layout/PageSidebar";
 import { getPageBundle, getDbBundleFromCache } from "@/lib/content-store";
+import type { NotionBlock } from "@/lib/notion";
 import { unstable_cache } from "next/cache";
 import { notFound, redirect } from "next/navigation";
 import { StepWizard } from "@/components/learning/StepWizard";
@@ -139,31 +140,46 @@ export default async function Page({
           { tags: ["page:" + meta.parentSlug!], revalidate: 60 }
         )();
 
-        const parentBlocks = parentBundle?.blocks ?? [];
+        const parentBlocks: NotionBlock[] = (parentBundle?.blocks ?? []) as NotionBlock[];
 
         // Collect candidate database ids from parent blocks (linked_db, child_database, link_to_page:database_id)
         const dbIds = new Set<string>();
         const add = (v?: string | null) => { if (v && v.trim()) dbIds.add(v.trim()); };
-        const visit = (nodes: any[]) => {
-          for (const b of nodes) {
+        const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+        const visit = (nodes: ReadonlyArray<unknown>) => {
+          for (const n of nodes) {
+            if (!isRecord(n)) continue;
+            const type = (n as { type?: string }).type;
             // child_database block: use block id as fallback
-            if (b?.type === 'child_database') add(typeof b?.id === 'string' ? b.id : undefined);
+            if (type === 'child_database') {
+              const idVal = (n as { id?: unknown }).id;
+              add(typeof idVal === 'string' ? idVal : undefined);
+            }
             // link_to_page to database
-            const ltp = (b as any)?.link_to_page;
-            if (ltp && typeof ltp === 'object' && ltp.type === 'database_id') add(ltp.database_id as string);
+            const ltp = (n as { link_to_page?: unknown }).link_to_page;
+            if (isRecord(ltp) && (ltp as { type?: string }).type === 'database_id') {
+              const dbid = (ltp as { database_id?: unknown }).database_id;
+              add(typeof dbid === 'string' ? dbid : undefined);
+            }
             // linked_db shape
-            const ldb = (b as any)?.linked_db;
-            if (ldb && typeof ldb === 'object') add((ldb as any).database_id as string);
+            const ldb = (n as { linked_db?: unknown }).linked_db;
+            if (isRecord(ldb)) {
+              const dbid = (ldb as { database_id?: unknown }).database_id;
+              add(typeof dbid === 'string' ? dbid : undefined);
+            }
             // collection pointer in format
-            const fmt = (b as any)?.format;
-            const ptr = fmt && typeof fmt === 'object' ? (fmt as any).collection_pointer : null;
-            if (ptr && typeof ptr === 'object') add((ptr as any).id as string);
+            const fmt = (n as { format?: unknown }).format;
+            const ptr = isRecord(fmt) ? (fmt as { collection_pointer?: unknown }).collection_pointer : null;
+            if (isRecord(ptr)) {
+              const pid = (ptr as { id?: unknown }).id;
+              add(typeof pid === 'string' ? pid : undefined);
+            }
 
-            const children = (b as any)?.__children;
-            if (Array.isArray(children) && children.length) visit(children);
+            const children = (n as { __children?: unknown }).__children;
+            if (Array.isArray(children) && children.length) visit(children as unknown[]);
           }
         };
-        visit(parentBlocks as any[]);
+        visit(parentBlocks as unknown[]);
 
         // Find the database bundle that contains the current page notionId
         const canonical = (s: string | null | undefined) => (s ? s.replace(/-/g, '').toLowerCase() : '');

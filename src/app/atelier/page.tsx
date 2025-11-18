@@ -41,6 +41,11 @@ export default async function WorkshopsIndexPage() {
             className="group flex flex-col justify-between rounded-2xl border border-white/50 bg-white/70 p-6 shadow-sm backdrop-blur transition hover:-translate-y-1 hover:border-amber-300"
           >
             <div className="space-y-2">
+              {item.visibility === 'private' ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                  <span aria-hidden>🔒</span> Privé
+                </span>
+              ) : null}
               <h2 className="text-lg font-semibold text-slate-900 group-hover:text-amber-600">
                 {item.title}
               </h2>

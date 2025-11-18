@@ -338,6 +338,9 @@ export type PromptTemplateWidgetConfig = {
   title?: string;
   template: string;
   fields: AutoPromptField[];
+  // optional visual tweaks (align with PromptWidget)
+  theme?: 'light' | 'dark';
+  wide?: boolean;
 };
 
 // Fill-in-the-blanks widget (inline inputs inside a rich template)
@@ -948,7 +951,17 @@ export function parseWidget(code: string): WidgetConfig | null {
       });
     }
 
-    return { widget: 'prompt_template', title: typeof obj.title === 'string' ? obj.title : undefined, template, fields } satisfies PromptTemplateWidgetConfig;
+    return {
+      widget: 'prompt_template',
+      title: typeof obj.title === 'string' ? obj.title : undefined,
+      template,
+      fields,
+      theme: ((): 'light' | 'dark' | undefined => {
+        const t = (obj as Record<string, unknown>).theme;
+        return t === 'dark' ? 'dark' : t === 'light' ? 'light' : undefined;
+      })(),
+      wide: Boolean((obj as Record<string, unknown>).wide),
+    } satisfies PromptTemplateWidgetConfig;
   }
 
   if (widgetType === 'fill_blanks') {

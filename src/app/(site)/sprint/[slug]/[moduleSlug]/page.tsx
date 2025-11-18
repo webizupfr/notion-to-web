@@ -4,7 +4,9 @@ import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
 
 import { getSprintBundle } from "@/lib/content-store";
+import { getPageBundle } from "@/lib/content-store";
 import { ActivityContent } from "@/components/learning/ActivityContent";
+import { Blocks } from "@/components/notion/Blocks";
 import { StepTimeline } from "@/components/learning/StepTimeline";
 import { StepNavBar } from "@/components/learning/StepNavBar";
 import { PageSidebar } from "@/components/layout/PageSidebar";
@@ -62,7 +64,78 @@ export default async function SprintModulePage({
 
   const moduleIndex = bundle.modules.findIndex((item) => item.slug === moduleSlug);
   const currentModule = moduleIndex >= 0 ? bundle.modules[moduleIndex] : undefined;
-  if (!currentModule) return notFound();
+
+  // Fallback: if no module matches, try rendering a synced child page under this sprint
+  if (!currentModule) {
+    const childSlug = `sprint/${slug}/${moduleSlug}`;
+    const childBundle = await unstable_cache(
+      async () => await getPageBundle(childSlug),
+      ["sprint-child:" + childSlug],
+      { tags: ["page:" + childSlug], revalidate: 60 }
+    )();
+
+    if (!childBundle) return notFound();
+
+    // Gate if the child page is private
+    if ((childBundle.meta.visibility ?? 'public') === 'private') {
+      const sp = (await (searchParams as Promise<Record<string, string>>).catch(() => undefined)) || (searchParams as Record<string, string> | undefined);
+      const cookieStore: Awaited<ReturnType<typeof cookies>> = await cookies();
+      const cookieKey = cookieStore.get('gate_key')?.value;
+      const rawKey = ((sp?.key ?? sp?.token) as string | undefined) || cookieKey;
+      const key = rawKey?.trim() ?? '';
+      const password = childBundle.meta.password?.trim() ?? '';
+      if (!key) redirect(`/gate?next=/${childSlug}`);
+      if (password && key !== password) redirect(`/gate?next=/${childSlug}&e=1`);
+    }
+
+    const parentTitle = childBundle.meta.parentTitle ?? bundle.title;
+    const parentSlug = childBundle.meta.parentSlug ?? `sprint/${slug}`;
+    const navigation: NavItem[] = (childBundle.meta.parentNavigation as NavItem[] | undefined) ?? (bundle.contextNavigation as NavItem[] | null) ?? [];
+
+    return (
+      <div className="mx-auto flex w-full max-w-[1800px] gap-10" data-hub={1}>
+        <HubFlag value={true} />
+        <div className="hidden lg:block lg:flex-shrink-0">
+          <PageSidebar
+            parentTitle={parentTitle}
+            parentSlug={parentSlug}
+            navigation={navigation}
+            isHub={true}
+            hubDescription={bundle.description ?? null}
+            releasedDays={[]}
+            learningKind={"modules"}
+            unitLabelSingular="Module"
+            unitLabelPlural="Modules"
+          />
+        </div>
+        <div className="lg:hidden">
+          <PageSidebar
+            parentTitle={parentTitle}
+            parentSlug={parentSlug}
+            navigation={navigation}
+            isHub={true}
+            hubDescription={bundle.description ?? null}
+            releasedDays={[]}
+            learningKind={"modules"}
+            unitLabelSingular="Module"
+            unitLabelPlural="Modules"
+          />
+        </div>
+
+        <section className="flex-1 min-w-0 space-y-6 px-6 py-12 sm:px-12">
+          <header className="space-y-3">
+            <Link href={`/${parentSlug}`} className="text-sm text-teal-600 underline">
+              ← Retour au sprint
+            </Link>
+            <h1 className="text-3xl font-semibold text-slate-900">{childBundle.meta.title}</h1>
+          </header>
+          <div className="space-y-6">
+            <Blocks blocks={childBundle.blocks} currentSlug={childSlug} />
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   const timezone = bundle.timezone || "Europe/Paris";
   const unlockLabel = formatUnlock(currentModule.unlockAtISO, timezone);

@@ -628,6 +628,11 @@ function firstRichText(property: PageObjectResponse['properties'][string] | unde
 function selectValue(property: PageObjectResponse['properties'][string] | undefined): string | null {
   if (!property) return null;
   if (property.type === 'select') return property.select?.name ?? null;
+  // Support Notion Status property as a drop-in replacement for Select
+  if ((property as { type?: string }).type === 'status') {
+    const p = property as Extract<PageObjectResponse['properties'][string], { type: 'status' }>;
+    return p.status?.name ?? null;
+  }
   return null;
 }
 

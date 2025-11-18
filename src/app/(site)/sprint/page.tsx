@@ -12,7 +12,10 @@ export default async function SprintIndexPage() {
     { tags: ["page:sprint:index"], revalidate: 120 }
   )();
 
-  if (!index || index.items.length === 0) {
+  // Afficher tous les sprints; marquer les privés par un badge 🔒
+  const items = (index?.items ?? []);
+
+  if (!index || items.length === 0) {
     return (
       <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-16 sm:px-12">
         <header className="space-y-3">
@@ -34,13 +37,18 @@ export default async function SprintIndexPage() {
       </header>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {index.items.map((item) => (
+        {items.map((item) => (
           <Link
             key={item.slug}
             href={`/sprint/${item.slug}`}
             className="group flex flex-col justify-between rounded-2xl border border-white/50 bg-white/70 p-6 shadow-sm backdrop-blur transition hover:-translate-y-1 hover:border-teal-300"
           >
             <div className="space-y-2">
+              {item.visibility === 'private' ? (
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
+                  <span aria-hidden>🔒</span> Privé
+                </span>
+              ) : null}
               <h2 className="text-lg font-semibold text-slate-900 group-hover:text-teal-600">
                 {item.title}
               </h2>

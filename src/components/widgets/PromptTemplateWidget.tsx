@@ -5,6 +5,9 @@ import type { PromptTemplateWidgetConfig } from "@/lib/widget-parser";
 import { renderTemplate } from "@/lib/widget-parser";
 
 export function PromptTemplateWidget({ config, storageKey }: { config: PromptTemplateWidgetConfig; storageKey: string }) {
+  const theme = config.theme ?? "light";
+  const wide = Boolean((config as { wide?: boolean }).wide);
+
   const hintFor = (name: string): string | undefined => {
     const n = name.toUpperCase();
     if (n.includes('RUN_TIME')) return '08:30';
@@ -87,51 +90,117 @@ export function PromptTemplateWidget({ config, storageKey }: { config: PromptTem
     setShowGenerated(false);
   };
 
-  return (
-    <section className="widget-surface p-5 space-y-5">
-      {config.title ? <h3 className="text-lg font-semibold">{config.title}</h3> : null}
+  const wrapperClass = useMemo(() => {
+    if (theme === "dark") {
+      return [
+        "overflow-hidden rounded-[22px] border shadow-subtle",
+        "border-slate-900/40 bg-slate-900 text-slate-50",
+        wide ? "px-0" : "px-0",
+        "py-0",
+      ].join(" ");
+    }
+    return "widget-surface p-5 space-y-5";
+  }, [theme, wide]);
 
-      <div className="grid gap-4 md:grid-cols-2">
+  const headerClass =
+    theme === "dark"
+      ? "flex items-center justify-between gap-3 border-b border-white/10 bg-slate-900/60 px-4 py-3 text-xs uppercase tracking-[0.2em] text-slate-50"
+      : "flex items-center justify-between";
+
+  const controlsClass =
+    theme === "dark"
+      ? "widget-actions flex flex-wrap items-center gap-2"
+      : "widget-actions flex flex-wrap items-center gap-2";
+
+  const labelClass =
+    theme === "dark"
+      ? "text-xs font-semibold uppercase tracking-wider text-slate-100"
+      : "text-xs font-semibold uppercase tracking-wider text-slate-600";
+
+  const inputClass = (hasValue: boolean) =>
+    theme === "dark"
+      ? [
+          "w-full rounded-xl border bg-slate-900/60 px-3 py-2 text-sm text-slate-50 placeholder:text-slate-500",
+          hasValue ? "border-slate-700" : "border-amber-300/80",
+          "focus:outline-none focus:ring-2 focus:ring-white/10",
+        ].join(" ")
+      : [
+          "w-full rounded-xl border bg-white/80 px-3 py-2 text-sm",
+          hasValue ? "border-slate-200" : "border-amber-300",
+          "focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400",
+        ].join(" ");
+
+  const outputWrapperClass =
+    theme === "dark"
+      ? "mt-2 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-[0.95rem] leading-[1.5] whitespace-pre-wrap"
+      : "mt-2 rounded-2xl border bg-white/80 p-4 text-[0.95rem] leading-[1.5] whitespace-pre-wrap";
+
+  const outputPlaceholderClass =
+    theme === "dark"
+      ? "rounded-2xl border border-dashed border-amber-300/80 bg-slate-900/70 p-4 text-sm text-slate-200"
+      : "rounded-2xl border border-dashed border-amber-200 bg-white/70 p-4 text-sm text-slate-600";
+
+  return (
+    <section className={wrapperClass}>
+      <div className={headerClass}>
+        {config.title ? (
+          <h3 className="text-sm font-semibold uppercase tracking-[0.2em]">
+            {config.title}
+          </h3>
+        ) : (
+          <span className="text-xs font-semibold uppercase tracking-[0.2em]">
+            Prompt template
+          </span>
+        )}
+        <div className={controlsClass}>
+          <button onClick={sampleFill} className="btn btn-ghost text-xs">
+            Remplir un exemple
+          </button>
+          <button onClick={clearAll} className="btn btn-ghost text-xs">
+            Vider
+          </button>
+          <button onClick={handleGenerate} className="btn btn-primary text-xs">
+            Générer mon prompt
+          </button>
+          <button onClick={copy} className="btn btn-ghost text-xs" disabled={!showGenerated}>
+            Copier
+          </button>
+        </div>
+      </div>
+
+      <div className="grid gap-4 p-5 md:grid-cols-2">
         {fieldsWithHints.map((f) => (
           <label key={`${storageKey}-${f.name}`} className={`block space-y-1 ${f.span === 2 ? 'md:col-span-2' : ''}`}>
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">{f.label ?? f.name}</span>
+            <span className={labelClass}>{f.label ?? f.name}</span>
             {f.type === 'textarea' ? (
               <textarea
                 value={values[f.name] ?? ''}
                 onChange={(e) => setValue(f.name, e.target.value)}
                 placeholder={f.placeholder}
                 rows={6}
-                className={`w-full rounded-xl border bg-white/80 px-3 py-2 text-sm ${!values[f.name] ? 'border-amber-300' : ''}`}
+                className={inputClass(Boolean(values[f.name]))}
               />
             ) : (
               <input
                 value={values[f.name] ?? ''}
                 onChange={(e) => setValue(f.name, e.target.value)}
                 placeholder={f.placeholder}
-                className={`w-full rounded-xl border bg-white/80 px-3 py-2 text-sm ${!values[f.name] ? 'border-amber-300' : ''}`}
+                className={inputClass(Boolean(values[f.name]))}
               />
             )}
           </label>
         ))}
       </div>
 
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">Prompt généré</span>
-          <div className="widget-actions">
-            <button onClick={sampleFill} className="btn btn-ghost text-xs">Remplir un exemple</button>
-            <button onClick={clearAll} className="btn btn-ghost text-xs">Vider</button>
-            <button onClick={handleGenerate} className="btn btn-primary text-xs">Générer mon prompt personnalisé</button>
-            <button onClick={copy} className="btn btn-ghost text-xs" disabled={!showGenerated}>Copier</button>
-          </div>
-        </div>
+      <div className="space-y-2 px-5 pb-5">
+        <span className={labelClass}>Prompt généré</span>
         {showGenerated ? (
-          <pre className="code-block rounded-2xl border bg-white/80 p-4 text-[0.95rem] leading-[1.5] whitespace-pre-wrap">
+          <pre className={outputWrapperClass}>
             <code>{output}</code>
           </pre>
         ) : (
-          <div className="rounded-2xl border border-dashed border-amber-200 bg-white/70 p-4 text-sm text-slate-600">
-            Cliquez sur « Générer mon prompt personnalisé » pour afficher le résultat.
+          <div className={outputPlaceholderClass}>
+            Cliquez sur « Générer mon prompt » pour afficher le résultat.
           </div>
         )}
       </div>
