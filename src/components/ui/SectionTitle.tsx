@@ -8,8 +8,8 @@ type SectionTitleProps = {
 };
 
 const stylesByLevel: Record<Required<SectionTitleProps>["as"], string> = {
-  h2: "font-display text-[1.9rem] font-semibold leading-[1.22] tracking-[-0.015em] text-slate-900",
-  h3: "font-display text-[1.45rem] font-semibold leading-[1.3] tracking-[-0.01em] text-slate-900",
+  h2: "font-display text-[1.85rem] font-semibold leading-[1.18] tracking-[-0.015em] text-[var(--foreground)]",
+  h3: "font-display text-[1.4rem] font-semibold leading-[1.28] tracking-[-0.01em] text-[var(--foreground)]",
 };
 
 export function SectionTitle({ children, eyebrow, description, as = "h2" }: SectionTitleProps) {
@@ -28,4 +28,3 @@ export function SectionTitle({ children, eyebrow, description, as = "h2" }: Sect
     </header>
   );
 }
-

@@ -123,55 +123,27 @@ export default async function SprintPage({
   })();
 
   const ModulesSection = (
-    <div className="grid gap-6 md:grid-cols-2">
+    <div className="grid gap-3 md:grid-cols-2">
       {bundle.modules.map((module, index) => {
         const countdown = timeUntil(module.unlockAtISO);
         const number = module.order > 0 ? module.order : index + 1;
-        const dayBadge = typeof module.dayIndex === 'number' ? `Jour ${(module.dayIndex ?? 0) + 1}` : null;
         const locked = module.isLocked;
         return (
           <Link
             key={module.slug}
             href={`/sprint/${slug}/${module.slug}`}
-            className={`group relative flex flex-col justify-between gap-3 ui-card p-5 ${
-              locked ? 'border-amber-200/70' : 'border-teal-200/70'
-            }`}
+            className={`group flex flex-col gap-2 rounded-lg border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${locked ? 'opacity-70' : ''}`}
             data-state={locked ? 'locked' : 'unlocked'}
           >
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/70 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
-                  Module {number}
-                </span>
-                {dayBadge ? (
-                  <span className="rounded-full border border-white/40 bg-white/70 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">
-                    {dayBadge}
-                  </span>
-                ) : null}
-              </div>
-              <h2 className={`text-base font-semibold tracking-tight ${locked ? 'text-slate-800' : 'text-slate-900 group-hover:text-teal-700'}`}>
-                {module.title}
-              </h2>
-              {module.description ? (
-                <p className="line-clamp-3 text-sm text-slate-600">{module.description}</p>
-              ) : null}
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-lime-100 text-foreground">{moduleNumberEmoji(number)}</span>
+              <span>Module {number}</span>
+              {module.duration ? <span className="ml-auto text-[11px] text-slate-500">{module.duration} min</span> : null}
             </div>
-            <div className="mt-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                {module.duration ? (
-                  <span className="rounded-full border border-white/50 bg-white/70 px-2.5 py-0.5 text-[11px] text-slate-600">
-                    {module.duration} min
-                  </span>
-                ) : null}
-                {module.tags?.slice(0, 2).map((tag) => (
-                  <span key={tag} className="rounded-full border border-white/50 bg-white/70 px-2.5 py-0.5 text-[11px] text-slate-600">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-              <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
-                locked ? 'border border-amber-300/70 bg-amber-50 text-amber-700' : 'border border-teal-300/70 bg-teal-50 text-teal-700'
-              }`}>
+            <h3 className="text-base font-semibold text-foreground group-hover:text-foreground/90">{module.title}</h3>
+            {module.description ? <p className="text-sm text-foreground/70">{module.description}</p> : null}
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-600">
+              <span className={`rounded-full px-2 py-0.5 ${locked ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
                 {locked ? (countdown ? `Déverrouillé ${countdown}` : 'Verrouillé') : 'Accessible'}
               </span>
             </div>
@@ -271,18 +243,6 @@ export default async function SprintPage({
 
   return (
     <section className={wrapperClass}>
-      <header className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="space-y-2">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/60 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">Sprint</span>
-            <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-[2.3rem]">{bundle.title}</h1>
-          </div>
-          <span className="rounded-full border border-slate-200/60 bg-white/70 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Fuseau horaire&nbsp;: {timezone}</span>
-        </div>
-        {bundle.description ? (
-          <p className="text-base leading-7 text-slate-600">{bundle.description}</p>
-        ) : null}
-      </header>
       {todaysModules.length > 0 ? (
         <div className="rounded-2xl border border-emerald-300/60 bg-emerald-50/70 p-5">
           <div className="mb-3 flex items-center justify-between">

@@ -34,11 +34,20 @@ export function PromptTemplateWidget({ config, storageKey }: { config: PromptTem
     return undefined;
   };
 
-  const fieldsWithHints = useMemo(() => config.fields.map((f) => ({
-    ...f,
-    placeholder: f.placeholder ?? hintFor(f.name),
-    span: (f.type === 'textarea' || /BLOCK|LIST|PARAGRAPH|DESCRIPTION|QUERIES/i.test(f.name)) ? 2 : 1,
-  })), [config.fields]);
+  const fieldsWithHints = useMemo(
+    () =>
+      config.fields.map((f) => ({
+        ...f,
+        placeholder: f.placeholder ?? hintFor(f.name),
+        span:
+          f.type === "textarea" ||
+          f.type === "chips" ||
+          /BLOCK|LIST|PARAGRAPH|DESCRIPTION|QUERIES/i.test(f.name)
+            ? 2
+            : 1,
+      })),
+    [config.fields]
+  );
 
   const initial = useMemo(() => {
     const obj: Record<string, string> = {};
@@ -112,6 +121,21 @@ export function PromptTemplateWidget({ config, storageKey }: { config: PromptTem
       ? "widget-actions flex flex-wrap items-center gap-2"
       : "widget-actions flex flex-wrap items-center gap-2";
 
+  const primaryBtnClass =
+    theme === "dark"
+      ? "rounded-full bg-white px-4 py-1.5 text-[11px] font-semibold text-slate-900 shadow-sm transition hover:bg-slate-100"
+      : "btn btn-primary text-xs";
+
+  const ghostBtnClass =
+    theme === "dark"
+      ? "rounded-full border border-white/10 px-3 py-1 text-[11px] font-medium text-slate-200 transition hover:border-white/30 hover:text-white"
+      : "btn btn-ghost text-xs";
+
+  const subtleBtnClass =
+    theme === "dark"
+      ? "text-[11px] text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-default"
+      : "btn btn-ghost text-xs";
+
   const labelClass =
     theme === "dark"
       ? "text-xs font-semibold uppercase tracking-wider text-slate-100"
@@ -144,7 +168,7 @@ export function PromptTemplateWidget({ config, storageKey }: { config: PromptTem
     <section className={wrapperClass}>
       <div className={headerClass}>
         {config.title ? (
-          <h3 className="text-sm font-semibold uppercase tracking-[0.2em]">
+          <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-50">
             {config.title}
           </h3>
         ) : (
@@ -153,16 +177,16 @@ export function PromptTemplateWidget({ config, storageKey }: { config: PromptTem
           </span>
         )}
         <div className={controlsClass}>
-          <button onClick={sampleFill} className="btn btn-ghost text-xs">
+          <button onClick={sampleFill} className={ghostBtnClass}>
             Remplir un exemple
           </button>
-          <button onClick={clearAll} className="btn btn-ghost text-xs">
+          <button onClick={clearAll} className={subtleBtnClass}>
             Vider
           </button>
-          <button onClick={handleGenerate} className="btn btn-primary text-xs">
+          <button onClick={handleGenerate} className={primaryBtnClass}>
             Générer mon prompt
           </button>
-          <button onClick={copy} className="btn btn-ghost text-xs" disabled={!showGenerated}>
+          <button onClick={copy} className={subtleBtnClass} disabled={!showGenerated}>
             Copier
           </button>
         </div>
@@ -172,7 +196,7 @@ export function PromptTemplateWidget({ config, storageKey }: { config: PromptTem
         {fieldsWithHints.map((f) => (
           <label key={`${storageKey}-${f.name}`} className={`block space-y-1 ${f.span === 2 ? 'md:col-span-2' : ''}`}>
             <span className={labelClass}>{f.label ?? f.name}</span>
-            {f.type === 'textarea' ? (
+            {f.type === "textarea" ? (
               <textarea
                 value={values[f.name] ?? ''}
                 onChange={(e) => setValue(f.name, e.target.value)}
@@ -180,6 +204,46 @@ export function PromptTemplateWidget({ config, storageKey }: { config: PromptTem
                 rows={6}
                 className={inputClass(Boolean(values[f.name]))}
               />
+            ) : f.type === "chips" && Array.isArray(f.options) ? (
+              <div className="flex flex-wrap gap-2">
+                {f.options.map((option) => {
+                  const current = values[f.name] ?? "";
+                  const selected = new Set(
+                    current
+                      .split(",")
+                      .map((v) => v.trim())
+                      .filter(Boolean)
+                  );
+                  const isActive = selected.has(option);
+                  const toggle = () => {
+                    const next = new Set(selected);
+                    if (next.has(option)) next.delete(option);
+                    else next.add(option);
+                    const joined = Array.from(next).join(", ");
+                    setValue(f.name, joined);
+                  };
+                  const base =
+                    "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition";
+                  const activeClasses =
+                    theme === "dark"
+                      ? "border-emerald-400 bg-emerald-900 text-emerald-200"
+                      : "border-emerald-400 bg-emerald-50 text-emerald-700";
+                  const inactiveClasses =
+                    theme === "dark"
+                      ? "border-slate-600 text-slate-200 hover:border-emerald-300 hover:text-emerald-200"
+                      : "border-slate-200 text-slate-600 hover:border-emerald-200 hover:text-emerald-600";
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={toggle}
+                      className={`${base} ${isActive ? activeClasses : inactiveClasses}`}
+                    >
+                      <span>{option}</span>
+                    </button>
+                  );
+                })}
+              </div>
             ) : (
               <input
                 value={values[f.name] ?? ''}

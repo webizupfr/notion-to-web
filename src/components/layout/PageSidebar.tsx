@@ -155,25 +155,25 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
       {/* Sidebar */}
       <aside className={`
         fixed lg:sticky top-0 lg:top-14 left-0 lg:left-auto h-screen lg:h-[calc(100vh-3.5rem)] w-full lg:w-64 xl:w-72
-        border-r-2 border-primary/20 bg-background-soft/30 backdrop-blur-sm shadow-lg z-40
+        border-r border-border/60 bg-white/90 backdrop-blur-md shadow-[0_12px_32px_-24px_rgba(12,18,28,0.25)] z-40
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-      <nav className="flex h-full flex-col overflow-y-auto px-5 py-6">
+      <nav className="flex h-full flex-col overflow-y-auto px-5 py-6 space-y-8">
         {/* Titre principal avec lien vers la page parent */}
-        <div className="mb-8 space-y-4 border-b border-border/30 pb-6">
+        <div className="space-y-3 border-b border-border/40 pb-5">
           {/* No icon in sidebar as requested */}
           <Link 
             href={`/${parentSlug}`}
             className={`group flex items-center gap-2 text-xl font-bold transition-all ${
               isParentActive
                 ? 'text-primary'
-                : 'text-foreground hover:text-primary hover:translate-x-1'
+                : 'text-foreground hover:text-primary'
             }`}
             onClick={() => setIsOpen(false)}
           >
             <span className={`transition-transform ${
-              isParentActive ? 'scale-110' : 'group-hover:scale-110'
+              isParentActive ? 'scale-105' : 'group-hover:scale-105'
             }`} aria-hidden="true">
               {renderSidebarIcon(parentIcon ?? null, <IconBook size={20} />, 22)}
             </span>
@@ -189,23 +189,21 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
         {/* Navigation hiérarchique (accès rapide) */}
         {filteredNavigation.length > 0 && (
           <div className="space-y-3">
-            <div className="text-xs font-bold uppercase tracking-wider text-primary/70">Accès rapide</div>
-            <ul className="space-y-6">
+            <div className="text-xs font-bold uppercase tracking-wider text-foreground/70">Accès rapide</div>
+            <ul className="space-y-4">
               {filteredNavigation.map((item, idx) => {
               if (item.type === 'section' && item.children) {
                 return (
                   <li key={`section-${idx}`}>
                     {/* Titre de la section avec style premium */}
-                    <div className="mb-3 flex items-center gap-2">
-                      <div className="h-px flex-1 bg-gradient-to-r from-border/40 to-transparent"></div>
-                      <span className="text-xs font-bold uppercase tracking-wider text-primary/70">
-                        {item.title}
-                      </span>
-                      <div className="h-px flex-1 bg-gradient-to-l from-border/40 to-transparent"></div>
+                    <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted">
+                      <div className="h-px flex-1 bg-gradient-to-r from-border/60 to-transparent" />
+                      <span>{item.title}</span>
+                      <div className="h-px flex-1 bg-gradient-to-l from-border/60 to-transparent" />
                     </div>
                     
                     {/* Pages sous cette section avec indicateur */}
-                    <ul className="space-y-1">
+                    <ul className="space-y-1.5">
                       {item.children.map((child) => {
                         const isActive = currentPath === child.slug;
                         
@@ -213,15 +211,15 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
                           <li key={child.id}>
                             <Link
                               href={`/${child.slug}`}
-                              className={`group relative flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all ${
+                              className={`group relative flex items-center gap-3 rounded-[12px] px-4 py-2.5 text-sm font-medium transition-all ${
                                 isActive
-                                  ? 'bg-primary/10 text-primary shadow-sm'
-                                  : 'text-muted hover:bg-background-soft hover:text-foreground hover:translate-x-1'
+                                  ? 'bg-primary/10 text-foreground shadow-sm border border-primary/30'
+                                  : 'text-muted hover:bg-background-soft hover:text-foreground hover:translate-x-0.5 border border-transparent'
                               }`}
                               onClick={() => setIsOpen(false)} // Fermer sur mobile après clic
                             >
                               {/* Indicateur gauche pour page active */}
-                              <span className={`absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full transition-all ${
+                              <span className={`absolute left-0 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-r-full transition-all ${
                                 isActive 
                                   ? 'bg-primary' 
                                   : 'bg-transparent group-hover:bg-primary/30'
@@ -229,7 +227,7 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
                               
                               {/* Icône */}
                               <span className={`transition-transform ${
-                                isActive ? 'scale-110' : 'group-hover:scale-110'
+                                isActive ? 'scale-105' : 'group-hover:scale-105'
                               }`} aria-hidden>
                                 {renderSidebarIcon(child.icon ?? null, <IconFileText size={16} />, 18)}
                               </span>
@@ -260,18 +258,18 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
                   <li key={item.id || `page-${idx}`}>
                     <Link
                       href={`/${item.slug}`}
-                      className={`group relative flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium transition-all ${
+                      className={`group relative flex items-center gap-3 rounded-[12px] px-4 py-2.5 text-sm font-medium transition-all border ${
                         isActive
-                          ? 'bg-primary/10 text-primary shadow-sm'
-                          : 'text-muted hover:bg-background-soft hover:text-foreground hover:translate-x-1'
+                          ? 'bg-primary/10 text-foreground shadow-sm border-primary/30'
+                          : 'text-muted hover:bg-background-soft hover:text-foreground hover:translate-x-0.5 border-transparent'
                       }`}
                       onClick={() => setIsOpen(false)} // Fermer sur mobile après clic
                     >
-                      <span className={`absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full transition-all ${
+                      <span className={`absolute left-0 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-r-full transition-all ${
                         isActive ? 'bg-primary' : 'bg-transparent group-hover:bg-primary/30'
                       }`}></span>
                       <span className={`transition-transform ${
-                        isActive ? 'scale-110' : 'group-hover:scale-110'
+                        isActive ? 'scale-105' : 'group-hover:scale-105'
                       }`} aria-hidden>
                         {renderSidebarIcon(item.icon ?? null, <IconFileText size={16} />, 18)}
                       </span>
@@ -295,16 +293,16 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
         {/* Quick access list (days by week) */}
         {isHub && !isModuleMode && weekList.length > 0 && (
           <div className="mt-8 space-y-3 border-t border-border/30 pt-6">
-            <div className="text-xs font-bold uppercase tracking-wider text-primary/70">{unitPlural} disponibles</div>
+            <div className="text-xs font-bold uppercase tracking-wider text-foreground/70">{unitPlural} disponibles</div>
             <div className="space-y-2">
               {weekList.map((w) => {
                 const open = openWeeks[w] ?? false;
                 const days = weeks.get(w) ?? [];
                 return (
-                  <div key={`week-${w}`} className="rounded-xl border border-border/30 bg-background-soft/20">
+                  <div key={`week-${w}`} className="rounded-xl border border-border/40 bg-white/80 backdrop-blur-sm">
                     <button
                       onClick={() => setOpenWeeks((s) => ({ ...s, [w]: !open }))}
-                      className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold"
+                      className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-foreground"
                     >
                       <span>Semaine {w}</span>
                       <span className="text-base" aria-hidden>{open ? '–' : '+'}</span>
@@ -319,7 +317,7 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
                               <Link
                                 href={`/${d.slug}`}
                                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
-                                  isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-background-soft hover:text-foreground'
+                                  isActive ? 'bg-primary/10 text-foreground border border-primary/30' : 'text-muted hover:bg-background-soft hover:text-foreground border border-transparent'
                                 }`}
                                 onClick={() => setIsOpen(false)}
                               >
@@ -343,16 +341,16 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
 
         {isHub && isModuleMode && moduleQuickGroups && moduleQuickGroups.length > 0 && (
           <div className="mt-8 space-y-3 border-t border-border/30 pt-6">
-            <div className="text-xs font-bold uppercase tracking-wider text-primary/70">Modules par jour</div>
+            <div className="text-xs font-bold uppercase tracking-wider text-foreground/70">Modules par jour</div>
             <div className="space-y-2">
               {moduleQuickGroups.map((group) => {
                 const open = openModuleGroups[group.label] ?? false;
                 return (
-                  <div key={group.label} className="rounded-xl border border-border/30 bg-background-soft/20">
+                  <div key={group.label} className="rounded-xl border border-border/40 bg-white/80 backdrop-blur-sm">
                     <button
                       type="button"
                       onClick={() => setOpenModuleGroups((prev) => ({ ...prev, [group.label]: !open }))}
-                      className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold"
+                      className="flex w-full items-center justify-between px-4 py-2 text-left text-sm font-semibold text-foreground"
                       aria-expanded={open}
                     >
                       <span>{group.label}</span>
@@ -369,7 +367,7 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
                               <Link
                                 href={`/${item.slug}`}
                                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
-                                  isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-background-soft hover:text-foreground'
+                                  isActive ? 'bg-primary/10 text-foreground border border-primary/30' : 'text-muted hover:bg-background-soft hover:text-foreground border border-transparent'
                                 }`}
                                 onClick={() => setIsOpen(false)}
                               >

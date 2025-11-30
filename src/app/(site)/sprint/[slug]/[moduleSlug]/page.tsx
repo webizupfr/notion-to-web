@@ -178,6 +178,8 @@ export default async function SprintModulePage({
   }
 
   const basePath = `/sprint/${slug}/${moduleSlug}`;
+  const prevModule = moduleIndex > 0 ? bundle.modules[moduleIndex - 1] : null;
+  const nextModule = moduleIndex + 1 < bundle.modules.length ? bundle.modules[moduleIndex + 1] : null;
 
   // Build synthetic navigation + groups (same as sprint page)
   // Navigation = Accès rapide (contextNavigation) + section Modules
@@ -244,23 +246,17 @@ export default async function SprintModulePage({
       </div>
 
       <section className="flex-1 min-w-0 space-y-6 px-6 py-12 sm:px-12">
-        <header className="space-y-3">
-          <Link href={`/sprint/${slug}`} className="text-sm text-teal-600 underline">
-            ← Retour au sprint
-          </Link>
-          <h1 className="text-3xl font-semibold text-slate-900">{currentModule.title}</h1>
-          <p className="text-xs uppercase tracking-wide text-slate-500">
-            Module {currentModule.order > 0 ? currentModule.order : moduleIndex + 1}
-          </p>
-          {currentModule.description ? (
-            <p className="text-base text-slate-600">{currentModule.description}</p>
-          ) : null}
-          {currentModule.duration ? (
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/50 bg-white/70 px-3 py-1 text-xs font-medium text-slate-600">
-              Durée estimée : {currentModule.duration} min
-            </span>
-          ) : null}
-        </header>
+        {currentModule.title ? (
+          <div className="space-y-3 rounded-[20px] border border-border/50 bg-white px-6 py-5 shadow-sm">
+            <h1 className="text-2xl font-semibold text-foreground">{currentModule.title}</h1>
+            <p className="text-xs uppercase tracking-[0.16em] text-foreground/60">
+              Module {currentModule.order > 0 ? currentModule.order : moduleIndex + 1}
+            </p>
+            {currentModule.description ? (
+              <p className="text-sm text-foreground/70">{currentModule.description}</p>
+            ) : null}
+          </div>
+        ) : null}
 
         {activities.length > 0 ? (
           <div className="space-y-6" id="steps">
@@ -296,6 +292,7 @@ export default async function SprintModulePage({
             Aucune activité configurée pour ce module.
           </div>
         )}
+
       </section>
     </div>
   );

@@ -60,26 +60,39 @@ export async function Collection({
 export function CollectionNoAccess({ id }: { id: string }) {
   const prettyId = id.replace(/-/g, "");
   const notionUrl = `https://www.notion.so/${prettyId}`;
+  const isProd = process.env.NODE_ENV === "production";
 
   return (
     <div className="collection-warning my-4 space-y-3 rounded-2xl border p-4 text-sm" data-variant="warning">
       <div className="text-base font-semibold">Cette base n’est pas accessible à l’intégration.</div>
-      <ol className="ml-4 list-decimal space-y-1 opacity-90">
-        <li>
-          Ouvrez la base source dans Notion :
-          <a
-            href={notionUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="ml-1 link-more underline underline-offset-4"
-          >
-            {prettyId}
-          </a>
-        </li>
-        <li>Menu <span className="font-semibold">Share</span> → ajoutez votre intégration API.</li>
-        <li>Rechargez la page pour voir la collection ici.</li>
-      </ol>
-      <div className="text-xs opacity-60">Database ID : {id}</div>
+      {isProd ? (
+        <>
+          <p className="opacity-90">
+            Ce bloc est masqué pour protéger les liens directs vers vos bases Notion. 
+            Contactez l’équipe interne pour corriger les droits d’accès de l’intégration.
+          </p>
+          <div className="text-xs opacity-60">Database ID : {id}</div>
+        </>
+      ) : (
+        <>
+          <ol className="ml-4 list-decimal space-y-1 opacity-90">
+            <li>
+              Ouvrez la base source dans Notion :
+              <a
+                href={notionUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="ml-1 link-more underline underline-offset-4"
+              >
+                {prettyId}
+              </a>
+            </li>
+            <li>Menu <span className="font-semibold">Share</span> → ajoutez votre intégration API.</li>
+            <li>Rechargez la page pour voir la collection ici.</li>
+          </ol>
+          <div className="text-xs opacity-60">Database ID : {id}</div>
+        </>
+      )}
     </div>
   );
 }
@@ -89,7 +102,11 @@ function asHref(item: DbItem, basePath: string): string {
     const normalizedBase = basePath.endsWith("/") ? basePath.slice(0, -1) : basePath;
     return `${normalizedBase}/${item.slug}`;
   }
-  return item.url ?? "#";
+  // Éviter de lier vers Notion en production (risque de fuite de DB publiques).
+  if (process.env.NODE_ENV !== "production") {
+    return item.url ?? "#";
+  }
+  return "#";
 }
 
 export function Tags({ tags }: { tags?: string[] }) {

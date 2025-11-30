@@ -1,71 +1,72 @@
 import type { ReactNode } from "react";
 import { IconInfo, IconCheckCircle, IconAlertTriangle, IconOctagon, IconListChecks, IconChevronRight } from "@/components/ui/icons";
+import type { LayoutVariant } from "@/components/notion/callout-layout";
 
 type Variant = "info" | "success" | "warning" | "danger" | "neutral" | "grey" | "exercise" | "connector";
 
 // Harmonized base + subtle interior variation per tone (radial tint using accent)
 const variantStyles: Record<Variant, { bg: string; border: string; accent: string; overlay?: string | null; fallbackIcon: ReactNode | null; label: string }> = {
   info: {
-    bg: "linear-gradient(180deg,#fff,var(--surface))",
-    border: "var(--border-soft)",
-    accent: "#3B82F6",
-    overlay: "rgba(59,130,246,0.08)",
+    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--background-soft) 92%,#fff))",
+    border: "color-mix(in oklab, var(--border) 70%, transparent)",
+    accent: "#3B5CCB",
+    overlay: "rgba(59,92,203,0.05)",
     fallbackIcon: <IconInfo size={18} />,
     label: "IA générative",
   },
   exercise: {
-    bg: "linear-gradient(180deg,#fff,var(--surface))",
-    border: "var(--border-soft)",
-    accent: "#F97316",
-    overlay: "rgba(249,115,22,0.08)",
+    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--background-soft) 92%,#fff))",
+    border: "color-mix(in oklab, var(--border) 70%, transparent)",
+    accent: "#d88a4d",
+    overlay: "rgba(216,138,77,0.06)",
     fallbackIcon: <IconListChecks size={18} />,
     label: "",
   },
   success: {
-    bg: "linear-gradient(180deg,#fff,var(--surface))",
-    border: "var(--border-soft)",
-    accent: "#10B981",
-    overlay: "rgba(16,185,129,0.08)",
+    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--background-soft) 92%,#fff))",
+    border: "color-mix(in oklab, var(--border) 70%, transparent)",
+    accent: "#2ca56b",
+    overlay: "rgba(44,165,107,0.06)",
     fallbackIcon: <IconCheckCircle size={18} />,
     label: "Action",
   },
   warning: {
-    bg: "linear-gradient(180deg,#fff,var(--surface))",
-    border: "var(--border-soft)",
-    accent: "#F59E0B",
-    overlay: "rgba(245,158,11,0.08)",
+    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--background-soft) 92%,#fff))",
+    border: "color-mix(in oklab, var(--border) 70%, transparent)",
+    accent: "#d88a4d",
+    overlay: "rgba(216,138,77,0.06)",
     fallbackIcon: <IconAlertTriangle size={18} />,
     label: "",
   },
   danger: {
-    bg: "linear-gradient(180deg,#fff,var(--surface))",
-    border: "var(--border-soft)",
-    accent: "#EF4444",
-    overlay: "rgba(239,68,68,0.08)",
+    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--background-soft) 92%,#fff))",
+    border: "color-mix(in oklab, var(--border) 70%, transparent)",
+    accent: "#d45050",
+    overlay: "rgba(212,80,80,0.06)",
     fallbackIcon: <IconOctagon size={18} />,
     label: "Important",
   },
   neutral: {
-    bg: "linear-gradient(180deg,#fff,var(--surface))",
-    border: "var(--border-soft)",
+    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--background-soft) 94%,#fff))",
+    border: "color-mix(in oklab, var(--border) 80%, transparent)",
     accent: "#94A3B8",
-    overlay: "rgba(246,201,120,0.09)",
+    overlay: "rgba(15,23,40,0.04)",
     fallbackIcon: null,
     label: "Note",
   },
   grey: {
-    bg: "linear-gradient(180deg,#fff,var(--surface))",
-    border: "var(--border-soft)",
+    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--background-soft) 94%,#fff))",
+    border: "color-mix(in oklab, var(--border) 80%, transparent)",
     accent: "#94A3B8",
-    overlay: "rgba(148,163,184,0.09)",
+    overlay: "rgba(148,163,184,0.06)",
     fallbackIcon: null,
     label: "",
   },
   connector: {
-    bg: "linear-gradient(180deg,#fff,var(--surface))",
-    border: "var(--border-soft)",
+    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--background-soft) 92%,#fff))",
+    border: "color-mix(in oklab, var(--border) 70%, transparent)",
     accent: "#9A6B4F",
-    overlay: "rgba(154,107,79,0.06)",
+    overlay: "rgba(154,107,79,0.05)",
     fallbackIcon: <IconChevronRight size={16} />,
     label: "",
   },
@@ -94,6 +95,7 @@ type InfoCardProps = {
   bgColorOverride?: string | null;
   headerBand?: boolean;
   cta?: { label: string; href: string } | null;
+  layoutVariant?: LayoutVariant;
   children: ReactNode;
 };
 
@@ -108,6 +110,7 @@ export function InfoCard({
   bgColorOverride,
   headerBand,
   cta,
+  layoutVariant = 'note',
   children,
 }: InfoCardProps) {
   const styles = variantStyles[variant];
@@ -128,22 +131,37 @@ export function InfoCard({
   const displayIcon = showIcon ? (icon ?? styles.fallbackIcon) : null;
 
   // Variant-aware paddings and elevation
-  const basePadding = density === 'compact' ? 'py-3 px-5' : 'py-5 px-6';
-  const padding = variant === 'grey' ? 'py-2.5 px-4' : variant === 'neutral' ? 'py-3 px-5' : basePadding;
+  const basePadding = density === 'compact' ? 'py-3 px-4' : 'py-4 px-5';
+  const padding = variant === 'grey' ? 'py-3 px-4' : variant === 'neutral' ? 'py-3 px-4' : basePadding;
   const borderStyle = resolvedFrame === 'dotted' ? 'dotted' : 'solid';
   const borderWidth = resolvedFrame === 'none' ? '0px' : '1px';
   const elevationClass = 'shadow-none';
 
   const backgroundCss = styles.overlay
     ? (variant === 'neutral' || variant === 'grey'
-        ? `radial-gradient(750px 320px at 10% -10%, ${styles.overlay}, transparent 64%), radial-gradient(650px 260px at 95% 110%, ${styles.overlay}, transparent 58%), ${bg}`
-        : `radial-gradient(700px 300px at 10% -10%, ${styles.overlay}, transparent 64%), ${bg}`)
+        ? `radial-gradient(680px 280px at 12% -10%, ${styles.overlay}, transparent 62%), ${bg}`
+        : `radial-gradient(700px 260px at 10% -10%, ${styles.overlay}, transparent 58%), ${bg}`)
     : bg;
+
+  const layoutConfig: Record<LayoutVariant, { barWidth: number; className?: string }> = {
+    note: { barWidth: resolvedBar ? 3 : 0 },
+    timeline: { barWidth: resolvedBar ? 4 : 0 },
+    exercise: { barWidth: resolvedBar ? 4 : 0, className: "info-card--exercise" },
+    sectionHeader: { barWidth: 0, className: "info-card--hero" },
+    result: { barWidth: resolvedBar ? 4 : 0, className: "info-card--result" },
+    ai: { barWidth: resolvedBar ? 4 : 0, className: "info-card--ai" },
+    theory: { barWidth: resolvedBar ? 3 : 0, className: "info-card--theory" },
+    story: { barWidth: resolvedBar ? 3 : 0, className: "info-card--story" },
+    warning: { barWidth: resolvedBar ? 4 : 0, className: "info-card--warning" },
+  };
+
+  const config = layoutConfig[layoutVariant] ?? layoutConfig.note;
 
   return (
     <div
-      className={`info-card relative overflow-hidden rounded-[22px] ${elevationClass} ${padding}`}
+      className={`info-card relative overflow-hidden rounded-[14px] ${elevationClass} ${padding} ${config.className ?? ""}`}
       data-variant={variant}
+      data-layout={layoutVariant}
       style={{
         background: backgroundCss,
         border: `${borderWidth} ${borderStyle} ${variant === 'neutral' || variant === 'grey' ? styles.border : `color-mix(in oklab, ${styles.accent} 20%, var(--border-soft))`}`,
@@ -153,21 +171,26 @@ export function InfoCard({
         <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1.5" style={{ backgroundColor: styles.accent }} />
       ) : null}
       {resolvedBar ? (
-        <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-1" style={{ backgroundColor: styles.accent }} />
+        <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0" style={{ width: config.barWidth, backgroundColor: styles.accent }} />
       ) : null}
-      <div className="flex items-start gap-3 text-[0.98rem] leading-[1.6] text-slate-700">
-        {displayIcon ? <span className="text-xl flex-shrink-0" aria-hidden>{displayIcon}</span> : null}
-        <div className="space-y-2 flex-1 min-w-0 w-full">
-          {title ? (
-            <div className="font-semibold text-slate-900">{title}</div>
-          ) : label ? (
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</div>
-          ) : null}
-          <div>{children}</div>
-        </div>
+      <div className="flex flex-col gap-3 text-[0.98rem] leading-[1.6] text-slate-700">
+        {(label || title || displayIcon) ? (
+          <div className="info-card-header flex items-center gap-2">
+            {displayIcon ? <span className="info-card-icon text-base flex-shrink-0 text-[var(--foreground)]" aria-hidden>{displayIcon}</span> : null}
+            {label ? (
+              <span className="info-card-label inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600 border border-slate-200/70 bg-white/70">
+                {label}
+              </span>
+            ) : null}
+            {title ? (
+              <span className="info-card-title text-[0.98rem] font-semibold text-[var(--foreground)] leading-tight">{title}</span>
+            ) : null}
+          </div>
+        ) : null}
+        <div className="info-card-body">{children}</div>
       </div>
       {cta ? (
-        <div className="mt-3 flex justify-end">
+        <div className="info-card-footer mt-3 flex justify-end">
           <a href={cta.href} className="btn btn-ghost btn-sm">{cta.label}</a>
         </div>
       ) : null}

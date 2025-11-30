@@ -20,6 +20,8 @@ import type { NotionBlock } from "@/lib/notion";
 import { groupLists, type GroupedListBlock, type ListBlock, type RenderableBlock } from "./utils";
 import { LinkCard } from "@/components/notion/LinkCard";
 import { TallyEmbed } from "@/components/embeds/Tally";
+import { AirtableEmbed } from "@/components/embeds/Airtable";
+import { resolveCalloutLayout, type LayoutVariant } from "@/components/notion/callout-layout";
 
 /**
  * 🔧 Hooks CSS (pilotés par globals.css)
@@ -147,6 +149,190 @@ function parseYouTube(url: string): { embed: string } | null {
     }
   } catch {/* ignore */}
   return null;
+}
+
+function isLayoutConfigBlock(block: NotionBlock): boolean {
+  if ((block as { type?: string }).type !== "code") return false;
+  const code = (block as Extract<NotionBlock, { type: "code" }>).code;
+  const lang = (code?.language || "").toLowerCase();
+  if (lang && lang !== "yaml" && lang !== "yml") return false;
+  const text = (code?.rich_text || []).map((r) => r.plain_text ?? "").join("\n").trim();
+  if (!text) return false;
+  try {
+    const yaml = require("js-yaml");
+    const data = yaml.load(text) as Record<string, unknown> | null;
+    const layout = (data as Record<string, unknown> | null)?.layout || (data as Record<string, unknown> | null)?.section;
+    return typeof layout === "string" && layout.trim().length > 0;
+  } catch {
+    return false;
+  }
+}
+
+function getPlain(block: NotionBlock): string {
+  if ((block as { type?: string }).type === "paragraph") {
+    return (block as Extract<NotionBlock, { type: "paragraph" }>).paragraph.rich_text?.map((r) => r.plain_text ?? "").join(" ") ?? "";
+  }
+  if ((block as { type?: string }).type === "heading_1") {
+    return (block as Extract<NotionBlock, { type: "heading_1" }>).heading_1.rich_text?.map((r) => r.plain_text ?? "").join(" ") ?? "";
+  }
+  if ((block as { type?: string }).type === "heading_2") {
+    return (block as Extract<NotionBlock, { type: "heading_2" }>).heading_2.rich_text?.map((r) => r.plain_text ?? "").join(" ") ?? "";
+  }
+  if ((block as { type?: string }).type === "heading_3") {
+    return (block as Extract<NotionBlock, { type: "heading_3" }>).heading_3.rich_text?.map((r) => r.plain_text ?? "").join(" ") ?? "";
+  }
+  return "";
+}
+
+type RenderItem =
+  | { kind: "section"; variant: "team" | "ia" | "checklist"; label: string; blocks: NotionBlock[] }
+  | { kind: "block"; block: NotionBlock };
+
+const normalizeText = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+function groupSections(blocks: NotionBlock[]): RenderItem[] {
+  const out: RenderItem[] = [];
+  let i = 0;
+  while (i < blocks.length) {
+    const b = blocks[i];
+    const type = (b as { type?: string }).type;
+    const title = normalizeText(getPlain(b));
+    const isHeading = type === "heading_2" || type === "heading_3";
+    const matchTeam = isHeading && title.includes("a faire en equipe");
+    const matchIa = isHeading && (title.includes("rubrique ia") || title.includes("ia "));
+    const matchChecklist = isHeading && title.includes("checklist");
+    const variant = matchTeam ? "team" : matchIa ? "ia" : matchChecklist ? "checklist" : null;
+
+    if (variant) {
+      const sectionBlocks: NotionBlock[] = [b];
+      i += 1;
+      while (i < blocks.length) {
+        const next = blocks[i];
+        const nextType = (next as { type?: string }).type;
+        if (nextType === "heading_2") break;
+        sectionBlocks.push(next);
+        i += 1;
+      }
+      const labelMap: Record<typeof variant, string> = {
+        team: "À faire en équipe",
+        ia: "La rubrique IA",
+        checklist: "Checklist",
+      } as const;
+      out.push({ kind: "section", variant, label: labelMap[variant], blocks: sectionBlocks });
+      continue;
+    }
+
+    out.push({ kind: "block", block: b });
+    i += 1;
+  }
+  return out;
+}
+
+function buildAutoHero(blocks: NotionBlock[], consume: Set<string>) {
+  const heading = blocks.find((b) => (b as { type?: string }).type === "heading_1" || (b as { type?: string }).type === "heading_2");
+  if (!heading) return null;
+  const idx = blocks.indexOf(heading);
+  const title = getPlain(heading).trim();
+  if (!title) return null;
+  const descBlock = blocks[idx + 1];
+  const description = descBlock && (descBlock as { type?: string }).type === "paragraph" ? getPlain(descBlock).trim() : undefined;
+
+  consume.add(heading.id);
+  if (descBlock && description) consume.add(descBlock.id);
+
+  return (
+    <HeroBanner
+      key="auto-hero"
+      title={title}
+      description={description}
+      badge={{ label: "Module", tone: "slate" }}
+    />
+  );
+}
+
+function buildSplitSections(blocks: NotionBlock[], consume: Set<string>) {
+  const splits: React.ReactNode[] = [];
+  for (let i = 0; i < blocks.length - 1; i += 1) {
+    const a = blocks[i];
+    const b = blocks[i + 1];
+    if ((a as { type?: string }).type !== "callout" || (b as { type?: string }).type !== "callout") continue;
+    // éviter de reconsommer
+    if (consume.has(a.id) || consume.has(b.id)) continue;
+    const left = renderRichText((a as Extract<NotionBlock, { type: "callout" }>).callout.rich_text);
+    const right = renderRichText((b as Extract<NotionBlock, { type: "callout" }>).callout.rich_text);
+    splits.push(
+      <SplitSection
+        key={`split-${a.id}`}
+        tone="light"
+        left={<div className="space-y-3">{left}</div>}
+        right={<div className="space-y-3">{right}</div>}
+      />
+    );
+    consume.add(a.id);
+    consume.add(b.id);
+    i += 1; // skip next
+  }
+  return splits;
+}
+
+function buildChecklist(blocks: NotionBlock[], consume: Set<string>) {
+  const checklists: React.ReactNode[] = [];
+  for (let i = 0; i < blocks.length - 1; i += 1) {
+    const heading = blocks[i];
+    if ((heading as { type?: string }).type !== "heading_2" && (heading as { type?: string }).type !== "heading_3") continue;
+    const text = getPlain(heading).toLowerCase();
+    if (!/livrable/.test(text) && !/livrables/.test(text)) continue;
+    const next = blocks[i + 1];
+    if ((next as { type?: string }).type !== "bulleted_list_item") continue;
+
+    // collect consecutive bullet items
+    const items: Array<{ label: string }> = [];
+    let j = i + 1;
+    while (j < blocks.length && (blocks[j] as { type?: string }).type === "bulleted_list_item") {
+      const itemText = (blocks[j] as Extract<NotionBlock, { type: "bulleted_list_item" }>).bulleted_list_item.rich_text?.map((r) => r.plain_text ?? "").join(" ") ?? "";
+      if (itemText.trim()) items.push({ label: itemText.trim() });
+      consume.add(blocks[j].id);
+      j += 1;
+    }
+    consume.add(heading.id);
+    if (items.length) {
+      checklists.push(<Checklist key={`checklist-${heading.id}`} title={getPlain(heading)} items={items} />);
+    }
+    i = j - 1;
+  }
+  return checklists;
+}
+
+function buildToc(blocks: NotionBlock[]) {
+  const entries: Array<{ id: string; title: string; level: number }> = [];
+  for (const b of blocks) {
+    const t = (b as { type?: string }).type;
+    if (t === "heading_2" || t === "heading_3") {
+      const title = getPlain(b).trim();
+      if (title) entries.push({ id: `b-${b.id}`, title, level: t === "heading_2" ? 2 : 3 });
+    }
+  }
+  if (entries.length < 3) return null;
+  return (
+    <div className="sticky top-4 z-10 flex flex-wrap gap-2 rounded-lg border border-border/60 bg-white/90 px-3 py-2 text-xs font-semibold text-foreground/80 shadow-sm">
+      {entries.map((entry) => (
+        <a
+          key={entry.id}
+          href={`#${entry.id}`}
+          className="rounded-full border border-border/60 px-2.5 py-1 hover:border-primary hover:text-foreground transition"
+        >
+          {entry.title}
+        </a>
+      ))}
+    </div>
+  );
 }
 
 // (removed unused parseTally helper; use <TallyEmbed />)
@@ -670,13 +856,13 @@ export async function renderBlockAsync(block: NotionBlock, currentSlug?: string)
     }
 
     case "heading_1":
-      return <H1>{renderRichText(block.heading_1.rich_text)}</H1>;
+      return <div id={`b-${block.id}`}><H1>{renderRichText(block.heading_1.rich_text)}</H1></div>;
 
     case "heading_2":
-      return <SectionTitle as="h2">{renderRichText(block.heading_2.rich_text)}</SectionTitle>;
+      return <div id={`b-${block.id}`}><SectionTitle as="h2">{renderRichText(block.heading_2.rich_text)}</SectionTitle></div>;
 
     case "heading_3":
-      return <SectionTitle as="h3">{renderRichText(block.heading_3.rich_text)}</SectionTitle>;
+      return <div id={`b-${block.id}`}><SectionTitle as="h3">{renderRichText(block.heading_3.rich_text)}</SectionTitle></div>;
 
     case "quote": {
       return <PullQuote>{renderRichText(block.quote.rich_text)}</PullQuote>;
@@ -762,6 +948,10 @@ export async function renderBlockAsync(block: NotionBlock, currentSlug?: string)
         const caption = block.embed?.caption?.[0]?.plain_text ?? null;
         return <TallyFigure url={url} caption={caption} />;
       }
+      if (/airtable\.com\//i.test(url)) {
+        const caption = block.embed?.caption?.[0]?.plain_text ?? null;
+        return <AirtableEmbed url={url} caption={caption} />;
+      }
       // Fallback: generic iframe
       return (
         <div className="media-figure mx-auto max-w-4xl overflow-hidden rounded-[22px] border">
@@ -791,6 +981,10 @@ export async function renderBlockAsync(block: NotionBlock, currentSlug?: string)
         const caption = block.bookmark?.caption?.[0]?.plain_text ?? null;
         return <TallyFigure url={url} caption={caption} />;
       }
+      if (/airtable\.com\//i.test(url)) {
+        const caption = block.bookmark?.caption?.[0]?.plain_text ?? null;
+        return <AirtableEmbed url={url} caption={caption} />;
+      }
       const title = block.bookmark?.caption?.[0]?.plain_text ?? url;
       return <LinkCard href={url} title={title} />;
     }
@@ -813,8 +1007,15 @@ export async function renderBlockAsync(block: NotionBlock, currentSlug?: string)
       if (iconEmoji === "📌") return null; // sidebar structuration
 
       const tone = notionColorTone(block.callout.color);
+      const layoutVariant = resolveCalloutLayout(tone);
       const variant = resolveCalloutVariant(tone);
+      const plainTitle =
+        (block.callout.rich_text || [])
+          .map((r) => r.plain_text ?? "")
+          .join(" ")
+          .trim() || undefined;
       const richText = renderRichText(block.callout.rich_text);
+      const headerTitle = layoutVariant === "sectionHeader" ? plainTitle : undefined;
 
       // Harmonized defaults: neutral surface, accent bar for variants
       const frame: 'none'|'solid'|'dotted' | undefined = 'none';
@@ -848,9 +1049,11 @@ export async function renderBlockAsync(block: NotionBlock, currentSlug?: string)
           labelOverride={labelOverride}
           bgColorOverride={bgColorOverride}
           headerBand={false}
+          title={headerTitle}
+          layoutVariant={layoutVariant}
         >
           <div className="space-y-3 w-full">
-            <div>{richText}</div>
+            {layoutVariant === "sectionHeader" ? null : <div>{richText}</div>}
             {getBlockChildren(block).length ? (
               <div className="w-full"><Blocks blocks={getBlockChildren(block)} currentSlug={currentSlug} /></div>
             ) : null}
@@ -1074,20 +1277,119 @@ export async function renderBlockAsync(block: NotionBlock, currentSlug?: string)
 }
 
 export async function Blocks({ blocks, currentSlug }: { blocks: NotionBlock[]; currentSlug?: string }) {
-  const grouped = groupLists(blocks);
+  const filteredBlocks = blocks.filter((b) => !isLayoutConfigBlock(b));
 
-  const rendered = await Promise.all(
-    grouped.map(async (block) => {
-      if (isGroupedListBlock(block)) {
-        const firstId = block.items[0]?.id ?? "list";
-        return <div key={`${block.type}-${firstId}`}>{renderGrouped(block, currentSlug)}</div>;
+  const grouped = groupLists(filteredBlocks);
+
+  // Découpe en sections en utilisant les dividers Notion comme séparateurs de rythme
+  const sections: RenderableBlock[][] = [];
+  let current: RenderableBlock[] = [];
+  for (const block of grouped) {
+    const isDivider = !isGroupedListBlock(block) && (block as { type?: string }).type === "divider";
+    if (isDivider) {
+      if (current.length) sections.push(current);
+      current = [];
+      continue;
+    }
+    current.push(block);
+  }
+  if (current.length) sections.push(current);
+
+  const renderedSections = await Promise.all(
+    sections.map(async (sectionBlocks, sectionIndex) => {
+      type SectionItem = { kind: "block"; block: RenderableBlock } | { kind: "timeline"; blocks: NotionBlock[] };
+
+      const normalized: SectionItem[] = [];
+      let idx = 0;
+      while (idx < sectionBlocks.length) {
+        const b = sectionBlocks[idx];
+        const isCallout = !isGroupedListBlock(b) && (b as { type?: string }).type === "callout";
+        if (isCallout) {
+          const notionCallout = b as NotionBlock & { type: "callout" };
+          const tone = notionColorTone(notionCallout.callout.color);
+          const layout = resolveCalloutLayout(tone);
+          if (layout === "timeline") {
+            const group: NotionBlock[] = [];
+            let j = idx;
+            while (j < sectionBlocks.length) {
+              const next = sectionBlocks[j];
+              const isNextCallout = !isGroupedListBlock(next) && (next as { type?: string }).type === "callout";
+              if (!isNextCallout) break;
+              const nextBlock = next as NotionBlock & { type: "callout" };
+              const nextTone = notionColorTone(nextBlock.callout.color);
+              const nextLayout = resolveCalloutLayout(nextTone);
+              if (nextLayout !== "timeline") break;
+              group.push(nextBlock);
+              j += 1;
+            }
+            if (group.length) {
+              normalized.push({ kind: "timeline", blocks: group });
+              idx = j;
+              continue;
+            }
+          }
+        }
+        normalized.push({ kind: "block", block: b });
+        idx += 1;
       }
-      const notionBlock = block as NotionBlock;
-      const content = await renderBlockAsync(notionBlock, currentSlug);
-      return <div key={notionBlock.id}>{content}</div>;
+
+      const rendered = await Promise.all(
+        normalized.map(async (item, itemIndex) => {
+          if (item.kind === "timeline") {
+            const children = await Promise.all(
+              item.blocks.map(async (callout, i) => {
+                const content = await renderBlockAsync(callout, currentSlug);
+                const pos = i % 2 === 0 ? "left" : "right";
+                return (
+                  <div key={callout.id} className={`timeline-item timeline-item-${pos}`}>
+                    <div className="timeline-dot">
+                      <span className="timeline-step">#{i + 1}</span>
+                    </div>
+                    <div className="timeline-card">{content}</div>
+                  </div>
+                );
+              })
+            );
+            return (
+              <div key={`timeline-${sectionIndex}-${itemIndex}`} className="timeline-group">
+                <div className="timeline-rail" />
+                <div className="timeline-items">{children}</div>
+              </div>
+            );
+          }
+
+          const block = item.block;
+          if (isGroupedListBlock(block)) {
+            const firstId = block.items[0]?.id ?? "list";
+            return <div key={`${block.type}-${firstId}`}>{renderGrouped(block, currentSlug)}</div>;
+          }
+          const notionBlock = block as NotionBlock;
+          const content = await renderBlockAsync(notionBlock, currentSlug);
+          return <div key={notionBlock.id}>{content}</div>;
+        })
+      );
+
+      const isAlt = sectionIndex % 2 === 1;
+      return (
+        <div key={`section-${sectionIndex}`} className={`section-shell ${isAlt ? "section-alt" : ""}`}>
+          <div className="prose max-w-none space-y-5">{rendered}</div>
+        </div>
+      );
     })
   );
 
-  // prose = styles tipographiques par défaut (light)
-  return <div className="prose max-w-none space-y-5">{rendered}</div>;
+  return (
+    <div className="notion-sections space-y-10">
+      {renderedSections.map((section, idx) => (
+        <div key={`wrap-${idx}`} className="space-y-6">
+          {section}
+          {idx < renderedSections.length - 1 ? (
+            <div className="section-divider" aria-hidden>
+              <span className="divider-dot" />
+            </div>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
 }

@@ -329,9 +329,10 @@ export type FlipCardsWidgetConfig = {
 export type AutoPromptField = {
   name: string;
   label?: string;
-  type?: 'text' | 'textarea';
+  type?: 'text' | 'textarea' | 'chips';
   placeholder?: string;
   default?: string;
+  options?: string[];
 };
 export type PromptTemplateWidgetConfig = {
   widget: 'prompt_template';
@@ -925,14 +926,22 @@ export function parseWidget(code: string): WidgetConfig | null {
         if (!rec) continue;
         const name = typeof rec.name === 'string' ? rec.name.trim() : '';
         if (!name) continue;
-        const typeRaw = typeof rec.type === 'string' ? rec.type : undefined;
-        const type: 'text' | 'textarea' = typeRaw === 'textarea' ? 'textarea' : 'text';
+        const typeRaw = typeof rec.type === 'string' ? rec.type.trim().toLowerCase() : undefined;
+        const type: AutoPromptField['type'] =
+          typeRaw === 'textarea' ? 'textarea' : typeRaw === 'chips' ? 'chips' : 'text';
+        const options =
+          type === 'chips' && Array.isArray(rec.options)
+            ? (rec.options as unknown[])
+                .map((v) => (typeof v === 'string' ? v.trim() : ''))
+                .filter((v) => v.length > 0)
+            : undefined;
         fields.push({
           name,
           label: typeof rec.label === 'string' ? rec.label : labelOf(name),
           type,
           placeholder: typeof rec.placeholder === 'string' ? rec.placeholder : undefined,
           default: typeof rec.default === 'string' ? rec.default : undefined,
+          options,
         });
       }
     } else {

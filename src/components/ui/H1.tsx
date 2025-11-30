@@ -19,7 +19,7 @@ export function H1({ children, eyebrow, description }: H1Props) {
           {eyebrow}
         </span>
       ) : null}
-      <h1 className="font-display text-[2.75rem] font-semibold leading-[1.08] tracking-[-0.02em] text-slate-900">
+      <h1 className="font-display text-[2.6rem] font-semibold leading-[1.08] tracking-[-0.02em] text-[var(--foreground)]">
         {children}
       </h1>
       {description ? (
@@ -28,4 +28,3 @@ export function H1({ children, eyebrow, description }: H1Props) {
     </header>
   );
 }
-
