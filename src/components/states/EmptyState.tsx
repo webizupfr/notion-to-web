@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
+
 type EmptyStateProps = {
   title: string;
   description?: string;
@@ -8,11 +11,13 @@ type EmptyStateProps = {
 
 export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
-    <section className="rounded-2xl border border-dashed border-slate-300/70 bg-white/70 px-6 py-12 text-center">
-      <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
-      {description ? <p className="mt-2 text-sm text-slate-600">{description}</p> : null}
-      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
+    <section className="surface-panel text-center space-y-[var(--space-s)]">
+      <span className="text-[color:var(--fg-muted)] text-lg" aria-hidden>
+        💡
+      </span>
+      <Heading level={3}>{title}</Heading>
+      {description ? <Text variant="muted">{description}</Text> : null}
+      {action ? <div className="flex justify-center">{action}</div> : null}
     </section>
   );
 }
-

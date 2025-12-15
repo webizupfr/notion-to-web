@@ -98,12 +98,12 @@ export function FormWidget({ config, storageKey }: { config: FormWidgetConfig; s
   };
 
   return (
-    <section className="space-y-4 widget-surface px-5 py-6">
+    <section className="surface-card space-y-[var(--space-m)]">
 
       <div className="space-y-4">
         {config.fields.map((field) => (
           <div key={field.name} className="space-y-1">
-            <label className="block text-sm font-medium text-slate-700" htmlFor={`${storageKey}-${field.name}`}>
+            <label className="block text-sm font-medium text-[color:var(--fg)]" htmlFor={`${storageKey}-${field.name}`}>
               {field.label}
             </label>
             <textarea
@@ -112,13 +112,13 @@ export function FormWidget({ config, storageKey }: { config: FormWidgetConfig; s
               onChange={(event) => updateField(field, event.target.value)}
               placeholder={field.placeholder}
               rows={field.placeholder && field.placeholder.length > 80 ? 4 : 3}
-              className="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm shadow-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+              className="w-full rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-4)] py-[var(--space-3)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
             />
           </div>
         ))}
       </div>
 
-      <div className="widget-actions text-xs text-slate-500 pt-2">
+      <div className="widget-actions text-xs text-[color:var(--muted)] pt-2">
         <button onClick={handleGenerate} className="btn btn-primary text-xs" disabled={!allFilled}>
           Générer
         </button>
@@ -134,9 +134,9 @@ export function FormWidget({ config, storageKey }: { config: FormWidgetConfig; s
       </div>
 
       {showPreview && (
-        <div className="space-y-2 rounded-2xl border border-slate-200/80 bg-slate-50/70 px-4 py-4">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Prévisualisation</div>
-          <pre className="whitespace-pre-wrap text-sm leading-6 text-slate-800">{preview}</pre>
+        <div className="space-y-2 rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-4)] py-[var(--space-4)] shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Prévisualisation</div>
+          <pre className="whitespace-pre-wrap text-sm leading-6 text-[color:var(--fg)]">{preview}</pre>
         </div>
       )}
     </section>

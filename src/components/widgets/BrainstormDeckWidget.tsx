@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Heading } from "@/components/ui/Heading";
 import type { BrainstormCard, CardType } from "@/types/brainstorm";
 import type { BrainstormDeckWidgetConfig } from "@/lib/widget-parser";
-import { AnimatePresence, motion } from "framer-motion";
 
 type SavedState = {
   lastId?: string;
@@ -16,9 +17,9 @@ type TypeMeta = { label: string; icon: string; accent: string };
 const ACTIVE_TYPES: CardType[] = ["image", "prompt"];
 
 const TYPE_META: Record<CardType, TypeMeta> = {
-  image: { label: "Image", icon: "🖼️", accent: "bg-amber-100 text-amber-700" },
-  prompt: { label: "Et si…", icon: "💬", accent: "bg-indigo-100 text-indigo-700" },
-  constraint: { label: "Contrainte", icon: "🧩", accent: "bg-emerald-100 text-emerald-700" },
+  image: { label: "Image", icon: "🖼️", accent: "bg-[color-mix(in_oklab,var(--accent)_18%,#fff)] text-[color-mix(in_oklab,var(--accent)_78%,#0f1728)]" },
+  prompt: { label: "Et si…", icon: "💬", accent: "bg-[color-mix(in_oklab,var(--bg)_92%,#fff)] text-[color:var(--fg)]" },
+  constraint: { label: "Contrainte", icon: "🧩", accent: "bg-[color-mix(in_oklab,var(--success)_16%,#fff)] text-[color-mix(in_oklab,var(--success)_78%,#0f1728)]" },
 };
 
 function rand<T>(arr: T[]): T | undefined { return arr[Math.floor(Math.random() * arr.length)]; }
@@ -81,18 +82,22 @@ function TypeChip({ type, active, onToggle, onShuffle }: TypeChipProps) {
       <button
         type="button"
         onClick={() => onToggle(type)}
-        className={`inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1.5 text-sm leading-none shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2 ${active ? "bg-white" : "bg-white/60 text-slate-500"}`}
+        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm leading-none shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--accent)_32%,transparent)] focus-visible:ring-offset-2 ${
+          active
+            ? "border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_96%,#fff)] text-[color:var(--fg)]"
+            : "border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_92%,#fff)] text-[color:var(--muted)] hover:border-[color-mix(in_oklab,var(--accent)_40%,transparent)] hover:text-[color-mix(in_oklab,var(--accent)_80%,#0f1728)]"
+        }`}
         aria-pressed={active}
         aria-label={`${active ? "Désactiver" : "Activer"} ${meta.label}`}
       >
         <span className="text-base" aria-hidden>{meta.icon}</span>
-        <span className="font-medium text-slate-700">{meta.label}</span>
-        <span className={`ml-1 text-xs ${active ? "text-amber-600" : "text-slate-400"}`}>{active ? "●" : "○"}</span>
+        <span className="font-medium text-[color:var(--fg)]">{meta.label}</span>
+        <span className={`ml-1 text-xs ${active ? "text-[color-mix(in_oklab,var(--accent)_75%,#0f1728)]" : "text-[color:var(--muted)]"}`}>{active ? "●" : "○"}</span>
       </button>
       <button
         type="button"
         onClick={() => onShuffle(type)}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white/80 text-sm shadow-sm transition hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] text-sm text-[color:var(--fg)] shadow-sm transition hover:bg-[color-mix(in_oklab,var(--bg)_96%,#fff)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--accent)_32%,transparent)] focus-visible:ring-offset-2"
         title={`Tirer une ${meta.label}`}
         aria-label={`Tirer une ${meta.label}`}
       >
@@ -119,23 +124,23 @@ function TimerRing({ seconds, total, running, onToggle, onReset }: TimerRingProp
       <div className="relative h-11 w-11">
         <div
           className="absolute inset-0 rounded-full"
-          style={{ background: `conic-gradient(#f59e0b ${pct}%, #e2e8f0 0)` }}
+          style={{ background: `conic-gradient(color-mix(in_oklab,var(--accent) 70%, transparent) ${pct}%, color-mix(in_oklab,var(--border) 80%, transparent) 0)` }}
           aria-hidden
         />
         <button
           type="button"
           onClick={onToggle}
-          className="absolute inset-1 flex items-center justify-center rounded-full bg-white text-[15px] shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
+          className="absolute inset-1 flex items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--bg)_96%,#fff)] text-[15px] text-[color:var(--fg)] shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--accent)_32%,transparent)] focus-visible:ring-offset-2"
           aria-label={running ? "Mettre le timer en pause" : "Démarrer le timer"}
         >
           {running ? "⏸" : "▶︎"}
         </button>
       </div>
-      <span className="w-[52px] text-right tabular-nums text-sm font-medium text-slate-700">{mm}:{ss}</span>
+      <span className="w-[52px] text-right tabular-nums text-sm font-medium text-[color:var(--fg)]">{mm}:{ss}</span>
       <button
         type="button"
         onClick={onReset}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-sm shadow-sm hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] text-sm text-[color:var(--fg)] shadow-sm hover:bg-[color-mix(in_oklab,var(--bg)_96%,#fff)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--accent)_32%,transparent)] focus-visible:ring-offset-2"
         title="Réinitialiser le timer"
         aria-label="Réinitialiser le timer"
       >
@@ -147,12 +152,12 @@ function TimerRing({ seconds, total, running, onToggle, onReset }: TimerRingProp
 
 function KeyboardHint() {
   return (
-    <div className="text-[12px] text-slate-500/70 transition hover:text-slate-600">
+    <div className="text-[12px] text-[color:var(--muted)] transition hover:text-[color:var(--fg)]">
       Astuce :
-      <span className="mx-1 inline-flex items-center justify-center rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px] font-semibold">SPACE</span>
+      <span className="mx-1 inline-flex items-center justify-center rounded border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-1.5 py-0.5 text-[11px] font-semibold text-[color:var(--fg)]">SPACE</span>
       pour mélanger —
-      <span className="mx-1 inline-flex items-center justify-center rounded border border-slate-300 bg-white px-1 py-0.5 text-[11px] font-semibold">I</span>
-      /<span className="mx-1 inline-flex items-center justify-center rounded border border-slate-300 bg-white px-1 py-0.5 text-[11px] font-semibold">E</span>
+      <span className="mx-1 inline-flex items-center justify-center rounded border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-1 py-0.5 text-[11px] font-semibold text-[color:var(--fg)]">I</span>
+      /<span className="mx-1 inline-flex items-center justify-center rounded border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-1 py-0.5 text-[11px] font-semibold text-[color:var(--fg)]">E</span>
       pour tirer Image / Et si…
     </div>
   );
@@ -161,7 +166,7 @@ function KeyboardHint() {
 function CardBadge({ type }: { type: CardType }) {
   const meta = TYPE_META[type];
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold ${meta.accent} shadow-sm`}> 
+    <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold shadow-sm border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_92%,#fff)] text-[color:var(--fg)]`}> 
       <span aria-hidden>{meta.icon}</span>
       {meta.label}
     </span>
@@ -365,14 +370,14 @@ export function BrainstormDeckWidget({ config, storageKey }: { config: Brainstor
   const currentMeta = current ? TYPE_META[current.type] : null;
 
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-slate-200/60 bg-[#FAF7F2] shadow-[0_24px_60px_-28px_rgba(17,24,39,0.35)]">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-br from-amber-200/30 via-transparent to-transparent" aria-hidden />
-      <div className="relative space-y-6 p-5 md:p-7">
+    <section className="surface-card relative overflow-hidden">
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-br from-[color-mix(in_oklab,var(--accent)_22%,transparent)] via-transparent to-transparent" aria-hidden />
+      <div className="relative space-y-[var(--space-l)] p-[var(--space-l)] md:p-[var(--space-xl)]">
         <header className="flex flex-wrap items-center justify-between gap-4">
-          <h3 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-amber-400/70 text-lg text-white shadow-sm" aria-hidden>🧠</span>
+          <Heading level={3} className="flex items-center gap-2">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--accent)_70%,#fff)] text-lg text-[color:var(--fg)] shadow-sm" aria-hidden>🧠</span>
             {title}
-          </h3>
+          </Heading>
           <div className="flex flex-wrap items-center gap-3">
             <TypeChip type="image" active={activeTypes.has("image")} onToggle={toggleType} onShuffle={drawType} />
             <TypeChip type="prompt" active={activeTypes.has("prompt")} onToggle={toggleType} onShuffle={drawType} />
@@ -380,7 +385,7 @@ export function BrainstormDeckWidget({ config, storageKey }: { config: Brainstor
             <button
               type="button"
               onClick={shuffleAll}
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-amber-400 to-amber-500 px-5 py-2 text-sm font-semibold text-slate-900 shadow-[0_12px_30px_rgba(245,158,11,0.28)] transition hover:shadow-[0_16px_34px_rgba(245,158,11,0.36)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[color-mix(in_oklab,var(--accent)_78%,#fff)] to-[color-mix(in_oklab,var(--accent)_92%,#fff)] px-[var(--space-5)] py-[var(--space-2)] text-sm font-semibold text-[color:var(--fg)] shadow-[0_12px_30px_color-mix(in_oklab,var(--accent)_45%,transparent)] transition hover:shadow-[0_16px_34px_color-mix(in_oklab,var(--accent)_55%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--accent)_40%,transparent)] focus-visible:ring-offset-2"
             >
               🌀 Mélanger
             </button>
@@ -389,33 +394,33 @@ export function BrainstormDeckWidget({ config, storageKey }: { config: Brainstor
 
         {toast ? (
           <div className="flex justify-end">
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-sm font-medium text-slate-700 shadow animate-slide-in">
+            <span className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-3 py-1 text-sm font-medium text-[color:var(--fg)] shadow animate-slide-in">
               ✨ {toast}
             </span>
           </div>
         ) : null}
 
-        <div className="rounded-2xl border border-slate-200/60 bg-white/70 px-4 py-6 md:px-6 md:py-8 shadow-[0_18px_42px_rgba(15,23,42,0.08)]">
+        <div className="rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-4)] py-[var(--space-6)] md:px-[var(--space-6)] md:py-[var(--space-8)] shadow-[var(--shadow-soft)]">
           {loading ? (
-            <div className="flex h-64 items-center justify-center text-sm text-slate-500">Chargement du jeu…</div>
+            <div className="flex h-64 items-center justify-center text-sm text-[color:var(--muted)]">Chargement du jeu…</div>
           ) : loadError ? (
-            <div className="flex flex-col items-center gap-3 text-center text-sm text-slate-600">
+            <div className="flex flex-col items-center gap-3 text-center text-sm text-[color:var(--muted)]">
               <span>{loadError}</span>
               <button
                 type="button"
                 onClick={() => setReloadKey((n) => n + 1)}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium shadow-sm hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
+                className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-4)] py-[var(--space-2)] text-sm font-medium text-[color:var(--fg)] shadow-sm hover:bg-[color-mix(in_oklab,var(--bg)_96%,#fff)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--accent)_32%,transparent)] focus-visible:ring-offset-2"
               >
                 ↻ Réessayer
               </button>
             </div>
           ) : !available.length ? (
-            <div className="flex flex-col items-center gap-3 text-center text-sm text-slate-500">
+            <div className="flex flex-col items-center gap-3 text-center text-sm text-[color:var(--muted)]">
               <span>Aucun type sélectionné. Active au moins une catégorie.</span>
               <button
                 type="button"
                 onClick={() => setActiveTypes(new Set(ACTIVE_TYPES))}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-1.5 text-sm font-medium shadow-sm hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
+                className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-4)] py-[var(--space-2)] text-sm font-medium text-[color:var(--fg)] shadow-sm hover:bg-[color-mix(in_oklab,var(--bg)_96%,#fff)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--accent)_32%,transparent)] focus-visible:ring-offset-2"
               >
                 Activer tout
               </button>
@@ -430,7 +435,7 @@ export function BrainstormDeckWidget({ config, storageKey }: { config: Brainstor
                   exit={{ opacity: 0, rotateX: 5 }}
                   transition={{ type: "spring", stiffness: 140, damping: 18 }}
                   whileHover={{ rotateX: -1.5, rotateY: 1.5, translateY: -4 }}
-                  className="relative overflow-hidden rounded-2xl bg-white/80 px-4 py-6 shadow-[0_8px_30px_rgba(0,0,0,0.08)] backdrop-blur supports-[backdrop-filter]:bg-white/60"
+                  className="relative overflow-hidden rounded-[var(--r-xl)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-4)] py-[var(--space-6)] shadow-[0_8px_30px_rgba(0,0,0,0.08)] backdrop-blur supports-[backdrop-filter]:bg-[color-mix(in_oklab,var(--bg)_92%,#fff)]"
                 >
                   {currentMeta ? (
                     <div className="absolute left-5 top-5">
@@ -458,7 +463,7 @@ export function BrainstormDeckWidget({ config, storageKey }: { config: Brainstor
                         }}
                       />
                       {current.credit ? (
-                        <figcaption className="absolute bottom-3 right-4 inline-flex items-center rounded-full bg-white/85 px-2 py-1 text-[10px] font-medium text-slate-600 shadow">
+                        <figcaption className="absolute bottom-3 right-4 inline-flex items-center rounded-full bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-2 py-1 text-[10px] font-medium text-[color:var(--muted)] shadow">
                           {current.credit}
                         </figcaption>
                       ) : null}
@@ -466,19 +471,19 @@ export function BrainstormDeckWidget({ config, storageKey }: { config: Brainstor
                   ) : (
                     <motion.blockquote
                       key={`${current.id}-text`}
-                      className="relative flex min-h-[18rem] items-center justify-center px-4 text-center text-2xl font-medium leading-snug text-slate-800 md:text-3xl"
+                      className="relative flex min-h-[18rem] items-center justify-center px-[var(--space-4)] text-center text-2xl font-medium leading-snug text-[color:var(--fg)] md:text-3xl"
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.28 }}
                     >
-                      <span className="absolute left-0 top-8 text-4xl text-amber-300" aria-hidden>«</span>
+                      <span className="absolute left-0 top-8 text-4xl text-[color-mix(in_oklab,var(--accent)_55%,#fff)]" aria-hidden>«</span>
                       <span className="inline-block px-3">{current.text}</span>
-                      <span className="absolute bottom-8 right-0 text-4xl text-amber-300" aria-hidden>»</span>
+                      <span className="absolute bottom-8 right-0 text-4xl text-[color-mix(in_oklab,var(--accent)_55%,#fff)]" aria-hidden>»</span>
                     </motion.blockquote>
                   )}
                 </motion.div>
               ) : (
-                <motion.div key="empty" className="flex h-64 items-center justify-center text-sm text-slate-500" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                <motion.div key="empty" className="flex h-64 items-center justify-center text-sm text-[color:var(--muted)]" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   Aucun contenu disponible.
                 </motion.div>
               )}
@@ -486,12 +491,12 @@ export function BrainstormDeckWidget({ config, storageKey }: { config: Brainstor
           )}
         </div>
 
-        <div className="flex items-center justify-between text-xs text-slate-500">
+        <div className="flex items-center justify-between text-xs text-[color:var(--muted)]">
           <KeyboardHint />
           <button
             type="button"
             onClick={shuffleAll}
-            className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/70 px-3 py-1 font-medium text-slate-600 shadow-sm hover:bg-white"
+            className="inline-flex items-center gap-1 rounded-full border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-3 py-1 font-medium text-[color:var(--fg)] shadow-sm hover:bg-[color-mix(in_oklab,var(--bg)_96%,#fff)]"
           >
             ↻ Mélanger encore
           </button>

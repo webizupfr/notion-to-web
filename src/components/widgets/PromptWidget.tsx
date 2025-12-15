@@ -62,35 +62,34 @@ export function PromptWidget({ config, storageKey }: { config: PromptWidgetConfi
   const wrapperClass = useMemo(() => {
     if (theme === 'dark') {
       return [
-        'overflow-hidden rounded-[22px] border shadow-subtle',
-        'border-slate-900/40 bg-slate-900 text-slate-50',
-        wide ? 'px-0' : 'px-0',
-        'py-0',
+        'overflow-hidden rounded-[var(--r-xl)] border shadow-[var(--shadow-subtle)]',
+        'border-[color-mix(in_oklab,var(--fg)_14%,transparent)] bg-[color-mix(in_oklab,var(--fg)_94%,#000)] text-[color:var(--bg)]',
+        'px-0 py-0',
       ].join(' ');
     }
-    return 'widget-surface px-4 py-4 space-y-3';
-  }, [theme, wide]);
+    return 'surface-card space-y-[var(--space-m)]';
+  }, [theme]);
 
   const headerClass = theme === 'dark'
-    ? 'flex items-center justify-between gap-3 border-b border-white/10 bg-slate-900/60 px-4 py-2 text-xs uppercase tracking-[0.2em] text-slate-300'
-    : 'flex items-center justify-between text-xs text-slate-500';
+    ? 'flex items-center justify-between gap-3 border-b border-[color-mix(in_oklab,var(--bg)_14%,transparent)] bg-[color-mix(in_oklab,var(--fg)_88%,#000)] px-[var(--space-4)] py-[var(--space-2)] text-xs uppercase tracking-[0.2em] text-[color-mix(in_oklab,var(--bg)_85%,#fff)]'
+    : 'flex items-center justify-between text-xs text-[color:var(--muted)]';
 
   const copyBtnClass = theme === 'dark'
-    ? 'rounded-full border border-white/10 px-3 py-1 text-[11px] font-medium text-slate-200 transition hover:border-white/30 hover:text-white'
-    : 'inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600';
+    ? 'rounded-full border border-[color-mix(in_oklab,var(--bg)_22%,transparent)] px-3 py-1 text-[11px] font-medium text-[color-mix(in_oklab,var(--bg)_82%,#fff)] transition hover:border-[color-mix(in_oklab,var(--bg)_40%,transparent)] hover:text-[color:var(--bg)]'
+    : 'inline-flex items-center gap-1 rounded-full border border-[color:var(--border)] px-3 py-1.5 text-xs font-medium text-[color:var(--muted)] transition hover:border-[color-mix(in_oklab,var(--accent)_40%,transparent)] hover:text-[color-mix(in_oklab,var(--accent)_80%,#0f1728)]';
 
   const resetBtnClass = theme === 'dark'
-    ? 'text-[11px] text-slate-300 hover:text-white'
-    : 'text-xs text-slate-400 hover:text-slate-600';
+    ? 'text-[11px] text-[color-mix(in_oklab,var(--bg)_80%,#fff)] hover:text-[color:var(--bg)]'
+    : 'text-xs text-[color:var(--muted)] hover:text-[color:var(--fg)]';
 
   const textareaClass = theme === 'dark'
     ? [
-        'w-full bg-transparent px-5 py-4',
+        'w-full bg-transparent px-[var(--space-5)] py-[var(--space-4)]',
         wide ? 'text-[1rem]' : 'text-[0.94rem]',
-        'leading-[1.6] font-mono text-slate-50 placeholder:text-slate-400',
-        'focus:outline-none focus:ring-2 focus:ring-white/10 min-h-[220px] resize-y',
+        'leading-[1.6] font-mono text-[color:var(--bg)] placeholder:text-[color-mix(in_oklab,var(--bg)_70%,#fff)]',
+        'focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--bg)_22%,transparent)] min-h-[220px] resize-y',
       ].join(' ')
-    : 'w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm leading-6 shadow-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100';
+    : 'w-full rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-4)] py-[var(--space-3)] text-sm leading-6 text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]';
 
   const bodyWrapperClass = theme === 'dark' ? 'max-h-[65vh] overflow-auto' : '';
 

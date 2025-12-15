@@ -3,15 +3,15 @@ import { notFound, redirect } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
 
-import { getSprintBundle } from "@/lib/content-store";
-import { getPageBundle } from "@/lib/content-store";
-import { ActivityContent } from "@/components/learning/ActivityContent";
+import { getSprintBundle, getPageBundle } from "@/lib/content-store";
 import { Blocks } from "@/components/notion/Blocks";
-import { StepTimeline } from "@/components/learning/StepTimeline";
-import { StepNavBar } from "@/components/learning/StepNavBar";
+import { PageSection } from "@/components/layout/PageSection";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 import { PageSidebar } from "@/components/layout/PageSidebar";
-import { HubFlag } from "@/components/layout/HubFlag";
-import type { NavItem } from "@/lib/types";
+import { ActivityContent } from "@/components/learning/ActivityContent";
+import { StepNavBar } from "@/components/learning/StepNavBar";
+import { LearningHeader } from "@/components/learning/LearningHeader";
 
 export const revalidate = 0;
 
@@ -28,12 +28,6 @@ function formatUnlock(dateIso: string | null | undefined, timezone: string) {
   }).format(date);
 }
 
-const moduleNumberEmoji = (value: number): string => {
-  const map = ['0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
-  if (value >= 0 && value < map.length) return map[value];
-  return '📘';
-};
-
 export default async function SprintModulePage({
   params,
   searchParams,
@@ -42,6 +36,9 @@ export default async function SprintModulePage({
   searchParams?: Promise<Record<string, string>> | Record<string, string>;
 }) {
   const { slug, moduleSlug } = await (params as Promise<{ slug: string; moduleSlug: string }>);
+  const resolvedSearchParams =
+    (await (searchParams as Promise<Record<string, string>>).catch(() => undefined)) ||
+    (searchParams as Record<string, string> | undefined);
 
   const bundle = await unstable_cache(
     async () => await getSprintBundle(slug),
@@ -52,10 +49,9 @@ export default async function SprintModulePage({
   if (!bundle) return notFound();
 
   if (bundle.visibility === "private") {
-    const sp = (await (searchParams as Promise<Record<string, string>>).catch(() => undefined)) || (searchParams as Record<string, string> | undefined);
     const cookieStore: Awaited<ReturnType<typeof cookies>> = await cookies();
     const cookieKey = cookieStore.get("gate_key")?.value;
-    const rawKey = ((sp?.key ?? sp?.token) as string | undefined) || cookieKey;
+    const rawKey = ((resolvedSearchParams?.key ?? resolvedSearchParams?.token) as string | undefined) || cookieKey;
     const key = rawKey?.trim() ?? "";
     const password = bundle.password?.trim() ?? "";
     if (!key) redirect(`/gate?next=/sprint/${slug}/${moduleSlug}`);
@@ -78,10 +74,9 @@ export default async function SprintModulePage({
 
     // Gate if the child page is private
     if ((childBundle.meta.visibility ?? 'public') === 'private') {
-      const sp = (await (searchParams as Promise<Record<string, string>>).catch(() => undefined)) || (searchParams as Record<string, string> | undefined);
       const cookieStore: Awaited<ReturnType<typeof cookies>> = await cookies();
       const cookieKey = cookieStore.get('gate_key')?.value;
-      const rawKey = ((sp?.key ?? sp?.token) as string | undefined) || cookieKey;
+      const rawKey = ((resolvedSearchParams?.key ?? resolvedSearchParams?.token) as string | undefined) || cookieKey;
       const key = rawKey?.trim() ?? '';
       const password = childBundle.meta.password?.trim() ?? '';
       if (!key) redirect(`/gate?next=/${childSlug}`);
@@ -90,85 +85,39 @@ export default async function SprintModulePage({
 
     const parentTitle = childBundle.meta.parentTitle ?? bundle.title;
     const parentSlug = childBundle.meta.parentSlug ?? `sprint/${slug}`;
-    const navigation: NavItem[] = (childBundle.meta.parentNavigation as NavItem[] | undefined) ?? (bundle.contextNavigation as NavItem[] | null) ?? [];
 
     return (
-      <div className="mx-auto flex w-full max-w-[1800px] gap-10" data-hub={1}>
-        <HubFlag value={true} />
-        <div className="hidden lg:block lg:flex-shrink-0">
-          <PageSidebar
-            parentTitle={parentTitle}
-            parentSlug={parentSlug}
-            navigation={navigation}
-            isHub={true}
-            hubDescription={bundle.description ?? null}
-            releasedDays={[]}
-            learningKind={"modules"}
-            unitLabelSingular="Module"
-            unitLabelPlural="Modules"
-          />
-        </div>
-        <div className="lg:hidden">
-          <PageSidebar
-            parentTitle={parentTitle}
-            parentSlug={parentSlug}
-            navigation={navigation}
-            isHub={true}
-            hubDescription={bundle.description ?? null}
-            releasedDays={[]}
-            learningKind={"modules"}
-            unitLabelSingular="Module"
-            unitLabelPlural="Modules"
-          />
-        </div>
-
-        <section className="flex-1 min-w-0 space-y-6 px-6 py-12 sm:px-12">
-          <header className="space-y-3">
-            <Link href={`/${parentSlug}`} className="text-sm text-teal-600 underline">
+      <>
+        <PageSection variant="content">
+          <div className="space-y-[var(--space-s)]">
+            <Text variant="small" className="uppercase tracking-[0.14em] text-[color:var(--muted)]">
+              {parentTitle}
+            </Text>
+            <Heading level={1}>{childBundle.meta.title}</Heading>
+            <Link href={`/${parentSlug}`} className="btn btn-secondary w-fit">
               ← Retour au sprint
             </Link>
-            <h1 className="text-3xl font-semibold text-slate-900">{childBundle.meta.title}</h1>
-          </header>
-          <div className="space-y-6">
-            <Blocks blocks={childBundle.blocks} currentSlug={childSlug} />
           </div>
-        </section>
-      </div>
+        </PageSection>
+        <PageSection variant="content">
+          <Blocks blocks={childBundle.blocks} currentSlug={childSlug} />
+        </PageSection>
+      </>
     );
   }
 
   const timezone = bundle.timezone || "Europe/Paris";
   const unlockLabel = formatUnlock(currentModule.unlockAtISO, timezone);
 
-  const activities = (currentModule.activities ?? []).map((activity, idx) => ({
-    ...activity,
-    order: activity.order ?? idx + 1,
-  })).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-
-  const sp = (await (searchParams as Promise<Record<string, string>>).catch(() => undefined)) || (searchParams as Record<string, string> | undefined);
-  const stepParam = Number(sp?.step ?? '1');
-  const activeIndex = Number.isFinite(stepParam) && stepParam >= 1 && stepParam <= activities.length ? stepParam - 1 : 0;
-  const activeActivity = activities[activeIndex];
-
-  const steps = activities.map((activity, idx) => ({
-    id: activity.notionId,
-    order: activity.order ?? idx + 1,
-    title: activity.title,
-    type: activity.type ?? undefined,
-    duration: activity.duration ? `${activity.duration} min` : null,
-    url: undefined,
-    instructions: activity.summary ?? null,
-  }));
-
   if (currentModule.isLocked) {
     return (
       <section className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-16 sm:px-12">
         <header className="space-y-3 text-center">
-          <h1 className="text-3xl font-semibold text-slate-900">{currentModule.title}</h1>
-          <p className="text-sm text-amber-700">
+          <Heading level={1} className="text-[1.9rem] leading-[1.2] text-slate-900">{currentModule.title}</Heading>
+          <Text variant="small" className="text-amber-700">
             Ce module est verrouillé pour le moment.
             {unlockLabel ? ` Déverrouillage prévu le ${unlockLabel}.` : ''}
-          </p>
+          </Text>
         </header>
         <Link href={`/sprint/${slug}`} className="btn btn-primary self-center">
           Revenir au sprint
@@ -177,122 +126,100 @@ export default async function SprintModulePage({
     );
   }
 
-  const basePath = `/sprint/${slug}/${moduleSlug}`;
-  const prevModule = moduleIndex > 0 ? bundle.modules[moduleIndex - 1] : null;
-  const nextModule = moduleIndex + 1 < bundle.modules.length ? bundle.modules[moduleIndex + 1] : null;
+  const moduleDayLabel =
+    typeof currentModule.dayIndex === "number" && !Number.isNaN(currentModule.dayIndex)
+      ? `Jour ${currentModule.dayIndex + 1}`
+      : `Module ${currentModule.order > 0 ? currentModule.order : moduleIndex + 1}`;
 
-  // Build synthetic navigation + groups (same as sprint page)
-  // Navigation = Accès rapide (contextNavigation) + section Modules
-  const modulesSection: NavItem = {
-    type: "section",
-    title: "Modules",
-    children: bundle.modules.map((m, idx) => ({
-      id: m.slug,
-      title: m.title,
-      slug: `sprint/${slug}/${m.slug}`,
-      icon: moduleNumberEmoji(m.order > 0 ? m.order : idx + 1),
-    })),
-  };
-  const navigation: NavItem[] = [
-    ...(Array.isArray(bundle.contextNavigation) && bundle.contextNavigation.length
-      ? bundle.contextNavigation
-      : []),
-    modulesSection,
-  ];
-  const dayGroups = (() => {
-    const map = new Map<number, Array<{ id: string; title: string; slug: string; order: number }>>();
-    for (let i = 0; i < bundle.modules.length; i++) {
-      const m = bundle.modules[i];
-      const dayIndex = (typeof m.dayIndex === 'number' && !Number.isNaN(m.dayIndex)) ? m.dayIndex : 0;
-      const dayNumber = (dayIndex ?? 0) + 1;
-      const arr = map.get(dayNumber) ?? [];
-      arr.push({ id: m.slug, title: m.title, slug: `sprint/${slug}/${m.slug}`, order: m.order > 0 ? m.order : i + 1 });
-      map.set(dayNumber, arr);
-    }
-    const groups = Array.from(map.entries()).sort((a,b) => a[0]-b[0]).map(([day, items]) => ({ label: `Jour ${day}`, items: items.sort((a,b) => a.order-b.order) }));
-    return groups;
-  })();
+  const parentSlug = `sprint/${slug}`;
+  const modulesNavigation =
+    bundle.modules.map((mod) => ({
+      type: "page" as const,
+      title: `${typeof mod.dayIndex === "number" ? `Jour ${mod.dayIndex + 1}` : `Module ${mod.order > 0 ? mod.order : 1}`} · ${mod.title}`,
+      slug: `sprint/${slug}/${mod.slug}`,
+    })) ?? [];
+
+  const modulePage = await unstable_cache(
+    async () => await getPageBundle(`sprint/${slug}/${moduleSlug}`),
+    [`sprint-module:${slug}:${moduleSlug}`],
+    { tags: [`page:sprint:${slug}:${moduleSlug}`], revalidate: 60 }
+  )();
+
+  const activities = currentModule.activities ?? [];
+  const steps = activities.map((activity, idx) => ({
+    id: activity.notionId,
+    order: activity.order ?? idx + 1,
+    title: activity.title,
+    type: activity.type ?? "activité",
+    duration: activity.duration ?? null,
+  }));
+  const basePath = `/sprint/${slug}/${moduleSlug}`;
+  const stepParam = Number(resolvedSearchParams?.step ?? "1");
+  const stepIdx = Number.isFinite(stepParam) && stepParam >= 1 && stepParam <= steps.length ? stepParam - 1 : 0;
+  const currentStep = steps[stepIdx] ?? steps[0];
 
   return (
-    <div className="mx-auto flex w-full max-w-[1800px] gap-10" data-hub={1}>
-      <HubFlag value={true} />
+    <div className="mx-auto flex w-full max-w-[1800px] gap-10">
       <div className="hidden lg:block lg:flex-shrink-0">
         <PageSidebar
           parentTitle={bundle.title}
-          parentSlug={`sprint/${slug}`}
-          navigation={navigation}
-          isHub={true}
-          hubDescription={bundle.description ?? null}
-          releasedDays={[]}
-          learningKind={"modules"}
-          unitLabelSingular="Module"
-          unitLabelPlural="Modules"
-          moduleQuickGroups={dayGroups}
+          parentSlug={parentSlug}
+          navigation={modulesNavigation}
         />
       </div>
+
       <div className="lg:hidden">
         <PageSidebar
           parentTitle={bundle.title}
-          parentSlug={`sprint/${slug}`}
-          navigation={navigation}
-          isHub={true}
-          hubDescription={bundle.description ?? null}
-          releasedDays={[]}
-          learningKind={"modules"}
-          unitLabelSingular="Module"
-          unitLabelPlural="Modules"
-          moduleQuickGroups={dayGroups}
+          parentSlug={parentSlug}
+          navigation={modulesNavigation}
         />
       </div>
 
-      <section className="flex-1 min-w-0 space-y-6 px-6 py-12 sm:px-12">
-        {currentModule.title ? (
-          <div className="space-y-3 rounded-[20px] border border-border/50 bg-white px-6 py-5 shadow-sm">
-            <h1 className="text-2xl font-semibold text-foreground">{currentModule.title}</h1>
-            <p className="text-xs uppercase tracking-[0.16em] text-foreground/60">
-              Module {currentModule.order > 0 ? currentModule.order : moduleIndex + 1}
-            </p>
-            {currentModule.description ? (
-              <p className="text-sm text-foreground/70">{currentModule.description}</p>
-            ) : null}
-          </div>
+      <section className="flex-1 min-w-0 space-y-8">
+        <PageSection variant="content" size="wide">
+          <LearningHeader
+            unitLabel={moduleDayLabel.startsWith("Jour") ? "Jour" : "Module"}
+            unitNumber={currentModule.dayIndex !== null && currentModule.dayIndex !== undefined ? currentModule.dayIndex + 1 : currentModule.order}
+            title={currentModule.title}
+            summary={
+              currentModule.description
+                ? currentModule.description
+                : modulePage?.meta?.description ?? null
+            }
+            currentStep={steps.length ? stepIdx + 1 : null}
+            totalSteps={steps.length || null}
+          />
+        </PageSection>
+
+        {modulePage?.blocks?.length ? (
+          <PageSection variant="content">
+            <div className="surface-panel">
+              <Blocks blocks={modulePage.blocks} currentSlug={`sprint/${slug}/${moduleSlug}`} />
+            </div>
+          </PageSection>
         ) : null}
 
-        {activities.length > 0 ? (
-          <div className="space-y-6" id="steps">
-            <div className="grid grid-cols-[1fr_auto] gap-6">
-              <div>
-                {activeActivity ? (
-                  <ActivityContent
-                    activityId={activeActivity.notionId}
-                    baseSlug={basePath}
-                    className="prose-activity"
-                    fallbackWidgetYaml={activeActivity.widgetYaml ?? null}
-                  />
-                ) : null}
-              </div>
-              <div className="justify-self-end -mr-6 sm:-mr-12">
-                <StepTimeline
-                  steps={steps}
-                  basePath={basePath}
-                  activeIndex={activeIndex}
-                  allowManualToggle={false}
-                  showCountLabel={false}
-                  mode="numbers"
+        {activities.length ? (
+          <>
+            {currentStep ? (
+              <div id="steps" className="space-y-[var(--space-m)]">
+                <ActivityContent
+                  activityId={currentStep.id}
+                  baseSlug={basePath}
+                  renderMode="day"
+                  withSurface
                 />
               </div>
-            </div>
-
-            {/* Contrôles de navigation en bas (sticky bar en client) */}
-            <div className="h-16" />
-            <StepNavBar basePath={basePath} currentIndex={activeIndex} total={activities.length} currentStepId={activeActivity?.notionId ?? ''} />
-          </div>
-        ) : (
-          <div className="rounded-2xl border border-dashed border-slate-300/60 bg-white/60 px-8 py-12 text-center text-sm text-slate-500">
-            Aucune activité configurée pour ce module.
-          </div>
-        )}
-
+            ) : null}
+            <StepNavBar
+              basePath={basePath}
+              currentIndex={stepIdx}
+              total={steps.length}
+              currentStepId={currentStep?.id ?? ""}
+            />
+          </>
+        ) : null}
       </section>
     </div>
   );

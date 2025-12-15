@@ -28,11 +28,16 @@ export async function GET(request: Request) {
   }
 
   const normalizeId = (value: string) => value.replace(/-/g, '').toLowerCase();
-  if (normalizeId(cohort.hubNotionId) !== normalizeId(bundle.meta.notionId)) {
+  const cohortHubs = [cohort.hubNotionId, ...(cohort.hubNotionIds ?? [])]
+    .filter(Boolean)
+    .map(normalizeId);
+  const bundleHubId = normalizeId(bundle.meta.notionId);
+  if (bundleHubId && cohortHubs.length && !cohortHubs.includes(bundleHubId)) {
     return NextResponse.json(
       {
         error: 'Cohort does not belong to the requested hub',
         cohortHubId: cohort.hubNotionId,
+        cohortHubIds: cohort.hubNotionIds ?? [],
         hubNotionId: bundle.meta.notionId,
       },
       { status: 400 }

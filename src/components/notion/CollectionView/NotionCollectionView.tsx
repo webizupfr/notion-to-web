@@ -4,6 +4,7 @@ import {
   CollectionNoAccess,
   GalleryView as BaseGalleryView,
   ListView as BaseListView,
+  RecordView as BaseRecordView,
 } from "@/components/collections/Collection";
 import { getDbBundleFromCache, type DbCacheEntry } from "@/lib/content-store";
 import { fetchDatabaseBundle, type DbItem } from "@/lib/db-render";
@@ -13,15 +14,25 @@ export type NotionCollectionViewProps = {
   viewId?: string | null;
   title?: string | null;
   basePath?: string;
-  forceView?: "list" | "gallery";
+  forceView?: "list" | "gallery" | "table";
 };
 
 const DEFAULT_REVALIDATE_SECONDS = 60;
 
-async function loadCachedBundle(databaseId: string, cursor: string): Promise<DbCacheEntry | null> {
+function normalizeViewId(value?: string | null): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (/^[0-9a-fA-F]{32}$/.test(trimmed)) {
+    return trimmed.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, "$1-$2-$3-$4-$5").toLowerCase();
+  }
+  return trimmed;
+}
+
+async function loadCachedBundle(databaseId: string, viewKey: string): Promise<DbCacheEntry | null> {
   return await unstable_cache(
-    async () => await getDbBundleFromCache(databaseId, cursor),
-    ["notion-collection", databaseId, cursor],
+    async () => await getDbBundleFromCache(databaseId, viewKey),
+    ["notion-collection", databaseId, viewKey],
     { tags: [`db:${databaseId}`], revalidate: DEFAULT_REVALIDATE_SECONDS }
   )();
 }
@@ -32,11 +43,12 @@ export async function NotionCollectionView({
   basePath = "",
   forceView,
 }: NotionCollectionViewProps) {
-  const cursorKey = viewId && viewId.trim() ? viewId : "_";
+  const normalizedViewId = normalizeViewId(viewId);
+  const viewKey = normalizedViewId ?? "_";
 
-  let entry = await loadCachedBundle(databaseId, cursorKey);
+  let entry = await loadCachedBundle(databaseId, viewKey);
 
-  if (!entry?.bundle && cursorKey !== "_") {
+  if (!entry?.bundle && viewKey !== "_") {
     entry = await loadCachedBundle(databaseId, "_");
   }
 
@@ -44,11 +56,12 @@ export async function NotionCollectionView({
 
   if (!bundle) {
     try {
-      bundle = await fetchDatabaseBundle(databaseId);
+      bundle = await fetchDatabaseBundle(databaseId, { viewId: normalizedViewId });
     } catch (error) {
       const err = error as { code?: string; message?: string };
       const message = String(err?.message ?? "");
       if ((err?.code ?? "") === "NO_ACCESS_DB" || message.startsWith("NO_ACCESS_DB:")) {
+        console.warn("[collection] Database not accessible", { databaseId, viewId: normalizedViewId });
         return <CollectionNoAccess id={databaseId} />;
       }
       throw error;
@@ -70,6 +83,8 @@ export async function NotionCollectionView({
 
       {viewMode === "gallery" ? (
         <NotionCollectionGallery items={bundle.items} basePath={basePath} />
+      ) : viewMode === "table" ? (
+        <NotionCollectionRecord items={bundle.items} basePath={basePath} />
       ) : (
         <NotionCollectionList items={bundle.items} basePath={basePath} />
       )}
@@ -95,4 +110,14 @@ export function NotionCollectionGallery({
   basePath: string;
 }) {
   return <BaseGalleryView items={items} basePath={basePath} />;
+}
+
+export function NotionCollectionRecord({
+  items,
+  basePath,
+}: {
+  items: DbItem[];
+  basePath: string;
+}) {
+  return <BaseRecordView items={items} basePath={basePath} />;
 }

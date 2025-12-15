@@ -55,7 +55,7 @@ export function TallyEmbed({ url, className }: { url: string; className?: string
       data-tally-src={tallySrc}
       title="Tally form"
       className={className}
-      style={{ width: "100%", height:  "820px", border: 0 }}
+      style={{ width: "100%", height:  "820px", border: 0, borderRadius: "var(--r-xl)" }}
       scrolling="yes"
       frameBorder={0}
       allow="clipboard-write; fullscreen"

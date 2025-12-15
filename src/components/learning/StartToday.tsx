@@ -1,6 +1,8 @@
 import 'server-only';
 
 import Link from 'next/link';
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 import type { DayEntry } from '@/lib/types';
 
 function formatFrDate(d: Date) {
@@ -74,7 +76,13 @@ function pickTodayDay(days: DayEntry[]): { day: DayEntry; locked: boolean } | nu
   return { day: days[days.length - 1], locked: /verrou/i.test(days[days.length - 1].state ?? '') };
 }
 
-export default async function StartToday({ days, unitLabelSingular }: { days: DayEntry[]; unitLabelSingular?: string | null }) {
+type StartTodayProps = {
+  days: DayEntry[];
+  unitLabelSingular?: string | null;
+  basePathPrefix?: string | null;
+};
+
+export default async function StartToday({ days, unitLabelSingular, basePathPrefix = null }: StartTodayProps) {
   const pick = pickTodayDay(days);
   if (!pick) return null;
 
@@ -93,11 +101,14 @@ export default async function StartToday({ days, unitLabelSingular }: { days: Da
   }
   if (!subtitle) subtitle = locked ? 'Bientôt disponible' : 'Prêt ?';
 
+  const prefix = basePathPrefix ? `/${basePathPrefix.replace(/^\/|\/$/g, '')}` : '';
+  const href = `${prefix}/${day.slug}`.replace(/\/+/g, '/');
+
   return (
     <div className="rounded-2xl p-6 md:p-8 bg-amber-50 border border-amber-200 shadow-sm">
-      <p className="text-xs uppercase tracking-wide text-amber-700 mb-2">Aujourd’hui</p>
-      <h3 className="text-2xl md:text-3xl font-semibold mb-2">🎯 {unitLabel} {day.order} — {day.title}</h3>
-      <p className="text-slate-700 mb-5">{subtitle}</p>
+      <Text variant="small" className="text-amber-700 mb-2 uppercase tracking-wide">Aujourd’hui</Text>
+      <Heading level={2} className="text-[1.8rem] md:text-[2.1rem] leading-[1.2] mb-2">🎯 {unitLabel} {day.order} — {day.title}</Heading>
+      <Text className="text-slate-700 mb-5">{subtitle}</Text>
 
       {locked ? (
         <button
@@ -109,7 +120,7 @@ export default async function StartToday({ days, unitLabelSingular }: { days: Da
           ⏳ Bientôt disponible
         </button>
       ) : (
-        <Link href={`/${day.slug}`} className="btn btn-primary inline-flex items-center gap-2">
+        <Link href={href} className="btn btn-primary inline-flex items-center gap-2">
           ⚡ Démarrer l’activité du jour
         </Link>
       )}

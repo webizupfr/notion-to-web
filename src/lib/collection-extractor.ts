@@ -1,6 +1,6 @@
 import type { ExtendedRecordMap } from 'notion-types';
 
-import type { DbBundle, DbItem } from '@/lib/db-render';
+import type { DbBundle, DbItem, DbItemCell } from '@/lib/db-render';
 
 type CollectionBundle = {
   databaseId: string;
@@ -86,6 +86,8 @@ export function extractCollectionBundles(recordMap: ExtendedRecordMap): Collecti
       const viewType = normalizeViewType(view.type);
       const bundle: DbBundle = {
         view: viewType,
+        viewId: view.id ? toUuid(view.id) : null,
+        viewName: view.name ?? null,
         name: getCollectionName(collection) || view.name || 'Collection',
         items,
         hasMore: false,
@@ -116,6 +118,7 @@ function buildDbItem(block: NotionBlockValue, schema: CollectionSchema): DbItem 
   const excerpt = excerptKey ? getRichText(properties[excerptKey]) : null;
   const cover = coverKey ? getFirstFile(properties[coverKey]) : extractCoverFromFormat(block.format);
   const tags = tagsKey ? getMultiSelect(properties[tagsKey]) : undefined;
+  const cells = buildCells(properties, schema);
 
   const normalizedSlug = slugRaw ? slugRaw : generateSlug(title, block.id);
 
@@ -127,6 +130,7 @@ function buildDbItem(block: NotionBlockValue, schema: CollectionSchema): DbItem 
     cover,
     tags,
     url: buildNotionUrl(block.id),
+    cells,
   };
 }
 
@@ -137,7 +141,9 @@ function getCollectionName(collection: NotionCollectionValue): string {
 
 function normalizeViewType(type?: string): DbBundle['view'] {
   if (!type) return DEFAULT_VIEW;
-  if (type === 'gallery' || type === 'board') return 'gallery';
+  const normalized = type.toLowerCase();
+  if (normalized === 'gallery' || normalized === 'board') return 'gallery';
+  if (normalized === 'table') return 'table';
   return 'list';
 }
 
@@ -199,6 +205,76 @@ function extractCoverFromFormat(format?: Record<string, unknown>): string | null
   const cover = format.page_cover as string | undefined;
   if (cover && cover.startsWith('http')) return cover;
   return null;
+}
+
+function buildCells(
+  properties: Record<string, unknown>,
+  schema: CollectionSchema
+): DbItemCell[] {
+  const cells: DbItemCell[] = [];
+  for (const [key, meta] of Object.entries(schema)) {
+    const value = properties[key];
+    const label = meta?.name ?? key;
+    const type = meta?.type ?? 'text';
+    const parsed = parsePropertyValue(value, type);
+    cells.push({
+      key,
+      label,
+      type,
+      text: parsed.text,
+      value: parsed.value,
+    });
+  }
+  return cells;
+}
+
+function parsePropertyValue(
+  value: unknown,
+  type: string
+): { text: string | null; value: unknown } {
+  switch (type) {
+    case 'title':
+    case 'text':
+    case 'rich_text':
+    case 'url':
+    case 'email':
+    case 'phone_number': {
+      const text = getRichText(value) || null;
+      return { text, value: text };
+    }
+    case 'number': {
+      const raw = getRichText(value);
+      if (!raw) return { text: null, value: null };
+      const num = Number(raw);
+      if (Number.isFinite(num)) {
+        return { text: String(num), value: num };
+      }
+      return { text: raw, value: raw };
+    }
+    case 'multi_select': {
+      const tags = getMultiSelect(value);
+      return { text: tags.length ? tags.join(', ') : null, value: tags };
+    }
+    case 'select': {
+      const options = getMultiSelect(value);
+      const first = options[0] ?? null;
+      return { text: first, value: first };
+    }
+    case 'checkbox': {
+      const raw = (getRichText(value) || '').toLowerCase();
+      if (!raw) return { text: null, value: null };
+      const val = raw === 'yes' || raw === 'true';
+      return { text: val ? 'Yes' : 'No', value: val };
+    }
+    case 'date': {
+      const text = getRichText(value) || null;
+      return { text, value: text };
+    }
+    default: {
+      const text = getRichText(value) || null;
+      return { text, value: text };
+    }
+  }
 }
 
 function findSchemaKey(

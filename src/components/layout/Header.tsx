@@ -70,16 +70,16 @@ export function Header({ links, size = "narrow" }: { links?: NavLink[]; size?: C
   const hubMode = hubModeByPath || hubFlag;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-black/5 bg-white/35 backdrop-blur-md">
-      <Container size={size} className="flex h-14 items-center justify-between gap-3">
+    <header className="sticky top-0 z-40 border-b border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_85%,#fff)] backdrop-blur-md">
+      <Container size={size} className="flex h-12 items-center justify-between gap-3">
         {/* Logo texte avec zap */}
         <Link
           href="/"
-          className="font-display text-base font-semibold tracking-tight text-slate-800/90 hover:opacity-90 inline-flex items-center gap-1.5"
+          className="font-display text-[0.85rem] font-semibold tracking-tight text-[color:var(--fg)]/90 hover:opacity-90 inline-flex items-center gap-1.5"
           aria-label="Impulsion – Accueil"
         >
           <svg
-            className="w-5 h-5 text-amber-400"
+            className="w-4 h-4 text-[color:var(--accent)]"
             viewBox="0 0 24 24"
             fill="currentColor"
             aria-hidden="true"
@@ -95,7 +95,7 @@ export function Header({ links, size = "narrow" }: { links?: NavLink[]; size?: C
         ) : (
           <>
             {/* Nav desktop */}
-            <nav className="hidden items-center gap-2 md:flex">
+            <nav className="hidden items-center gap-1.5 md:flex text-[0.85rem]">
               {navLinks.map((link) => {
                 const active = isActive(link.href);
                 return (
@@ -103,7 +103,7 @@ export function Header({ links, size = "narrow" }: { links?: NavLink[]; size?: C
                     key={link.href}
                     href={link.href}
                     aria-current={active ? "page" : undefined}
-                    className={`pill ${link.accent ? "pill-accent" : ""}`}
+                    className={`pill text-[0.85rem] ${link.accent ? "pill-accent" : ""}`}
                   >
                     {link.label}
                   </Link>
@@ -115,7 +115,7 @@ export function Header({ links, size = "narrow" }: { links?: NavLink[]; size?: C
             <button
               aria-label="Menu"
               onClick={() => setOpen((v) => !v)}
-              className="md:hidden rounded-full border border-white/40 bg-white/40 px-3 py-1.5 text-slate-700/90 backdrop-blur-md"
+              className="md:hidden rounded-full border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_82%,#fff)] px-3 py-1 text-[0.9rem] text-[color:var(--fg)]/85 backdrop-blur-md"
             >
               {open ? "Fermer" : "Menu"}
             </button>
@@ -131,17 +131,17 @@ export function Header({ links, size = "narrow" }: { links?: NavLink[]; size?: C
           } overflow-hidden`}
         >
           <Container size={size} className="py-2">
-            <nav className="flex flex-col gap-2 rounded-2xl border border-white/45 bg-white/45 p-3 backdrop-blur-md">
+            <nav className="flex flex-col gap-2 rounded-2xl border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_88%,#fff)] p-3 backdrop-blur-md">
               {navLinks.map((link) => {
                 const active = isActive(link.href);
                 return (
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`rounded-xl px-4 py-3 text-sm ${
+                    className={`rounded-xl px-4 py-2.5 text-[0.95rem] ${
                       active
-                        ? "bg-white/60 text-slate-900"
-                        : "text-slate-800/90 hover:bg-white/55"
+                        ? "bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] text-[color:var(--fg)]"
+                        : "text-[color:var(--fg)]/90 hover:bg-[color-mix(in_oklab,var(--bg)_92%,#fff)]"
                     }`}
                   >
                     {link.label}

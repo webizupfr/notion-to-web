@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 import type { SingleChoiceWidgetConfig } from "@/lib/widget-parser";
 
 export function SingleChoiceWidget({ config, storageKey }: { config: SingleChoiceWidgetConfig; storageKey: string }) {
@@ -30,9 +32,9 @@ export function SingleChoiceWidget({ config, storageKey }: { config: SingleChoic
   const reset = () => setValue(null);
 
   return (
-    <section className="widget-surface p-5 space-y-4">
-      {config.title ? <h3 className="text-lg font-semibold">{config.title}</h3> : null}
-      {config.question ? <p className="text-sm text-slate-600">{config.question}</p> : null}
+    <section className="surface-card space-y-[var(--space-m)]">
+      {config.title ? <Heading level={3} className="text-[1.12rem] leading-[1.35]">{config.title}</Heading> : null}
+      {config.question ? <Text variant="small" className="text-[color:var(--muted)]">{config.question}</Text> : null}
 
       <div className="grid gap-3">
         {config.options.map((opt, idx) => {
@@ -40,8 +42,10 @@ export function SingleChoiceWidget({ config, storageKey }: { config: SingleChoic
           return (
             <label
               key={`${storageKey}-${idx}`}
-              className={`group flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 transition hover:-translate-y-0.5 hover:shadow ${
-                active ? 'border-emerald-500 bg-emerald-50' : 'border-slate-200 bg-white'
+              className={`group flex cursor-pointer items-start gap-3 rounded-[var(--r-lg)] border px-[var(--space-4)] py-[var(--space-3)] transition hover:-translate-y-0.5 hover:shadow ${
+                active
+                  ? 'border-[color-mix(in_oklab,var(--success)_55%,transparent)] bg-[color-mix(in_oklab,var(--success)_12%,#fff)]'
+                  : 'border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)]'
               }`}
             >
               <input
@@ -49,12 +53,12 @@ export function SingleChoiceWidget({ config, storageKey }: { config: SingleChoic
                 name={`sc-${storageKey}`}
                 checked={active}
                 onChange={() => setValue(idx)}
-                className="mt-1 h-5 w-5 cursor-pointer text-emerald-600 focus:ring-2"
+                className="mt-1 h-5 w-5 cursor-pointer text-[color:var(--success)] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--success)_24%,transparent)]"
               />
               <div className="flex-1">
-                <div className="font-medium">{opt.label}</div>
+                <div className="font-medium text-[color:var(--fg)]">{opt.label}</div>
                 {opt.description ? (
-                  <div className="text-[0.92rem] leading-[1.6] text-slate-600">{opt.description}</div>
+                  <div className="text-[0.92rem] leading-[1.6] text-[color:var(--muted)]">{opt.description}</div>
                 ) : null}
               </div>
             </label>
@@ -63,7 +67,7 @@ export function SingleChoiceWidget({ config, storageKey }: { config: SingleChoic
       </div>
 
       <div className="flex items-center justify-between text-sm">
-        <div className="text-slate-600">
+        <div className="text-[color:var(--muted)]">
           Choix actuel: {value !== null ? <strong>{config.options[value]?.label}</strong> : <em>Aucun</em>}
         </div>
         <button onClick={reset} className="btn btn-ghost text-xs">Réinitialiser</button>

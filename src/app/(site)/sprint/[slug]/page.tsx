@@ -4,14 +4,23 @@ import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
 
 import { getSprintBundle } from "@/lib/content-store";
-import type { NavItem, DayEntry, ActivityStep } from "@/lib/types";
-import { Blocks } from "@/components/notion/Blocks";
+import type { NotionBlock } from "@/lib/notion";
+import { splitBlocksIntoSections } from "@/components/learning/sectioning";
 import { PageSidebar } from "@/components/layout/PageSidebar";
-import { HubFlag } from "@/components/layout/HubFlag";
-import { nowInTimezone } from "@/lib/cohorts";
-import { EmptyState } from "@/components/states/EmptyState";
+import { Blocks } from "@/components/notion/Blocks";
+import { PageSection } from "@/components/layout/PageSection";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 
 export const revalidate = 0;
+
+function formatDurationMinutes(mins: number | null | undefined): string | null {
+  if (!mins || mins <= 0) return null;
+  if (mins < 60) return `${mins} min`;
+  const hours = Math.floor(mins / 60);
+  const rest = mins % 60;
+  return rest ? `${hours} h ${rest} min` : `${hours} h`;
+}
 
 function timeUntil(dateIso: string | null | undefined): string | null {
   if (!dateIso) return null;
@@ -25,28 +34,6 @@ function timeUntil(dateIso: string | null | undefined): string | null {
   if (h > 0 && m > 0) return `dans ${h} h ${m} min`;
   if (h > 0) return `dans ${h} h`;
   return `dans ${m} min`;
-}
-
-const moduleNumberEmoji = (value: number): string => {
-  const map = ['0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
-  if (value >= 0 && value < map.length) return map[value];
-  return '📘';
-};
-
-function dateKeyInTimezone(dateIso: string, timezone: string): string {
-  const date = new Date(dateIso);
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
-    .formatToParts(date)
-    .reduce<Record<string, string>>((acc, part) => {
-      if (part.type !== 'literal') acc[part.type] = part.value;
-      return acc;
-    }, {});
-  return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
 export default async function SprintPage({
@@ -80,200 +67,183 @@ export default async function SprintPage({
   const timezone = bundle.timezone || "Europe/Paris";
 
   const contextBlocks = bundle.contextBlocks ?? [];
-  const baseNavigation = (bundle.contextNavigation ?? []) as NavItem[];
-  const fallbackNav: NavItem[] = [
-    {
-      type: "section",
-      title: "Modules",
-      children: bundle.modules.map((m, idx) => ({
-        id: m.slug,
-        title: m.title,
-        slug: `sprint/${slug}/${m.slug}`,
-        icon: moduleNumberEmoji(m.order > 0 ? m.order : idx + 1),
-      })),
-    },
-  ];
-  const navigation: NavItem[] = baseNavigation.length ? baseNavigation : fallbackNav;
-  const showSidebar = navigation.length > 0;
-  const navTitle = bundle.title;
+  const sprintTitle = bundle.title;
+  const sprintSubtitle = bundle.description ?? null;
+  const contextLabel =
+    ((bundle.settings as { context?: string | null } | null | undefined)?.context ?? "").trim() || null;
   const navSlug = `sprint/${slug}`;
+  const modules = bundle.modules.map((module, index) => {
+    const number = module.order > 0 ? module.order : index + 1;
+    const dayLabel =
+      typeof module.dayIndex === "number" && !Number.isNaN(module.dayIndex)
+        ? `Jour ${module.dayIndex + 1}`
+        : `Module ${number}`;
+    return {
+      ...module,
+      number,
+      dayLabel,
+      href: `/sprint/${slug}/${module.slug}`,
+    };
+  });
 
-  const dayGroups = (() => {
-    const map = new Map<number, Array<{ id: string; title: string; slug: string; order: number }>>();
-    for (let i = 0; i < bundle.modules.length; i++) {
-      const m = bundle.modules[i];
-      const dayIndex = (typeof m.dayIndex === 'number' && !Number.isNaN(m.dayIndex)) ? m.dayIndex : 0;
-      const dayNumber = (dayIndex ?? 0) + 1;
-      const arr = map.get(dayNumber) ?? [];
-      arr.push({ id: m.slug, title: m.title, slug: `sprint/${slug}/${m.slug}`, order: m.order > 0 ? m.order : i + 1 });
-      map.set(dayNumber, arr);
-    }
-    const groups = Array.from(map.entries()).sort((a,b) => a[0]-b[0]).map(([day, items]) => ({ label: `Jour ${day}`, items: items.sort((a,b) => a.order-b.order) }));
-    return groups;
-  })();
-
-  const todaysModules = (() => {
-    const { key: todayKey } = nowInTimezone(timezone);
-    const list = bundle.modules.filter((m) => {
-      if (!m.unlockAtISO) return false;
-      const key = dateKeyInTimezone(m.unlockAtISO, timezone);
-      return key === todayKey;
-    });
-    return list.sort((a, b) => (a.order - b.order));
-  })();
-
-  const ModulesSection = (
-    <div className="grid gap-3 md:grid-cols-2">
-      {bundle.modules.map((module, index) => {
-        const countdown = timeUntil(module.unlockAtISO);
-        const number = module.order > 0 ? module.order : index + 1;
-        const locked = module.isLocked;
-        return (
-          <Link
-            key={module.slug}
-            href={`/sprint/${slug}/${module.slug}`}
-            className={`group flex flex-col gap-2 rounded-lg border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${locked ? 'opacity-70' : ''}`}
-            data-state={locked ? 'locked' : 'unlocked'}
-          >
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-lime-100 text-foreground">{moduleNumberEmoji(number)}</span>
-              <span>Module {number}</span>
-              {module.duration ? <span className="ml-auto text-[11px] text-slate-500">{module.duration} min</span> : null}
-            </div>
-            <h3 className="text-base font-semibold text-foreground group-hover:text-foreground/90">{module.title}</h3>
-            {module.description ? <p className="text-sm text-foreground/70">{module.description}</p> : null}
-            <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-600">
-              <span className={`rounded-full px-2 py-0.5 ${locked ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
-                {locked ? (countdown ? `Déverrouillé ${countdown}` : 'Verrouillé') : 'Accessible'}
-              </span>
-            </div>
-          </Link>
-        );
-      })}
-    </div>
-  );
-
-  // Si sidebar active: layout "Hub-like" avec Notion Blocks + Modules
-  if (showSidebar) {
-    // Map modules en liste pour l'accès rapide (mode modules)
-    const releasedModules: DayEntry[] = bundle.modules.map((m, idx) => ({
-      id: m.slug,
-      order: m.order > 0 ? m.order : idx + 1,
-      slug: `sprint/${slug}/${m.slug}`,
-      title: m.title,
-      summary: m.description ?? null,
-      steps: [] as ActivityStep[],
-    }));
-    return (
-      <div className="mx-auto flex w-full max-w-[1800px] gap-10" data-hub={1}>
-        <HubFlag value={true} />
-        <div className="hidden lg:block lg:flex-shrink-0">
-          <PageSidebar
-            parentTitle={navTitle ?? bundle.title}
-            parentSlug={navSlug}
-            navigation={navigation}
-            isHub={true}
-            hubDescription={bundle.description ?? null}
-            releasedDays={releasedModules}
-            learningKind={"modules"}
-            unitLabelSingular="Module"
-            unitLabelPlural="Modules"
-            moduleQuickGroups={dayGroups}
-          />
-        </div>
-        <div className="lg:hidden">
-          <PageSidebar
-            parentTitle={navTitle ?? bundle.title}
-            parentSlug={navSlug}
-            navigation={navigation}
-            isHub={true}
-            hubDescription={bundle.description ?? null}
-            releasedDays={releasedModules}
-            learningKind={"modules"}
-            unitLabelSingular="Module"
-            unitLabelPlural="Modules"
-            moduleQuickGroups={dayGroups}
-          />
-        </div>
-        <section className="flex-1 min-w-0 lg:ml-0 space-y-8">
-          <header className="flex items-center justify-between">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/60 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">Sprint</span>
-            <span className="rounded-full border border-slate-200/60 bg-white/70 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600">Fuseau horaire&nbsp;: {timezone}</span>
-          </header>
-          {todaysModules.length > 0 ? (
-            <div className="rounded-2xl border border-emerald-300/60 bg-emerald-50/70 p-5">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-emerald-800">Aujourd’hui</h3>
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">{todaysModules.length} module{todaysModules.length>1?'s':''}</span>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {todaysModules.map((m, idx) => {
-                  const number = m.order > 0 ? m.order : idx + 1;
-                  const countdown = timeUntil(m.unlockAtISO);
-                  return (
-                    <a key={m.slug} href={`/sprint/${slug}/${m.slug}`} className="group flex items-center justify-between rounded-xl border border-emerald-200/70 bg-white/70 px-3 py-2 shadow-sm transition hover:-translate-y-0.5">
-                      <div className="min-w-0">
-                        <div className="text-xs uppercase tracking-wide text-emerald-700">Module {number}</div>
-                        <div className="truncate text-sm font-medium text-emerald-900 group-hover:text-emerald-800">{m.title}</div>
-                      </div>
-                      <span className={`ml-3 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${m.isLocked ? 'border border-amber-300/70 bg-amber-50 text-amber-700' : 'border border-teal-300/70 bg-teal-50 text-teal-700'}`}>
-                        {m.isLocked ? (countdown ? `dans ${countdown.replace('dans ', '')}` : 'aujourd’hui') : 'disponible'}
-                      </span>
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-          {contextBlocks?.length ? <Blocks blocks={contextBlocks} currentSlug={navSlug} /> : null}
-          {bundle.modules.length ? (
-            ModulesSection
-          ) : (
-            <EmptyState title="Aucun module disponible" description="Ajoutez des modules dans Notion pour ce sprint." />
-          )}
-        </section>
-      </div>
-    );
-  }
-
-  // Sinon, layout simple: Notion Blocks en haut + Modules
-  const wrapperClass = showSidebar
-    ? "mx-auto flex w-full max-w-[1800px] flex-col gap-10 px-6 py-12 sm:px-12"
-    : "mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 py-12 sm:px-12";
+  const totalDurationMinutes = modules.reduce((acc, mod) => acc + (mod.duration ?? 0), 0);
+  const totalDurationLabel = formatDurationMinutes(totalDurationMinutes);
+  const metaItems = [
+    totalDurationLabel,
+    `${bundle.modules.length} module${bundle.modules.length > 1 ? "s" : ""}`,
+    contextLabel,
+  ].filter(Boolean);
+  const navigation = modules.map((mod) => ({
+    type: "page" as const,
+    title: mod.title,
+    slug: `sprint/${slug}/${mod.slug}`,
+  }));
 
   return (
-    <section className={wrapperClass}>
-      {todaysModules.length > 0 ? (
-        <div className="rounded-2xl border border-emerald-300/60 bg-emerald-50/70 p-5">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-emerald-800">Aujourd’hui</h3>
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">{todaysModules.length} module{todaysModules.length>1?'s':''}</span>
+    <div className="mx-auto flex w-full max-w-[1800px] gap-10">
+      <div className="hidden lg:block lg:flex-shrink-0">
+        <PageSidebar
+          parentTitle={sprintTitle}
+          parentSlug={`sprint/${slug}`}
+          navigation={navigation}
+          learningKind="modules"
+        />
+      </div>
+
+      <div className="lg:hidden">
+        <PageSidebar
+          parentTitle={sprintTitle}
+          parentSlug={`sprint/${slug}`}
+          navigation={navigation}
+          learningKind="modules"
+        />
+      </div>
+
+      <section className="flex-1 min-w-0 space-y-8">
+        <PageSection variant="content" size="wide">
+          <div className="surface-card space-y-[var(--space-m)]">
+            <header className="flex flex-col gap-[var(--space-s)] sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-[var(--space-xs)]">
+                <div className="flex items-center gap-[var(--space-s)]">
+                  <span className="pill">Sprint / Hackathon</span>
+                  {timezone ? (
+                    <span className="rounded-full border border-[color:var(--border)] px-[var(--space-3)] py-[var(--space-1)] text-[0.95rem] text-[color:var(--muted)]">
+                      {timezone}
+                    </span>
+                  ) : null}
+                </div>
+                <Heading level={1}>{sprintTitle}</Heading>
+                {sprintSubtitle ? (
+                  <Text variant="lead" className="max-w-[72ch]">
+                    {sprintSubtitle}
+                  </Text>
+                ) : null}
+                {metaItems.length ? (
+                  <Text variant="small" className="text-[color:var(--muted)]">
+                    {metaItems.join(" · ")}
+                  </Text>
+                ) : null}
+              </div>
+              <div className="flex items-center gap-[var(--space-s)]">
+                <div className="rounded-full border border-[color:var(--border)] bg-[color-mix(in_srgb,var(--bg)_96%,white_4%)] px-[var(--space-4)] py-[var(--space-2)] text-[0.95rem] font-semibold text-[color:var(--fg)] shadow-[var(--shadow-subtle)]">
+                  {bundle.modules.length} module{bundle.modules.length > 1 ? "s" : ""}
+                </div>
+              </div>
+            </header>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {todaysModules.map((m, idx) => {
-              const number = m.order > 0 ? m.order : idx + 1;
-              const countdown = timeUntil(m.unlockAtISO);
-              return (
-                <a key={m.slug} href={`/sprint/${slug}/${m.slug}`} className="group flex items-center justify-between rounded-xl border border-emerald-200/70 bg-white/70 px-3 py-2 shadow-sm transition hover:-translate-y-0.5">
-                  <div className="min-w-0">
-                    <div className="text-xs uppercase tracking-wide text-emerald-700">Module {number}</div>
-                    <div className="truncate text-sm font-medium text-emerald-900 group-hover:text-emerald-800">{m.title}</div>
-                  </div>
-                  <span className={`ml-3 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${m.isLocked ? 'border border-amber-300/70 bg-amber-50 text-amber-700' : 'border border-teal-300/70 bg-teal-50 text-teal-700'}`}>
-                    {m.isLocked ? (countdown ? `dans ${countdown.replace('dans ', '')}` : 'aujourd’hui') : 'disponible'}
-                  </span>
-                </a>
-              );
-            })}
+        </PageSection>
+
+        <PageSection variant="content" id="modules" size="wide">
+          <div className="space-y-[var(--space-m)]">
+            <Heading level={2}>Modules du sprint</Heading>
+            <div className="grid gap-[var(--space-m)] sm:grid-cols-2">
+              {modules.map((module) => {
+                const countdown = timeUntil(module.unlockAtISO);
+                const locked = module.isLocked;
+                const moduleSubtitle = (module as { subtitle?: string | null }).subtitle ?? module.description ?? null;
+                const moduleDuration = formatDurationMinutes(module.duration);
+                const moduleLevel = module.tags?.[0] ?? null;
+                const stateLabel = locked ? (countdown ? `Verrouillé (${countdown})` : "Verrouillé") : "Accessible";
+                return (
+                  <Link
+                    key={module.slug}
+                    href={module.href}
+                    className={`surface-card block transition-transform hover:-translate-y-[1px] ${locked ? "opacity-75" : ""}`}
+                    data-state={locked ? "locked" : "unlocked"}
+                  >
+                    <Text variant="small" className="uppercase tracking-[0.12em] text-[color:var(--muted)]">
+                      {module.dayLabel}
+                    </Text>
+                    <Heading level={3} className="mt-[var(--space-xs)]">
+                      {module.title}
+                    </Heading>
+                    {moduleSubtitle ? (
+                      <Text className="mt-[var(--space-xs)] text-[color:var(--muted)]">{moduleSubtitle}</Text>
+                    ) : null}
+                    <Text
+                      variant="small"
+                      className="mt-[var(--space-s)] text-[color:var(--muted)]"
+                    >
+                      {stateLabel}
+                      {moduleDuration ? ` · ${moduleDuration}` : ""}
+                      {moduleLevel ? ` · ${moduleLevel}` : ""}
+                    </Text>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      ) : null}
-      {contextBlocks?.length ? <Blocks blocks={contextBlocks} currentSlug={navSlug} /> : null}
-      {bundle.modules.length ? (
-        ModulesSection
-      ) : (
-        <EmptyState title="Aucun module disponible" description="Ajoutez des modules dans Notion pour ce sprint." />
-      )}
-    </section>
+        </PageSection>
+
+        <PageSection variant="content" size="wide">
+          <div className="space-y-[var(--space-s)]">
+            <Heading level={2}>Sprint Innovation : le Hub</Heading>
+            {sprintSubtitle ? <Text>{sprintSubtitle}</Text> : null}
+            {contextLabel ? <Text className="text-[color:var(--muted)]">{contextLabel}</Text> : null}
+            <div className="flex flex-wrap gap-[var(--space-s)] pt-[var(--space-s)]">
+              <Link href="/contact" className="btn btn-primary">
+                Planifier un échange
+              </Link>
+              <Link href="#modules" className="btn btn-secondary">
+                Voir les modules
+              </Link>
+            </div>
+          </div>
+        </PageSection>
+
+        {contextBlocks?.length ? (() => {
+          const sections = splitBlocksIntoSections(contextBlocks as NotionBlock[]);
+          if (sections.length <= 1) {
+            return (
+              <PageSection variant="content" size="wide">
+                <div className="content-panel section-band w-full">
+                  <Blocks blocks={contextBlocks} currentSlug={navSlug} />
+                </div>
+              </PageSection>
+            );
+          }
+          return (
+            <>
+              {sections.map((section, idx) => {
+                const tone = idx % 2 === 0 ? "default" : "alt";
+                return (
+                  <PageSection
+                    key={section.id}
+                    variant="content"
+                    tone={tone}
+                    size="wide"
+                    className="py-[var(--space-5)] sm:py-[var(--space-6)]"
+                  >
+                    <div className="content-panel section-band w-full">
+                      <Blocks blocks={section.blocks} currentSlug={navSlug} />
+                    </div>
+                  </PageSection>
+                );
+              })}
+            </>
+          );
+        })() : null}
+      </section>
+    </div>
   );
 }

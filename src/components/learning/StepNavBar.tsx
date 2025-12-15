@@ -38,15 +38,23 @@ export function StepNavBar({
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/70 bg-white/85 backdrop-blur supports-[backdrop-filter]:bg-white/65">
-      <div className="mx-auto flex w-full max-w-[1200px] items-center justify-end gap-2 px-4 py-3">
+    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200/70 bg-[rgba(255,255,255,0.96)] backdrop-blur supports-[backdrop-filter]:bg-[rgba(255,255,255,0.94)] shadow-[0_-16px_40px_rgba(15,23,40,0.18)]">
+      <div className="mx-auto flex w-full max-w-[1800px] items-center justify-end gap-3 px-4 py-4">
         {currentIndex > 0 ? (
-          <a href={prevHref} onClick={onPrev} className="btn btn-ghost text-sm">
+          <a
+            href={prevHref}
+            onClick={onPrev}
+            className="btn btn-ghost text-[0.95rem] hover:-translate-y-[1px]"
+          >
             ← Précédent
           </a>
         ) : null}
         {currentIndex < total - 1 ? (
-          <a href={nextHref} onClick={onNext} className="btn btn-primary text-sm">
+          <a
+            href={nextHref}
+            onClick={onNext}
+            className="btn btn-primary text-[0.95rem] hover:-translate-y-[1px]"
+          >
             Suivant →
           </a>
         ) : null}
@@ -54,4 +62,3 @@ export function StepNavBar({
     </div>
   );
 }
-

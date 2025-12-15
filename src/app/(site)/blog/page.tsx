@@ -1,4 +1,6 @@
 import { Container } from "@/components/layout/Container";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 import { getPostsIndex } from "@/lib/content-store";
 import { unstable_cache } from "next/cache";
 import { PostCard } from "./PostCard";
@@ -22,12 +24,12 @@ export default async function BlogIndex() {
           Journal
         </span>
         <div className="space-y-3">
-          <h1 className="text-[2.3rem] font-semibold leading-[1.2] tracking-[-0.02em] text-slate-900">
+          <Heading level={1} className="text-[2.3rem] leading-[1.2] tracking-[-0.02em] text-slate-900">
             Explorations et retours d’expérience
-          </h1>
-          <p className="max-w-2xl text-[1.05rem] leading-[1.7] text-slate-600">
+          </Heading>
+          <Text className="max-w-2xl text-[1.05rem] leading-[1.7] text-slate-600">
             Veille, études de cas et méthodes pour passer d’une idée à une preuve avec l’IA et le design.
-          </p>
+          </Text>
         </div>
       </section>
 

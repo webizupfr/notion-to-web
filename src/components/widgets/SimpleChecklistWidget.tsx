@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 import type { SimpleChecklistWidgetConfig } from "@/lib/widget-parser";
 
 export function SimpleChecklistWidget({ config, storageKey }: { config: SimpleChecklistWidgetConfig; storageKey: string }) {
@@ -31,18 +33,18 @@ export function SimpleChecklistWidget({ config, storageKey }: { config: SimpleCh
   );
 
   return (
-    <section className={`space-y-3 ${capture ? '' : 'widget-surface p-5'}`}>
+    <section className={`space-y-[var(--space-s)] ${capture ? "" : "surface-card"}`}>
       {config.title ? (
-        <h3 className="text-lg font-semibold">
+        <Heading level={3}>
           {allDone ? '✅ ' : ''}{config.title}
-        </h3>
+        </Heading>
       ) : null}
 
       {hasBoxes ? (
         <ul className="space-y-2">
           {items.map((it, i) => (
             it.heading ? (
-              <li key={`${storageKey}-${i}`} className="pt-3 text-[0.95rem] font-semibold text-slate-700">
+              <li key={`${storageKey}-${i}`} className="pt-3 font-semibold text-[color:var(--fg)]">
                 <span dangerouslySetInnerHTML={{ __html: it.text }} />
               </li>
             ) : (
@@ -51,9 +53,9 @@ export function SimpleChecklistWidget({ config, storageKey }: { config: SimpleCh
                   type="checkbox"
                   checked={checked[i]}
                   onChange={() => setChecked((prev) => prev.map((v, idx) => (idx === i ? !v : v)))}
-                  className="mt-1 h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-2"
+                  className="mt-1 h-5 w-5 rounded border-[color:var(--border)] text-[color:var(--success)] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--success)_24%,transparent)]"
                 />
-                <div className="text-[1.02rem] leading-[1.65]" dangerouslySetInnerHTML={{ __html: it.text }} />
+                <div className="leading-[1.6] text-[color:var(--fg)]" dangerouslySetInnerHTML={{ __html: it.text }} />
               </li>
             )
           ))}
@@ -62,9 +64,9 @@ export function SimpleChecklistWidget({ config, storageKey }: { config: SimpleCh
         <ul className="list-disc space-y-2 pl-6">
           {items.map((it, i) => (
             it.heading ? (
-              <li key={`${storageKey}-${i}`} className="text-[1.02rem] font-semibold leading-[1.65]" dangerouslySetInnerHTML={{ __html: it.text }} />
+              <li key={`${storageKey}-${i}`} className="font-semibold leading-[1.6]" dangerouslySetInnerHTML={{ __html: it.text }} />
             ) : (
-              <li key={`${storageKey}-${i}`} className="text-[1.02rem] leading-[1.65]" dangerouslySetInnerHTML={{ __html: it.text }} />
+              <li key={`${storageKey}-${i}`} className="leading-[1.6]" dangerouslySetInnerHTML={{ __html: it.text }} />
             )
           ))}
         </ul>
@@ -73,7 +75,7 @@ export function SimpleChecklistWidget({ config, storageKey }: { config: SimpleCh
       {!capture ? (
         <div className="flex items-center justify-end gap-2">
           {hasBoxes ? (
-            <div className="text-xs text-slate-600">{done} / {config.items.length} complétés</div>
+            <Text variant="small" className="text-[color:var(--muted)]">{done} / {config.items.length} complétés</Text>
           ) : null}
           <button onClick={() => setCapture((v) => !v)} className="btn btn-ghost text-xs">Mode capture</button>
         </div>

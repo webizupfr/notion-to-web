@@ -49,8 +49,8 @@ export function QuizWidget({ config, storageKey }: { config: QuizWidgetConfig; s
   };
 
   return (
-    <section className="space-y-4 widget-surface px-5 py-6">
-      <p className="text-sm font-medium text-slate-700">{config.question}</p>
+    <section className="surface-card space-y-[var(--space-m)]">
+      <p className="text-sm font-medium text-[color:var(--fg)]">{config.question}</p>
 
       <div className="space-y-3">
         {config.options.map((option, index) => {
@@ -61,27 +61,29 @@ export function QuizWidget({ config, storageKey }: { config: QuizWidgetConfig; s
               <button
                 type="button"
                 onClick={() => handleSelect(index)}
-                className={`w-full rounded-2xl border px-4 py-4 text-left transition hover:-translate-y-0.5 hover:shadow ${
+                className={`w-full rounded-[var(--r-xl)] border px-[var(--space-4)] py-[var(--space-4)] text-left transition hover:-translate-y-0.5 hover:shadow ${
                   isActive
                     ? isCorrect
-                      ? 'border-emerald-500 bg-emerald-50'
-                      : 'border-amber-400 bg-amber-50'
-                    : 'border-slate-200 bg-white'
+                      ? 'border-[color-mix(in_oklab,var(--success)_55%,transparent)] bg-[color-mix(in_oklab,var(--success)_14%,#fff)]'
+                      : 'border-[color-mix(in_oklab,var(--accent)_55%,transparent)] bg-[color-mix(in_oklab,var(--accent)_14%,#fff)]'
+                    : 'border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)]'
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <span className="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs font-semibold">
+                  <span className="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs font-semibold text-[color:var(--fg)] border-[color:var(--border)]">
                     {option.label ?? String.fromCharCode(65 + index)}
                   </span>
-                  <div className="space-y-2 text-sm leading-6 text-slate-800">
+                  <div className="space-y-2 text-sm leading-6 text-[color:var(--fg)]">
                     <div className="whitespace-pre-wrap">{option.text}</div>
                   </div>
                 </div>
               </button>
               {isActive && option.feedback && (
                 <div
-                  className={`rounded-2xl border px-4 py-3 text-sm leading-6 ${
-                    isCorrect ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'
+                  className={`rounded-[var(--r-xl)] border px-[var(--space-4)] py-[var(--space-3)] text-sm leading-6 ${
+                    isCorrect
+                      ? 'border-[color-mix(in_oklab,var(--success)_45%,transparent)] bg-[color-mix(in_oklab,var(--success)_16%,#fff)] text-[color-mix(in_oklab,var(--success)_85%,#0f1728)]'
+                      : 'border-[color-mix(in_oklab,var(--accent)_45%,transparent)] bg-[color-mix(in_oklab,var(--accent)_16%,#fff)] text-[color-mix(in_oklab,var(--accent)_85%,#0f1728)]'
                   }`}
                 >
                   <div className="flex items-start gap-2">

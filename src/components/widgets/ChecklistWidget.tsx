@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 import type { ChecklistWidgetConfig } from "@/lib/widget-parser";
 
 export function ChecklistWidget({ config, storageKey }: { config: ChecklistWidgetConfig; storageKey: string }) {
@@ -29,17 +31,21 @@ export function ChecklistWidget({ config, storageKey }: { config: ChecklistWidge
   const gridCols = useMemo(() => (config.columns === 1 ? "md:grid-cols-1" : "md:grid-cols-2"), [config.columns]);
 
   return (
-    <section className="widget-surface p-5 space-y-5">
+    <section className="surface-card space-y-[var(--space-m)]">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">{config.title ?? "Checklist"}</h3>
-          <div className="mt-2 h-2 w-full max-w-sm overflow-hidden rounded-full bg-slate-200">
-            <div className="h-full bg-emerald-500" style={{ width: `${progress}%` }} />
+          <Heading level={3}>{config.title ?? "Checklist"}</Heading>
+          <div className="mt-[var(--space-xs)] h-2 w-full max-w-sm overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--bg-soft)_88%,white_12%)]">
+            <div className="h-full bg-[color:var(--success)] transition-all" style={{ width: `${progress}%` }} />
           </div>
-          <div className="mt-1 text-xs text-slate-600">{done} / {count} complétés</div>
+          <Text variant="small" className="mt-[var(--space-xs)] text-[color:var(--fg-muted)]">
+            {done} / {count} complétés
+          </Text>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={reset} className="btn btn-ghost text-xs">Réinitialiser</button>
+          <button onClick={reset} className="btn btn-ghost text-xs">
+            Réinitialiser
+          </button>
           {config.cta ? (
             <a
               href={config.cta.href ?? '#'}
@@ -52,21 +58,25 @@ export function ChecklistWidget({ config, storageKey }: { config: ChecklistWidge
         </div>
       </div>
 
-      <div className={`grid gap-3 ${gridCols}`}>
+      <div className={`grid gap-[var(--space-3)] ${gridCols}`}>
         {config.items.map((item, i) => (
-          <div key={`${storageKey}-${i}`} className="rounded-xl border bg-white/80 p-3">
+          <div key={`${storageKey}-${i}`} className="surface-panel">
             <details>
               <summary className="flex cursor-pointer list-none items-center gap-3">
                 <input
                   type="checkbox"
                   checked={checked[i]}
                   onChange={() => toggle(i)}
-                  className="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-2"
+                  className="h-5 w-5 rounded border-[color:var(--border)] text-[color:var(--success)] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--success)_30%,transparent)] focus:ring-offset-0"
                 />
-                <span className="font-medium text-[0.98rem]">{item.label}</span>
+                <Text as="span" variant="body" className="font-medium">
+                  {item.label}
+                </Text>
               </summary>
               {item.help ? (
-                <div className="mt-2 pl-8 text-[0.92rem] text-slate-600">{item.help}</div>
+                <Text variant="small" className="mt-[var(--space-xs)] pl-8 text-[color:var(--fg-muted)] block">
+                  {item.help}
+                </Text>
               ) : null}
             </details>
           </div>

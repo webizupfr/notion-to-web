@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 import type { InsightBoardWidgetConfig, InsightBoardColumn } from "@/lib/widget-parser";
 
 type Row = { id: string; values: Record<string, string> };
@@ -104,13 +106,13 @@ export function InsightBoardWidget({ config, storageKey }: { config: InsightBoar
   };
 
   return (
-    <section className="widget-surface space-y-5 p-5 md:p-6">
+    <section className="surface-card space-y-[var(--space-m)]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          {config.title ? <h3 className="text-lg font-semibold text-slate-800">{config.title}</h3> : null}
-          {config.help ? <p className="mt-1 max-w-2xl text-sm text-slate-600">{config.help}</p> : null}
+          {config.title ? <Heading level={3} className="text-[1.12rem] leading-[1.35] text-[color:var(--fg)]">{config.title}</Heading> : null}
+          {config.help ? <Text variant="small" className="mt-1 max-w-2xl text-[color:var(--muted)]">{config.help}</Text> : null}
         </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
+        <div className="flex items-center gap-2 text-xs text-[color:var(--muted)]">
           <span>{rows.length}/{maxRows} entrées</span>
           <button
             type="button"
@@ -128,16 +130,16 @@ export function InsightBoardWidget({ config, storageKey }: { config: InsightBoar
         {rows.map((row, idx) => (
           <article
             key={row.id}
-            className="rounded-2xl border border-slate-200/70 bg-white/75 p-4 shadow-sm"
+            className="rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] p-[var(--space-4)] shadow-sm"
           >
             <div className="flex items-center justify-between pb-3">
-              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">
                 Insight #{rows.length - idx}
               </div>
               <button
                 type="button"
                 onClick={() => removeRow(row.id)}
-                className="text-xs text-slate-500 hover:text-slate-700"
+                className="text-xs text-[color:var(--muted)] hover:text-[color:var(--fg)]"
                 disabled={rows.length === 1}
               >
                 Supprimer
@@ -147,13 +149,13 @@ export function InsightBoardWidget({ config, storageKey }: { config: InsightBoar
             <div className="grid gap-4 md:grid-cols-3">
               {columns.map((col) => (
                 <label key={col.id} className="flex flex-col gap-2">
-                  <span className="text-xs font-medium text-slate-600">{col.label}</span>
+                  <span className="text-xs font-medium text-[color:var(--muted)]">{col.label}</span>
                   <textarea
                     rows={3}
                     placeholder={col.placeholder}
                     value={row.values[col.id] ?? ""}
                     onChange={(event) => updateValue(row.id, col.id, event.target.value)}
-                    className="min-h-[96px] resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                    className="min-h-[96px] resize-y rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--primary)_28%,transparent)]"
                   />
                 </label>
               ))}
@@ -162,7 +164,7 @@ export function InsightBoardWidget({ config, storageKey }: { config: InsightBoar
         ))}
       </div>
 
-      <div className="flex items-center justify-between text-xs text-slate-500">
+      <div className="flex items-center justify-between text-xs text-[color:var(--muted)]">
         <div>
           Synthétisez 3 à 5 apprentissages clairs. Ajoutez une ligne par insight marquant.
         </div>
@@ -178,4 +180,3 @@ export function InsightBoardWidget({ config, storageKey }: { config: InsightBoar
     </section>
   );
 }
-

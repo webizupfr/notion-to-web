@@ -35,8 +35,8 @@ export function MediaFrame({
   }
 
   const figureClass = withBackground
-    ? "media-figure inline-block max-w-full overflow-hidden rounded-[22px] border"
-    : "media-figure inline-block max-w-full rounded-[22px]";
+    ? "media-figure inline-block max-w-full overflow-hidden rounded-[var(--r-xl)] border border-[color:var(--border)]"
+    : "media-figure inline-block max-w-full rounded-[var(--r-xl)]";
 
   return (
     <figure className={figureClass} style={figureStyle}>
@@ -50,11 +50,10 @@ export function MediaFrame({
         loading="lazy"
       />
       {caption ? (
-        <figcaption className={withBackground ? "px-6 pb-4 pt-3 text-sm text-[0.95rem]" : "mt-3 text-center text-sm text-[0.95rem] text-muted-soft"}>
+        <figcaption className={withBackground ? "px-6 pb-4 pt-3 text-sm text-[0.95rem]" : "mt-3 text-center text-sm text-[0.95rem] text-[color:var(--muted)]"}>
           {caption}
         </figcaption>
       ) : null}
     </figure>
   );
 }
-

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Heading } from "@/components/ui/Heading";
 import type { AffirmationCheckWidgetConfig } from "@/lib/widget-parser";
 
 export function AffirmationCheckWidget({ config, storageKey }: { config: AffirmationCheckWidgetConfig; storageKey: string }) {
@@ -26,42 +27,65 @@ export function AffirmationCheckWidget({ config, storageKey }: { config: Affirma
   const reset = () => { setAnswers(config.items.map(() => false)); setNotes(config.items.map(() => "")); };
 
   return (
-    <section className="rounded-[22px] border bg-white/70 backdrop-blur p-5 space-y-4">
+    <section className="surface-card space-y-[var(--space-m)]">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">{config.title ?? 'Checklist — Affirmations'}</h3>
-        <button onClick={reset} className="btn btn-ghost text-xs">Réinitialiser</button>
+        <Heading level={3}>{config.title ?? "Checklist — Affirmations"}</Heading>
+        <button onClick={reset} className="btn btn-ghost text-xs">
+          Réinitialiser
+        </button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border">
+      <div className="overflow-hidden rounded-[var(--r-l)] border border-[color:var(--border)] bg-[color:var(--bg-soft)] shadow-[var(--shadow-s)]">
         <table className="w-full text-[0.98rem]">
-          <thead className="bg-slate-50/70">
+          <thead className="bg-[color-mix(in_srgb,var(--bg-soft)_90%,white_10%)]">
             <tr>
-              <th className="px-3 py-2 text-left font-semibold">Test</th>
-              <th className="px-3 py-2 text-left font-semibold">Question</th>
-              <th className="px-3 py-2 text-left font-semibold">Oui ?</th>
-              {config.showNotes !== false ? (<th className="px-3 py-2 text-left font-semibold">Notes</th>) : null}
+              <th className="px-[var(--space-3)] py-[var(--space-2)] text-left font-semibold text-[color:var(--fg)]">
+                Test
+              </th>
+              <th className="px-[var(--space-3)] py-[var(--space-2)] text-left font-semibold text-[color:var(--fg)]">
+                Question
+              </th>
+              <th className="px-[var(--space-3)] py-[var(--space-2)] text-left font-semibold text-[color:var(--fg)]">
+                Oui ?
+              </th>
+              {config.showNotes !== false ? (
+                <th className="px-[var(--space-3)] py-[var(--space-2)] text-left font-semibold text-[color:var(--fg)]">
+                  Notes
+                </th>
+              ) : null}
             </tr>
           </thead>
           <tbody>
             {config.items.map((it, i) => (
-              <tr key={`${storageKey}-${i}`} className={i % 2 === 1 ? 'bg-slate-50/40' : undefined}>
-                <td className="px-3 py-3 align-top font-semibold">{it.test}</td>
-                <td className="px-3 py-3 align-top">{it.question}</td>
-                <td className="px-3 py-3 align-top">
+              <tr
+                key={`${storageKey}-${i}`}
+                className={i % 2 === 1 ? "bg-[color-mix(in_srgb,var(--bg-soft)_94%,white_6%)]" : undefined}
+              >
+                <td className="px-[var(--space-3)] py-[var(--space-3)] align-top font-semibold text-[color:var(--fg)]">
+                  {it.test}
+                </td>
+                <td className="px-[var(--space-3)] py-[var(--space-3)] align-top text-[color:var(--fg)]">
+                  {it.question}
+                </td>
+                <td className="px-[var(--space-3)] py-[var(--space-3)] align-top">
                   <input
                     type="checkbox"
                     checked={answers[i]}
-                    onChange={(e) => setAnswers((prev) => prev.map((v, idx) => (idx === i ? e.target.checked : v)))}
-                    className="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-2"
+                    onChange={(e) =>
+                      setAnswers((prev) => prev.map((v, idx) => (idx === i ? e.target.checked : v)))
+                    }
+                    className="h-5 w-5 rounded border-[color:var(--border)] text-[color:var(--success)] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--success)_24%,transparent)]"
                   />
                 </td>
                 {config.showNotes !== false ? (
-                  <td className="px-3 py-3 align-top">
+                  <td className="px-[var(--space-3)] py-[var(--space-3)] align-top">
                     <input
                       value={notes[i]}
-                      onChange={(e) => setNotes((prev) => prev.map((v, idx) => (idx === i ? e.target.value : v)))}
+                      onChange={(e) =>
+                        setNotes((prev) => prev.map((v, idx) => (idx === i ? e.target.value : v)))
+                      }
                       placeholder="✅ / ❌ + remarque courte"
-                      className="w-full rounded-lg border bg-white/80 px-3 py-2 text-sm"
+                      className="w-full rounded-[var(--r-m)] border border-[color:var(--border)] bg-[color:var(--bg-card)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
                     />
                   </td>
                 ) : null}

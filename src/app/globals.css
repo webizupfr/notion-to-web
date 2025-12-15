@@ -6,32 +6,19 @@
 
 
 :root {
-  /* ——— Brand tokens (Navy + Ivoire + Lime feutré) ——— */
-  --background: #0c1322;
-  --background-soft: #f6f3ec;
-  --foreground: #0f1728;
-  --muted: #596179;
-  --muted-soft: #6e7690;
-  --primary: #c7f000;
-  --primary-strong: #b4d900;
-  --accent: #d88a4d;
-  --success: #1ea36c;
-  --border: rgba(15, 23, 40, 0.14);
-  --border-soft: rgba(15, 23, 40, 0.08);
-  --ring: color-mix(in oklab, var(--primary) 35%, #0f1728);
-  --radius: 14px;
+  /* Palette relayée depuis tokens */
+  --background: var(--bg);
+  --background-soft: var(--bg-soft);
+  --foreground: var(--fg);
+  --muted: var(--muted);
+  --muted-soft: var(--fg-soft);
+  --primary: var(--primary);
+  --accent: var(--primary-soft);
+  --border-soft: var(--border);
 
-  /* Halos (plus discrets) */
-  --halo-amber: rgba(199, 240, 0, 0.14);
-  --halo-red: rgba(216, 138, 77, 0.12);
-
-  /* Elevations plus courtes */
-  --elev-1: 0 12px 32px -18px rgba(15, 23, 40, 0.25);
-  --elev-2: 0 26px 68px -32px rgba(10, 16, 30, 0.35);
-
-  /* Typos (fallbacks si police non dispo localement) */
-  --font-text: "Inter", "Manrope", "Source Sans Pro", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
-  --font-display: "Space Grotesk", var(--font-text);
+  /* Typos (fallbacks) */
+  --font-text: "Outfit", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-display: "Outfit", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
 }
 
 @layer base {
@@ -41,12 +28,24 @@
 
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+  --color-muted: var(--muted);
   --color-primary: var(--primary);
   --color-accent: var(--accent);
-  --color-muted: var(--muted);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --radius-md: var(--r-m);
+  --radius-lg: var(--r-l);
+  --shadow-lg: var(--shadow-l);
+  --shadow-md: var(--shadow-m);
+  --spacing-4: var(--space-m);
+  --spacing-6: var(--space-l);
   --font-sans: var(--font-text);
+  --font-display: var(--font-display);
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 }
 
@@ -56,7 +55,10 @@
   *::before,
   *::after { border-color: var(--border-soft); }
 
-  html { scroll-behavior: smooth; }
+  html {
+    scroll-behavior: smooth;
+    font-size: clamp(13.5px, 0.78vw + 9px, 15px);
+  }
 
   body {
     background: var(--background-soft);
@@ -69,13 +71,15 @@
     letter-spacing: -0.002em;
   }
 
-  /* Titres en display font (impact + premium) */
+  /* Titres en display font (impact + premium), sans uppercase global */
   h1, h2, h3, .heading {
     font-family: var(--font-display);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.012em;
+    text-transform: none;
   }
-  h1 { font-weight: 700; text-transform: uppercase; }
-  h2, h3 { font-weight: 600; text-transform: uppercase; }
+  h1 { font-size: clamp(2rem, 3.6vw, 2.4rem); font-weight: 760; }
+  h2 { font-size: clamp(1.65rem, 2.8vw, 2.05rem); font-weight: 690; }
+  h3 { font-size: clamp(1.25rem, 2vw, 1.5rem); font-weight: 620; }
 
   ::selection {
     background: color-mix(in oklab, var(--primary) 35%, #0b1220);
@@ -84,6 +88,174 @@
 
   a { color: inherit; text-decoration: none; }
   a:hover { color: color-mix(in oklab, var(--primary-strong) 85%, var(--foreground)); }
+
+  /* Notion media wrapper */
+  .notion-media__inner {
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    box-shadow: none; 
+    border: none;  
+    background: transparent;
+  }
+
+  /* Supprime l'effet carte autour de TOUS les médias Notion */
+.notion-media,
+.notion-image,
+.notion-media figure {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Les images prennent toute la largeur dispo et respectent le radius du parent */
+.notion-media img,
+.notion-image img,
+.prose img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 100%;
+  object-fit: cover;      /* ou "contain" si tu veux zéro crop */
+  border-radius: inherit; /* hérite du radius du wrapper */
+}
+
+  /* Learning toggles */
+  .learning-toggle {
+    width: 100%;
+    border-radius: var(--r-l);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-m);
+    padding: var(--space-m) var(--space-l);
+    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    margin-bottom: var(--space-m);
+  }
+  .learning-toggle summary {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-m);
+    cursor: pointer;
+    font-weight: 600;
+  }
+  .learning-toggle summary::-webkit-details-marker { display: none; }
+  .learning-toggle[open] summary .learning-toggle__caret { transform: rotate(180deg); }
+  .learning-toggle__caret {
+    transition: transform 0.2s ease;
+    color: var(--muted);
+  }
+  .learning-toggle__content {
+    margin-top: var(--space-m);
+  }
+
+  /* Callouts */
+  .callout {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-m);
+    border-radius: var(--r-l);
+    padding: var(--space-m) var(--space-l);
+    border-left: 4px solid var(--primary);
+    background: color-mix(in srgb, var(--primary-soft) 28%, var(--bg-card));
+    box-shadow: var(--shadow-s);
+    align-items: flex-start;
+    margin-bottom: var(--space-m);
+  }
+  .callout--no-icon {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .callout--no-icon .callout__body {
+    grid-column: 1 / -1;
+  }
+  .callout__icon {
+    width: var(--space-xl);
+    height: var(--space-xl);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--fg);
+    opacity: 0.9;
+  }
+  .callout__body {
+    display: grid;
+    gap: var(--space-s);
+  }
+  .callout__children {
+    margin-top: var(--space-xs);
+  }
+  .callout-note {
+    border-left-color: var(--primary);
+    background: color-mix(in srgb, var(--primary-soft) 24%, var(--bg-card));
+  }
+  .callout-warning {
+    border-left-color: var(--warning);
+    background: color-mix(in srgb, var(--warning) 18%, var(--bg-card));
+  }
+  .callout-success {
+    border-left-color: var(--success);
+    background: color-mix(in srgb, var(--success) 16%, var(--bg-card));
+  }
+  .callout-example {
+    border-left-color: color-mix(in srgb, var(--primary) 25%, rgb(59 130 246));
+    background: color-mix(in srgb, rgb(59 130 246) 16%, var(--bg-card));
+  }
+  .callout-danger {
+    border-left-color: var(--danger);
+    background: color-mix(in srgb, var(--danger) 16%, var(--bg-card));
+  }
+
+  .notion-columns[data-layout="weighted"] {
+    grid-template-columns: var(--notion-columns-template, minmax(0, 1fr));
+  }
+
+  @media (max-width: 640px) {
+    .notion-columns[data-layout="weighted"] {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* Premium dividers */
+  .notion-divider,
+  .prose .notion-divider {
+    position: relative;
+    width: 100%;
+    height: 1px;
+    border: none;
+    margin: clamp(var(--space-6), 4vw, var(--space-9)) 0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, var(--primary-soft) 65%, var(--border)),
+      transparent
+    );
+  }
+  .notion-divider::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    background: color-mix(in oklab, var(--primary) 80%, #fff);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+  }
+  .marketing-page .marketing-section[data-tone="dark"] .notion-divider {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in oklab, rgba(255, 255, 255, 0.65) 70%, transparent),
+      transparent
+    );
+  }
+  .marketing-page .marketing-section[data-tone="dark"] .notion-divider::after {
+    background: color-mix(in oklab, #fff 85%, var(--primary));
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  }
 
   /* Accessibilité clavier améliorée (WCAG AAA) */
   :focus-visible {
@@ -99,7 +271,7 @@
     outline-offset: 4px;
     box-shadow: 
       0 0 0 6px rgba(246, 201, 120, 0.2),
-      var(--elev-1);
+      var(--shadow-m);
   }
 
   /* Focus pour les liens */
@@ -123,7 +295,7 @@
     border-radius: 9999px;
     z-index: 9999;
     transition: top 0.2s ease;
-    box-shadow: var(--elev-2);
+    box-shadow: var(--shadow-l);
   }
 
   .skip-to-content:focus {
@@ -136,11 +308,11 @@
   input,
   textarea,
   select {
-    border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
-    background: #fff;
-    border-radius: 12px;
+    border: 1px solid color-mix(in oklab, var(--fg) 8%, transparent);
+    background: color-mix(in oklab, var(--bg) 98%, #fff);
+    border-radius: var(--r-md);
     padding: 0.65rem 0.8rem;
-    color: var(--foreground);
+    color: var(--fg);
     font: inherit;
     transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
   }
@@ -148,9 +320,9 @@
   textarea:focus,
   select:focus {
     outline: none;
-    border-color: color-mix(in oklab, var(--primary) 50%, var(--foreground));
+    border-color: color-mix(in oklab, var(--primary) 50%, var(--fg));
     box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 20%, transparent);
-    background: #fff;
+    background: color-mix(in oklab, var(--bg) 98%, #fff);
   }
 }
 
@@ -162,97 +334,123 @@
 @layer utilities {
   /* Flip cards subtle gradient surface */
   .flip-card-surface {
-    border: 1px solid var(--border-soft);
+    border: 1px solid var(--border);
     background: linear-gradient(
       150deg,
-      color-mix(in oklab, var(--background-soft) 90%, #ffffff),
+      color-mix(in oklab, var(--bg) 90%, #ffffff),
       #ffffff
     );
     backdrop-filter: blur(8px) saturate(115%);
     -webkit-backdrop-filter: blur(8px) saturate(115%);
   }
-  /* Surfaces (cartes, sections) */
+  /* Surfaces (cartes, panneaux) */
   .surface-card {
-    border: 1px solid var(--border-soft);
-    background: linear-gradient(180deg,
-      color-mix(in oklab, var(--background-soft) 96%, #ffffff),
-      color-mix(in oklab, var(--background-soft) 90%, #ffffff));
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-soft);
-    backdrop-filter: saturate(110%) blur(8px);
+    border: 1px solid color-mix(in srgb, var(--muted) 10%, transparent 90%);
+    background: var(--bg-card);
+    border-radius: var(--r-l);
+    box-shadow: var(--shadow-m);
+    padding: var(--space-l);
+    transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  }
+  .surface-card:hover {
+    background: var(--bg-soft);
+    box-shadow: var(--shadow-l);
+    transform: translateY(-1px);
+  }
+
+  .surface-panel {
+    border: 1px solid color-mix(in srgb, var(--muted) 10%, transparent 90%);
+    background: var(--bg-soft);
+    border-radius: var(--r-m);
+    box-shadow: var(--shadow-s);
+    padding: var(--space-m);
+    transition: background 0.2s ease, box-shadow 0.2s ease;
   }
 
   .surface-hero {
-    border: 1px solid var(--border-soft);
-    background:
-      linear-gradient(135deg, color-mix(in oklab, var(--background-soft) 92%, #ffffff), #ffffff),
-      radial-gradient(800px 360px at 12% -8%, var(--halo-amber), transparent 60%),
-      radial-gradient(820px 360px at 88% 0%, var(--halo-red), transparent 58%);
-    border-radius: calc(var(--radius) + 4px);
-    box-shadow: var(--shadow-elevated);
+    border: 1px solid var(--border);
+    background: linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--primary) 12%, white 88%) 0%,
+      transparent 80%
+    );
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-m);
+  }
+
+  /* Panels harmonisés (learning) */
+  .content-panel {
+    border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+    background: color-mix(in srgb, var(--bg-card) 96%, white 4%);
+    border-radius: var(--r-l);
+    box-shadow: var(--shadow-subtle);
+    padding: clamp(var(--space-5), 4vw, var(--space-6));
+    transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .content-panel:hover {
+    background: color-mix(in srgb, var(--bg-soft) 96%, white 4%);
+    box-shadow: var(--shadow-subtle);
+  }
+
+  .widget-panel {
+    border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+    background: color-mix(in srgb, var(--primary-soft) 16%, var(--bg));
+    border-radius: var(--r-l);
+    box-shadow: var(--shadow-subtle);
+    padding: clamp(var(--space-5), 4vw, var(--space-6));
+  }
+
+  /* Notion blocks en panel : largeur fluide */
+  .content-panel .prose { max-width: 100%; }
+  .content-panel .prose img { max-width: 100%; }
+
+  .section-band {
+    position: relative;
+  }
+  .section-band::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    top: 0;
+    height: 2px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--primary) 70%, white 30%), color-mix(in srgb, var(--accent) 65%, white 35%));
+    border-radius: var(--r-l) var(--r-l) 0 0;
+    opacity: 0.7;
+  }
+  .section-band > * {
+    position: relative;
   }
 
   /* Boutons resserrés et cohérents */
-  .btn {
-    display: inline-flex; align-items: center; justify-content: center;
-    gap: .5rem; padding: .75rem 1.35rem; border-radius: 999px;
-    font-weight: 600; line-height: 1; border: 1px solid transparent;
-    transition:
-      transform 0.18s ease,
-      box-shadow 0.22s ease,
-      background-color 0.18s ease,
-      border-color 0.18s ease,
-      color 0.18s ease;
-    will-change: transform;
-  }
-  .btn-primary {
-    background: linear-gradient(140deg, #0f1728, #111a2d);
-    color: #f7f7f2;
-    border-color: color-mix(in oklab, #0f1728 70%, var(--border));
-    box-shadow: 0 12px 28px -18px rgba(10, 16, 30, 0.4);
-  }
-  .btn-primary:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 16px 32px -18px rgba(10, 16, 30, 0.45);
-  }
-  .btn-primary:active {
-    transform: translateY(0);
-    transition-duration: 0.1s;
-  }
+  /* LEGACY: consolidated with buttons block near bottom; keep focus styles above */
 
-  .btn-ghost {
-    background: color-mix(in oklab, var(--background-soft) 92%, #ffffff);
-    color: var(--foreground);
-    border-color: color-mix(in oklab, var(--foreground) 12%, transparent);
-  }
-  .btn-ghost:hover {
-    background: color-mix(in oklab, var(--primary) 14%, #ffffff);
-    border-color: color-mix(in oklab, var(--primary) 28%, var(--border));
-    transform: translateY(-1px);
-  }
-
-  /* Badges / Callouts */
-  .badge-accent {
-    background: color-mix(in oklab, var(--accent) 16%, white);
-    color: color-mix(in oklab, var(--accent) 70%, black);
-    border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent);
+  /* Pills */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
     border-radius: 999px;
-    padding: .25rem .6rem; font-weight: 600;
-  }
-
-  /* Grille type Notion */
-  .notion-columns {
-    display: grid; gap: 1.5rem; grid-template-columns: minmax(0, 1fr);
-  }
-  @media (min-width: 768px) {
-    .notion-columns {
-      grid-template-columns: var(--column-template, repeat(var(--columns, 1), minmax(0, 1fr)));
-    }
+    padding: 4px var(--space-s);
+    background: color-mix(in srgb, var(--primary-soft) 30%, #fff 70%);
+    border: 1px solid color-mix(in srgb, var(--primary-soft) 55%, transparent);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
 
   /* Typo helpers */
   .eyebrow { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .08em; font-size: .78rem; color: color-mix(in oklab, var(--foreground) 65%, #94a3b8); }
   .lead    { font-size: 1.15rem; color: color-mix(in oklab, var(--foreground) 90%, #5b6475); }
+}
+
+.section-tone-default {
+  background: transparent;
+}
+
+.section-tone-alt {
+  background: transparent;
 }
 
 /* ——— Verrouille la typographie par défaut ——— */
@@ -265,114 +463,68 @@
   p, li, blockquote, figcaption { color: color-mix(in oklab, var(--foreground) 90%, #475569); }
 }
 
-/* Rendu plus contrasté pour les contenus d'activité */
-.prose-activity h2 {
-  font-size: 1.4rem; line-height: 1.25; font-weight: 700;
-  margin-top: 1.25rem; margin-bottom: .75rem; color: var(--foreground);
-}
-.prose-activity h3 {
-  font-size: 1.15rem; line-height: 1.35; font-weight: 600;
-  margin-top: 1rem; margin-bottom: .5rem; color: var(--foreground);
-}
-.prose-activity p { color: color-mix(in oklab, var(--foreground) 92%, #6b7280); }
-.prose-activity .callout { border-radius: 16px; }
+/* LEGACY prose styles replaced by src/lib/theme/prose.css */
 
-/* ——— Tailwind Typography (prose) : force les variables sur ton thème ——— */
-/* S’applique à TOUT ce qui a .prose (ex: Blocks.tsx) */
-@layer utilities {
-  .prose {
-    /* Couleurs principales */
-    --tw-prose-body: var(--foreground);
-    --tw-prose-headings: var(--foreground);
-    --tw-prose-links: color-mix(in oklab, var(--foreground) 96%, var(--primary));
-    --tw-prose-bold: var(--foreground);
-    --tw-prose-counters: color-mix(in oklab, var(--foreground) 72%, #94a3b8);
-    --tw-prose-bullets: color-mix(in oklab, var(--foreground) 72%, #94a3b8);
-    --tw-prose-hr: color-mix(in oklab, var(--foreground) 12%, transparent);
-    --tw-prose-quotes: var(--foreground);
-    --tw-prose-quote-borders: color-mix(in oklab, var(--primary) 60%, transparent);
-    --tw-prose-captions: color-mix(in oklab, var(--foreground) 70%, #94a3b8);
+/* Typo plus éditoriale pour les contenus de Jour (rendu Notion en mode LMS) */
+/* LEGACY: prose-activity (Notion v0) conservée pour rollback, ne plus utiliser */
 
-    /* Codes & tableaux */
-    --tw-prose-code: color-mix(in oklab, var(--foreground) 92%, #0b1020);
-    --tw-prose-pre-code: color-mix(in oklab, var(--foreground) 92%, #0b1020);
-    --tw-prose-pre-bg: color-mix(in oklab, var(--foreground) 4%, #ffffff);
-    --tw-prose-th-borders: color-mix(in oklab, var(--foreground) 14%, transparent);
-    --tw-prose-td-borders: color-mix(in oklab, var(--foreground) 10%, transparent);
-
-    /* Liens au survol */
-    text-underline-offset: 4px;
-    font-size: 1rem;
-    line-height: 1.6;
-  }
-
-  .prose :where(p, ul, ol){
-    margin-top: 1rem;
-    margin-bottom: 1rem;
-  }
-
-  .prose :where(h1){
-    margin-top: 2.4rem;
-    margin-bottom: 1rem;
-    font-size: clamp(2.1rem, 2.8vw, 2.7rem);
-    line-height: 1.18;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    text-transform: uppercase;
-  }
-
-  .prose :where(h2){
-    margin-top: 2.1rem;
-    margin-bottom: 0.85rem;
-    font-size: clamp(1.8rem, 2.4vw, 2.1rem);
-    line-height: 1.24;
-    font-weight: 700;
-    text-transform: uppercase;
-  }
-
-  .prose :where(h3){
-    margin-top: 1.7rem;
-    margin-bottom: 0.75rem;
-    font-size: clamp(1.4rem, 2.1vw, 1.7rem);
-    line-height: 1.28;
-    font-weight: 650;
-  }
-
-  .prose :where(blockquote){
-    margin: 1.5rem 0;
-    padding: 0;
-    background: none;
-    border-left: none;
-    font-style: inherit;
-  }
-
-  .prose :where(hr){
-    margin: 2.5rem 0;
-    border-color: var(--border-soft);
-  }
-
-  .prose :where(img){
-    border-radius: 22px;
-  }
-
+/* Accentuation sémantique pour les sections de Jour (Objectifs, Guide, etc.) */
+[data-section-kind="intro"] .prose {
+  max-width: 64rem;
 }
 
-.prose a:hover {
-  color: color-mix(in oklab, var(--primary) 85%, var(--foreground));
-  text-decoration-color: color-mix(in oklab, var(--primary) 60%, transparent);
+[data-section-kind="intro"] .prose p:first-of-type {
+  font-size: 1.06rem;
+  font-weight: 500;
+}
+
+[data-section-kind="objectives"] .prose :where(h2, h3),
+[data-section-kind="guide"] .prose :where(h2, h3),
+[data-section-kind="assistant"] .prose :where(h2, h3),
+[data-section-kind="prompts"] .prose :where(h2, h3),
+[data-section-kind="next"] .prose :where(h2, h3) {
+  text-transform: none;
+  letter-spacing: -0.025em;
+}
+
+[data-section-kind="objectives"] .prose p:first-of-type {
+  font-size: 1.02rem;
+  font-weight: 500;
+}
+
+[data-section-kind="guide"] .prose ol {
+  padding-left: 0;
+  list-style: none;
+}
+[data-section-kind="guide"] .prose ol > li {
+  margin-bottom: 0.85rem;
+}
+
+[data-section-kind="assistant"] .prose p,
+[data-section-kind="prompts"] .prose p {
+  font-size: 0.98rem;
+  line-height: 1.7;
+}
+
+[data-section-kind="next"] .prose p {
+  font-size: 1.02rem;
+  font-weight: 500;
 }
 
 /* Sections rythmiques (basées sur les séparateurs Notion) */
 .notion-sections { }
 .section-shell { padding: 8px 4px; border-radius: 0; transition: background 0.2s ease, border-color 0.2s ease; }
 .section-shell.section-alt {
-  background: linear-gradient(180deg,
-    color-mix(in oklab, var(--background-soft) 80%, #ffffff),
-    color-mix(in oklab, var(--background-soft) 76%, #ffffff));
-  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
-  border-radius: 16px;
-  padding: 26px 22px;
-  box-shadow: 0 18px 42px -28px rgba(15,23,42,0.2);
+  background: var(--bg-card);
+  border: 1px solid color-mix(in srgb, var(--muted) 10%, transparent 90%);
+  border-radius: var(--r-l);
+  padding: var(--space-l);
+  box-shadow: var(--shadow-s);
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.section-shell.section-alt:hover {
+  background: var(--bg-soft);
+  box-shadow: var(--shadow-m);
 }
 .section-divider {
   position: relative;
@@ -391,21 +543,38 @@
   content: "";
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--foreground) 22%, transparent));
   position: relative;
 }
 .section-divider::before {
-  mask: linear-gradient(90deg, transparent 0%, black 40%, black 100%);
+  background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--foreground) 22%, transparent));
+  mask: linear-gradient(90deg, transparent 0%, black 60%, black 100%);
 }
 .section-divider::after {
-  mask: linear-gradient(90deg, black 0%, black 60%, transparent 100%);
+  background: linear-gradient(270deg, transparent, color-mix(in oklab, var(--foreground) 22%, transparent));
+  mask: linear-gradient(90deg, black 0%, black 40%, transparent 100%);
+}
+.section-divider .divider-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 18px;
+  border-radius: 999px;
+  background: radial-gradient(circle at 20% 20%, #fff5d4, #ffb300 55%, #e29300 100%);
+  border: 1px solid #f8b436;
+  box-shadow:
+    0 15px 30px -28px rgba(255, 179, 0, 0.9),
+    0 4px 10px -26px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
 }
 .section-divider .divider-dot {
   width: 10px;
   height: 10px;
   border-radius: 999px;
-  background: var(--primary);
-  box-shadow: 0 0 0 6px color-mix(in oklab, var(--primary) 18%, transparent);
+  background: radial-gradient(circle, #fffef8, #ffe4b7);
+  border: 2px solid #f8b94a;
+  box-shadow:
+    0 0 12px -6px rgba(255, 179, 0, 0.9),
+    inset 0 1px 1px rgba(255, 255, 255, 0.9);
 }
 
 /* InfoCard premium skins */
@@ -574,22 +743,22 @@
 }
 
 /* Neutral widget surface: subtle elevation and gentle tint */
-.widget-surface {
-  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
-  background:
-    radial-gradient(720px 300px at 12% -8%, color-mix(in oklab, var(--foreground) 3%, transparent), transparent 62%),
-    linear-gradient(180deg, rgba(255,255,255,.98), color-mix(in oklab, var(--background-soft) 92%, #fff));
-  border-radius: 18px;
-  box-shadow: var(--shadow-subtle);
-  transition:
-    box-shadow .25s cubic-bezier(0.4,0,0.2,1),
-    transform .18s ease,
-    border-color .2s ease;
-  backdrop-filter: blur(6px) saturate(115%);
-  -webkit-backdrop-filter: blur(6px) saturate(115%);
-}
-.widget-surface:hover { transform: translateY(-2px); box-shadow: 0 24px 48px -32px rgba(17,24,39,.22); }
-.widget-surface:focus-within { box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 30%, transparent), var(--shadow-subtle); }
+  .widget-surface {
+    border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+    background:
+      radial-gradient(720px 300px at 12% -8%, color-mix(in oklab, var(--fg) 3%, transparent), transparent 62%),
+      linear-gradient(180deg, rgba(255,255,255,.98), color-mix(in oklab, var(--bg) 92%, #fff));
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-subtle);
+    transition:
+      box-shadow .25s cubic-bezier(0.4,0,0.2,1),
+      transform .18s ease,
+      border-color .2s ease;
+    backdrop-filter: blur(6px) saturate(115%);
+    -webkit-backdrop-filter: blur(6px) saturate(115%);
+  }
+  .widget-surface:hover { transform: translateY(-2px); box-shadow: 0 24px 48px -32px rgba(17,24,39,.22); }
+  .widget-surface:focus-within { box-shadow: 0 0 0 3px color-mix(in oklab, var(--primary) 30%, transparent), var(--shadow-subtle); }
 
 /* Full-bleed helpers when nested in callouts */
 .info-card .widget-bleed {
@@ -699,17 +868,17 @@
 .btn-hero:hover{ transform: translateY(-2px); }
 .btn-hero:active{ transform: translateY(0); transition-duration: 0.1s; }
 
-.btn-hero.btn-primary{ background:#111; color:#fff; border:1px solid transparent; }
-.btn-hero.btn-primary:hover{ background:#1a1a1a; }
-.btn-hero.btn-outline{ background:#fff; color:#111; border:1px solid rgba(0,0,0,.12); }
-.btn-hero.btn-outline:hover{ background:#f7f7f7; border-color: transparent; }
-.btn-hero.btn-ghost{ background:transparent; color:#111; border:1px dashed rgba(0,0,0,.18); }
-.btn-hero.btn-ghost:hover{ background:rgba(0,0,0,.035); border-style: solid; }
+.btn-hero.btn-primary{ background: linear-gradient(140deg, color-mix(in oklab,var(--fg) 95%,#000), color-mix(in oklab,var(--fg) 88%,#000)); color:var(--bg); border:1px solid transparent; }
+.btn-hero.btn-primary:hover{ background: linear-gradient(140deg, color-mix(in oklab,var(--fg) 90%,#000), color-mix(in oklab,var(--fg) 84%,#000)); }
+.btn-hero.btn-outline{ background: color-mix(in oklab,var(--bg) 98%,#fff); color:var(--fg); border:1px solid color-mix(in oklab,var(--border) 75%,transparent); }
+.btn-hero.btn-outline:hover{ background: color-mix(in oklab,var(--bg) 96%,#fff); border-color: color-mix(in oklab,var(--primary) 28%,var(--border)); }
+.btn-hero.btn-ghost{ background:transparent; color:var(--fg); border:1px dashed color-mix(in oklab,var(--fg) 18%,transparent); }
+.btn-hero.btn-ghost:hover{ background:color-mix(in oklab,var(--fg) 4%,#fff); border-style: solid; }
 
 /* --- Badge rond Notion-like --- */
 .badge {
   width: 56px; height: 56px; border-radius: 999px;
-  background: #0f1728; color: #c7f000; display: grid; place-items: center;
+  background: var(--fg); color: var(--primary); display: grid; place-items: center;
   box-shadow: 0 10px 26px -16px rgba(10,16,30,.4), inset 0 0 0 1px rgba(255,255,255,.08);
 }
 
@@ -719,31 +888,38 @@
 /* --- Boutons --- */
 .btn{
   display:inline-flex; align-items:center; justify-content:center;
-  height:3rem; padding:0 1.25rem; border-radius:999px;
+  gap: 0.5rem;
+  height: 3rem;
+  padding: 0 var(--space-l);
+  border-radius: var(--r-m);
   font-weight:600; font-size:0.95rem; letter-spacing:-0.01em;
-  transition: transform .18s ease, box-shadow .22s ease, background .18s ease, border-color .18s ease, color .18s ease;
-  will-change: transform; gap:.5rem;
+  transition: transform .2s ease, box-shadow .2s ease, background .2s ease, border-color .2s ease, color .2s ease;
   border: 1px solid transparent;
 }
 .btn:focus-visible{ outline: none; box-shadow: 0 0 0 4px rgba(199,240,0,.25); }
-.btn:hover{ transform: translateY(-1px); }
+.btn:hover{ transform: translateY(-2px); box-shadow: var(--shadow-m); }
 .btn:active{ transform: translateY(0); transition-duration: .1s; }
 
 .btn-primary{
-  background: linear-gradient(140deg, #0f1728, #111a2d);
-  color:#f7f7f2;
-  border-color: color-mix(in oklab, #0f1728 70%, var(--border));
-  box-shadow: 0 12px 28px -18px rgba(10,16,30,.4);
+  background: var(--primary);
+  color: var(--primary-contrast);
+  border-color: var(--primary);
+  box-shadow: var(--shadow-m);
 }
-.btn-primary:hover{ background: linear-gradient(140deg, #111a2d, #0f1728); }
+.btn-primary:hover{ background: var(--primary-hover); box-shadow: var(--shadow-l); }
 
-/* Accent (2e ligne, accès protégé) */
-.btn-accent{
-  background: color-mix(in oklab, var(--accent) 12%, #ffffff);
-  color:#0f1728;
-  border:1px solid color-mix(in oklab, var(--accent) 30%, transparent);
+.btn-accent,
+.btn-secondary{
+  background: var(--bg-card);
+  color: var(--fg);
+  border: 1px solid var(--primary-soft);
+  box-shadow: var(--shadow-s);
 }
-.btn-accent:hover{ background: color-mix(in oklab, var(--accent) 18%, #ffffff); border-color: color-mix(in oklab, var(--accent) 45%, transparent); }
+.btn-accent:hover,
+.btn-secondary:hover{
+  background: var(--bg-soft);
+  box-shadow: var(--shadow-m);
+}
 
 /* Pills glass ultra-légers pour le header */
 .pill {
@@ -751,8 +927,8 @@
   height:2.25rem; padding:0 .9rem; border-radius:999px;
   font-weight:600; font-size:.9rem; letter-spacing:-0.01em;
   border:1px solid color-mix(in oklab, var(--border) 70%, transparent);
-  background: color-mix(in oklab, var(--background-soft) 90%, #ffffff);
-  color:#0f1728;
+  background: color-mix(in oklab, var(--bg) 90%, #ffffff);
+  color:var(--fg);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   transition: 
@@ -770,14 +946,14 @@
 }
 .pill[aria-current="page"] { 
   box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 40%, transparent) inset;
-  background: color-mix(in oklab, var(--background-soft) 92%, #ffffff);
+  background: color-mix(in oklab, var(--bg) 92%, #ffffff);
 }
 
 .pill-accent {
   /* pour Accès privé : teinte ambre translucide */
   border-color: color-mix(in oklab, var(--accent) 35%, transparent);
   background: color-mix(in oklab, var(--accent) 14%, #ffffff);
-  color:#0f1728;
+  color:var(--fg);
 }
 .pill-accent:hover { 
   background: color-mix(in oklab, var(--accent) 18%, #ffffff);
@@ -823,59 +999,98 @@
 
 /* Callouts avec hover subtil */
 .callout {
-  transition: 
-    border-color 0.25s ease,
-    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
 .callout:hover {
-  border-color: color-mix(in oklab, var(--border) 80%, var(--primary));
-  box-shadow: 0 20px 44px -28px rgba(224, 122, 42, 0.18);
+  background: var(--bg-soft);
+  border-color: color-mix(in srgb, var(--muted) 22%, transparent);
+  box-shadow: var(--shadow-m);
+  transform: translateY(-1px);
 }
+
 /* Harmonisation des surfaces colorées (callouts/toggles/todos) */
 .callout[data-callout-tone] {
-  background: #fff;
-  border: 1px solid color-mix(in oklab, var(--foreground) 8%, transparent);
+  background: color-mix(in srgb, var(--bg-soft) 96%, #ffffff 4%);
+  border: 1px solid color-mix(in srgb, var(--muted) 14%, transparent);
   border-left-width: 4px;
-  box-shadow: 0 12px 28px -22px rgba(8,12,18,0.14);
+  border-radius: var(--r-m);
+  box-shadow: var(--shadow-s);
 }
+
 .toggle[data-toggle-tone],
 .todo[data-todo-tone] {
-    background: #fff;
-    border: 1px solid color-mix(in oklab, var(--foreground) 6%, transparent);
-    border-radius: 12px;
-    box-shadow: 0 10px 24px -20px rgba(8,12,18,0.12);
-    padding: 12px 14px;
-  }
-/* Palette tonale harmonisée */
+  background: color-mix(in srgb, var(--bg-soft) 96%, #ffffff 4%);
+  border: 1px solid color-mix(in srgb, var(--muted) 14%, transparent);
+  border-radius: var(--r-m);
+  box-shadow: var(--shadow-s);
+  padding: var(--space-m);
+}
+
+/* Palette tonale harmonisée (tons doux) */
 .callout[data-callout-tone="gray"],
 .toggle[data-toggle-tone="gray"],
-.todo[data-todo-tone="gray"] { background: #ffffff; border-color: #e4e8ef; border-left-color: #cbd5e1; }
+.todo[data-todo-tone="gray"] {
+  background: color-mix(in srgb, var(--bg-soft) 96%, #ffffff 4%);
+  border-color: color-mix(in srgb, var(--muted) 18%, transparent);
+  border-left-color: color-mix(in srgb, var(--muted) 55%, transparent);
+}
 .callout[data-callout-tone="brown"],
 .toggle[data-toggle-tone="brown"],
-.todo[data-toggle-tone="brown"] { background: #f8f5ef; border-color: #e6d8c8; border-left-color: #cfa97e; }
+.todo[data-todo-tone="brown"] {
+  background: color-mix(in srgb, var(--primary-soft) 18%, #ffffff 82%);
+  border-color: color-mix(in srgb, var(--primary) 26%, transparent);
+  border-left-color: color-mix(in srgb, var(--primary) 55%, transparent);
+}
 .callout[data-callout-tone="orange"],
 .toggle[data-toggle-tone="orange"],
-.todo[data-toggle-tone="orange"] { background: #fefbf5; border-color: #f3dec4; border-left-color: #d88a4d; }
+.todo[data-todo-tone="orange"] {
+  background: color-mix(in srgb, var(--primary-soft) 22%, #ffffff 78%);
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  border-left-color: color-mix(in srgb, var(--primary) 62%, transparent);
+}
 .callout[data-callout-tone="yellow"],
 .toggle[data-toggle-tone="yellow"],
-.todo[data-toggle-tone="yellow"] { background: #fefcf4; border-color: #efdfae; border-left-color: #c7f000; }
+.todo[data-todo-tone="yellow"] {
+  background: color-mix(in srgb, var(--warning) 18%, #ffffff 82%);
+  border-color: color-mix(in srgb, var(--warning) 30%, transparent);
+  border-left-color: color-mix(in srgb, var(--warning) 60%, transparent);
+}
 .callout[data-callout-tone="green"],
 .toggle[data-toggle-tone="green"],
-.todo[data-todo-tone="green"] { background: #f2fbf7; border-color: #cceada; border-left-color: #2ca56b; }
+.todo[data-todo-tone="green"] {
+  background: color-mix(in srgb, var(--success) 16%, #ffffff 84%);
+  border-color: color-mix(in srgb, var(--success) 28%, transparent);
+  border-left-color: color-mix(in srgb, var(--success) 58%, transparent);
+}
 .callout[data-callout-tone="blue"],
 .toggle[data-toggle-tone="blue"],
-.todo[data-toggle-tone="blue"] { background: #f3f6ff; border-color: #d2dbf5; border-left-color: #3b5ccb; }
+.todo[data-todo-tone="blue"] {
+  background: color-mix(in srgb, var(--ring) 18%, #ffffff 82%);
+  border-color: color-mix(in srgb, var(--ring) 30%, transparent);
+  border-left-color: color-mix(in srgb, var(--ring) 58%, transparent);
+}
 .callout[data-callout-tone="purple"],
 .toggle[data-toggle-tone="purple"],
-.todo[data-toggle-tone="purple"] { background: #f7f4ff; border-color: #dcd2f5; border-left-color: #7c3aed; }
+.todo[data-todo-tone="purple"],
 .callout[data-callout-tone="pink"],
 .toggle[data-toggle-tone="pink"],
-.todo[data-toggle-tone="pink"] { background: #fdf5f9; border-color: #f3cfe2; border-left-color: #db2777; }
+.todo[data-todo-tone="pink"] {
+  background: color-mix(in srgb, var(--ring) 20%, #ffffff 80%);
+  border-color: color-mix(in srgb, var(--ring) 32%, transparent);
+  border-left-color: color-mix(in srgb, var(--ring) 60%, transparent);
+}
 .callout[data-callout-tone="red"],
 .toggle[data-toggle-tone="red"],
-.todo[data-toggle-tone="red"] { background: #fef5f5; border-color: #f1c9c4; border-left-color: #d45050; }
+.todo[data-todo-tone="red"] {
+  background: color-mix(in srgb, var(--danger) 16%, #ffffff 84%);
+  border-color: color-mix(in srgb, var(--danger) 30%, transparent);
+  border-left-color: color-mix(in srgb, var(--danger) 60%, transparent);
+}
 
 /* Bookmarks avec lift effect */
 .bookmark {
@@ -894,9 +1109,9 @@
 /* Tables (Notion) - version premium */
 .ui-table table { width: 100%; border-collapse: separate; border-spacing: 0; }
 .ui-table thead th {
-  background: color-mix(in oklab, var(--background-soft) 90%, #ffffff);
+  background: color-mix(in oklab, var(--bg) 92%, #ffffff);
   border-bottom: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
-  color: var(--foreground);
+  color: var(--fg);
   font-weight: 700;
 }
 .ui-table tbody tr { transition: background 0.2s ease, box-shadow 0.2s ease; }
@@ -906,12 +1121,12 @@
 }
 .ui-table tbody tr:nth-child(odd) td,
 .ui-table tbody tr:nth-child(odd) th {
-  background: color-mix(in oklab, var(--background-soft) 94%, #ffffff);
+  background: color-mix(in oklab, var(--bg) 94%, #ffffff);
 }
 .ui-table td,
 .ui-table th {
   border-bottom: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
-  color: var(--foreground);
+  color: var(--fg);
   font-size: 0.95rem;
 }
 .ui-table tbody tr:last-child td,
@@ -923,12 +1138,10 @@
 .table-wrap tbody tr {
   transition: background-color 0.18s ease;
 }
-
 .table-wrap tbody tr:hover {
   background-color: color-mix(in oklab, var(--primary) 7%, transparent);
 }
 
-/* Actions internes (Mode capture / Copier) */
 .table-wrap button {
   border-radius: 999px;
   border: 1px solid color-mix(in oklab, var(--foreground) 14%, transparent);
@@ -953,20 +1166,6 @@
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Amélioration des surfaces card générales */
-.surface-card {
-  transition: 
-    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.25s ease;
-}
-
-.surface-card:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in oklab, var(--border) 80%, var(--primary));
-  box-shadow: 0 24px 48px -32px rgba(224, 122, 42, 0.22);
-}
-
 /* Optimisation performance - réduire animations si préféré */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -975,6 +1174,20 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* Section panel: version plus plane pour les pages “day” (évite l’effet carte sur carte) */
+  .section-panel {
+    border: 1px solid color-mix(in srgb, var(--border) 85%, transparent);
+    background: color-mix(in srgb, var(--bg) 96%, white 4%);
+    border-radius: var(--r-l);
+    box-shadow: var(--shadow-subtle);
+    padding: var(--space-5);
+    transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .section-panel:hover {
+    background: color-mix(in srgb, var(--bg-soft) 92%, white 8%);
+    box-shadow: var(--shadow-m);
   }
 }
 
@@ -993,7 +1206,86 @@
   background: linear-gradient(
     90deg,
     var(--background-soft) 25%,
-    color-mix(in oklab, var(--foreground) 5%, var(--background)) 50%,
-    var(--background-soft) 75%
+  color-mix(in oklab, var(--foreground) 5%, var(--background)) 50%,
+  var(--background-soft) 75%
   );
+}
+
+/* Notion tables */
+.notion-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--r-l);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-s);
+}
+.notion-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 480px;
+}
+.notion-table th,
+.notion-table td {
+  padding: 0.6rem 0.8rem;
+  text-align: left;
+}
+.notion-table thead th {
+  background: color-mix(in srgb, var(--bg-soft) 90%, white 10%);
+  font-weight: 800;
+  color: var(--fg);
+  position: relative;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+}
+.notion-table[data-table-has-row-header="true"] thead th:first-child {
+  border-right: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
+}
+.notion-table tbody tr:nth-child(odd) {
+  background: color-mix(in srgb, var(--bg-soft) 92%, white 8%);
+}
+.notion-table tbody tr:hover {
+  background: color-mix(in srgb, var(--bg-soft) 85%, white 15%);
+}
+
+/* Collections typography */
+.collection .item-title {
+  font-size: var(--step-1);
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  font-family: var(--font-display);
+}
+
+.collection .item-excerpt {
+  font-size: var(--step-0);
+  line-height: 1.6;
+  color: color-mix(in oklab, var(--fg) 75%, var(--muted));
+}
+
+.collection .tag {
+  font-size: 0.82rem;
+}
+.notion-table td.table-row-header {
+  color: var(--fg);
+  font-weight: 600;
+  background: color-mix(in srgb, var(--bg-soft) 85%, white 15%);
+  position: relative;
+}
+.notion-table td.table-row-header::after {
+  content: "";
+  position: absolute;
+  top: 12%;
+  right: 0;
+  bottom: 12%;
+  width: 1px;
+  background: color-mix(in srgb, var(--border) 55%, transparent);
+}
+.notion-table[data-table-has-row-header="true"] tbody td:not(.table-row-header) {
+  color: color-mix(in srgb, var(--fg) 78%, var(--muted));
+}
+.notion-table tbody tr:nth-child(odd) {
+  background: color-mix(in srgb, var(--bg-soft) 92%, white 8%);
+}
+.notion-table tbody tr:hover {
+  background: color-mix(in srgb, var(--bg-soft) 85%, white 15%);
 }

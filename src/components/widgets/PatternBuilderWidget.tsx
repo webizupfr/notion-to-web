@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Heading } from "@/components/ui/Heading";
 import type { PatternBuilderWidgetConfig, PatternField } from "@/lib/widget-parser";
 
 type Row = Record<string, string> & { id: string };
@@ -74,12 +75,12 @@ export function PatternBuilderWidget({ config, storageKey }: { config: PatternBu
   const copy = async () => { try { await navigator.clipboard.writeText(md); } catch {} };
 
   return (
-    <section className="widget-surface p-5 space-y-4">
+    <section className="surface-card space-y-[var(--space-m)]">
       {(config.title || toast) ? (
         <div className="flex items-center justify-between">
-          {config.title ? <h3 className="text-lg font-semibold">{config.title}</h3> : <div />}
+          {config.title ? <Heading level={3}>{config.title}</Heading> : <div />}
           {toast ? (
-            <div className="text-xs px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 animate-slide-in">
+            <div className="text-xs px-2 py-1 rounded-full border border-[color-mix(in_oklab,var(--success)_45%,transparent)] bg-[color-mix(in_oklab,var(--success)_12%,#fff)] text-[color-mix(in_oklab,var(--success)_85%,#0f1728)] animate-slide-in">
               {toast}
             </div>
           ) : null}
@@ -87,8 +88,8 @@ export function PatternBuilderWidget({ config, storageKey }: { config: PatternBu
       ) : null}
 
       {/* Aide pédagogique */}
-      <div className="rounded-xl border border-slate-200 bg-white/70 px-4 py-3 text-[0.92rem] leading-6 text-slate-700">
-        <div className="font-semibold text-slate-800 mb-1">Comment remplir ?</div>
+      <div className="surface-panel space-y-[var(--space-xs)]">
+        <Heading level={3}>Comment remplir ?</Heading>
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Symptôme</strong> (Observation) — ce que tu <em>vois/entends</em> exactement, sans reformulation.</li>
           <li><strong>Cause possible</strong> (Ce que ça montre) — le <em>besoin/tension</em> derrière le symptôme.</li>
@@ -100,10 +101,10 @@ export function PatternBuilderWidget({ config, storageKey }: { config: PatternBu
       <div className="grid gap-3 md:grid-cols-3">
         {fields.map((f) => (
           <label key={`draft-${f.id}`} className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600 inline-flex items-center gap-1">
+            <span className="text-xs font-medium text-[color:var(--muted)] inline-flex items-center gap-1">
               {f.label}
               <span
-                className="inline-flex items-center justify-center w-4 h-4 text-[10px] leading-none rounded-full bg-slate-100 text-slate-600 border"
+                className="inline-flex items-center justify-center w-4 h-4 text-[10px] leading-none rounded-full bg-[color-mix(in_oklab,var(--bg)_92%,#fff)] text-[color:var(--muted)] border border-[color:var(--border)]"
                 title={
                   f.id.toLowerCase().includes('observ') || f.id.toLowerCase().includes('sympt')
                     ? 'Ce que vous avez vu ou entendu (verbatim brut)'
@@ -123,14 +124,14 @@ export function PatternBuilderWidget({ config, storageKey }: { config: PatternBu
                 onChange={(e)=> setDraft((d)=> ({ ...d, [f.id]: e.target.value }))}
                 placeholder={f.placeholder}
                 rows={3}
-                className="w-full rounded-xl border bg-white/90 px-3 py-2 text-sm"
+                className="w-full rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
               />
             ) : (
               <input
                 value={draft[f.id] ?? ''}
                 onChange={(e)=> setDraft((d)=> ({ ...d, [f.id]: e.target.value }))}
                 placeholder={f.placeholder}
-                className="w-full rounded-xl border bg-white/90 px-3 py-2 text-sm"
+                className="w-full rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
               />
             )}
             
@@ -141,25 +142,25 @@ export function PatternBuilderWidget({ config, storageKey }: { config: PatternBu
       <div className="widget-actions text-xs"><button onClick={add} className="btn btn-primary text-xs">➕ Ajouter un motif</button></div>
 
       {/* Table of patterns */}
-      <div className="overflow-auto rounded-xl border">
+      <div className="overflow-auto rounded-[var(--r-l)] border border-[color:var(--border)] bg-[color:var(--bg-soft)] shadow-sm">
         <table className="w-full min-w-[540px] text-sm">
-          <thead className="bg-slate-50/70">
+          <thead className="bg-[color-mix(in_oklab,var(--bg-soft)_90%,white_10%)]">
             <tr>
-              {fields.map((f) => (<th key={`h-${f.id}`} className="px-3 py-2 text-left font-semibold">{f.label}</th>))}
-              <th className="px-3 py-2" />
+              {fields.map((f) => (<th key={`h-${f.id}`} className="px-[var(--space-3)] py-[var(--space-2)] text-left font-semibold text-[color:var(--fg)]">{f.label}</th>))}
+              <th className="px-[var(--space-3)] py-[var(--space-2)]" />
             </tr>
           </thead>
           <tbody>
             {rows.map((r, idx) => (
-              <tr key={r.id} className={`border-t ${idx % 2 === 1 ? 'bg-slate-50/60' : 'bg-white'} ${lastAdded === r.id ? 'animate-slide-in' : ''}`}>
+              <tr key={r.id} className={`border-t border-[color:var(--border)] ${idx % 2 === 1 ? 'bg-[color-mix(in_oklab,var(--bg-soft)_94%,white_6%)]' : ''} ${lastAdded === r.id ? 'animate-slide-in' : ''}`}>
                 {fields.map((f) => (
-                  <td key={`${r.id}-${f.id}`} className="px-3 py-2 align-top whitespace-pre-wrap">{r[f.id] ?? ''}</td>
+                  <td key={`${r.id}-${f.id}`} className="px-[var(--space-3)] py-[var(--space-2)] align-top whitespace-pre-wrap text-[color:var(--fg)]">{r[f.id] ?? ''}</td>
                 ))}
-                <td className="px-3 py-2 text-right"><button onClick={()=>remove(r.id)} className="btn btn-ghost text-xs">Suppr.</button></td>
+                <td className="px-[var(--space-3)] py-[var(--space-2)] text-right"><button onClick={()=>remove(r.id)} className="btn btn-ghost text-xs">Suppr.</button></td>
               </tr>
             ))}
             {!rows.length && (
-              <tr><td colSpan={fields.length+1} className="px-3 py-4 text-slate-500 text-center">Aucun motif pour l’instant</td></tr>
+              <tr><td colSpan={fields.length+1} className="px-[var(--space-3)] py-[var(--space-4)] text-[color:var(--muted)] text-center">Aucun motif pour l’instant</td></tr>
             )}
           </tbody>
         </table>

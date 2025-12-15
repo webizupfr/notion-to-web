@@ -120,9 +120,9 @@ export function TabsFormWidget({ config, storageKey }: { config: TabsFormWidgetC
   const previewDark = config.previewTheme === 'dark';
 
   return (
-    <section className="space-y-4 widget-surface px-5 py-6">
+    <section className="surface-card space-y-[var(--space-m)]">
       {/* Tabs header */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-[var(--space-s)]">
         {config.sections.map((section) => {
           const isActive = activeTab === section.id;
           const { filled, total } = sectionProgress(section.id);
@@ -131,16 +131,16 @@ export function TabsFormWidget({ config, storageKey }: { config: TabsFormWidgetC
               key={section.id}
               type="button"
               onClick={() => setActiveTab(section.id)}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                isActive
-                  ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                  : "border-slate-200 text-slate-600 hover:border-emerald-200 hover:text-emerald-700"
-              }`}
+              className={`pill ${isActive ? "border-[color-mix(in_srgb,var(--success)_45%,transparent)] bg-[color-mix(in_srgb,var(--success)_18%,white_82%)] text-[color:var(--fg)]" : ""}`}
             >
               <span>{section.label}</span>
-              <span className={`ml-2 inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
-                filled === total && total > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
-              }`}>
+              <span
+                className={`ml-2 inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${
+                filled === total && total > 0
+                  ? "bg-[color-mix(in_srgb,var(--success)_20%,white_80%)] text-[color:var(--success)]"
+                  : "bg-[color-mix(in_srgb,var(--bg-soft)_92%,white_8%)] text-[color:var(--fg-muted)]"
+              }`}
+              >
                 {filled}/{total}
               </span>
             </button>
@@ -152,17 +152,17 @@ export function TabsFormWidget({ config, storageKey }: { config: TabsFormWidgetC
       {config.sections.map((section) => {
         if (section.id !== activeTab) return null;
         return (
-          <div key={section.id} className="space-y-4">
+          <div key={section.id} className="space-y-[var(--space-m)]">
             {section.help ? (
-              <div className="rounded-2xl border border-slate-200 bg-white/70 px-3 py-2 text-[0.82rem] leading-6 text-slate-600">
+              <div className="surface-panel text-[0.9rem] leading-[1.6] text-[color:var(--fg-muted)]">
                 {section.help}
               </div>
             ) : null}
 
-            <div className="space-y-4">
+            <div className="space-y-[var(--space-s)]">
               {section.fields.map((field) => (
-                <div key={field.name} className="space-y-1">
-                  <label className="block text-sm font-medium text-slate-700" htmlFor={`${storageKey}-${field.name}`}>
+                <div key={field.name} className="space-y-[var(--space-xs)]">
+                  <label className="block text-sm font-medium text-[color:var(--fg)]" htmlFor={`${storageKey}-${field.name}`}>
                     {field.label}
                   </label>
                   <textarea
@@ -171,7 +171,7 @@ export function TabsFormWidget({ config, storageKey }: { config: TabsFormWidgetC
                     onChange={(e) => updateField(field.name, e.target.value)}
                     placeholder={field.placeholder}
                     rows={field.placeholder && field.placeholder.length > 120 ? 4 : 3}
-                    className="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm shadow-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                    className="w-full rounded-[var(--r-m)] border border-[color:var(--border)] bg-[color:var(--bg-card)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
                   />
                 </div>
               ))}
@@ -180,7 +180,7 @@ export function TabsFormWidget({ config, storageKey }: { config: TabsFormWidgetC
         );
       })}
 
-      <div className="flex flex-wrap items-center justify-end gap-2 pt-2 text-xs text-slate-500">
+      <div className="flex flex-wrap items-center justify-end gap-[var(--space-s)] pt-[var(--space-xs)] text-xs text-[color:var(--fg-muted)]">
         <button onClick={() => setShowPreview(true)} className="btn btn-primary text-xs">
           Générer
         </button>
@@ -197,19 +197,19 @@ export function TabsFormWidget({ config, storageKey }: { config: TabsFormWidgetC
 
       {showPreview && (
         previewDark ? (
-          <div className="overflow-hidden rounded-[22px] border border-slate-900/40 bg-slate-900 text-slate-50">
-            <div className="flex items-center justify-between gap-3 border-b border-white/10 bg-slate-900/60 px-4 py-2 text-xs uppercase tracking-[0.2em] text-slate-300">
+          <div className="overflow-hidden rounded-[var(--r-l)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--fg)_95%,#000)] text-[color:var(--bg)]">
+            <div className="flex items-center justify-between gap-3 border-b border-[color-mix(in_oklab,var(--bg)_12%,transparent)] bg-[color-mix(in_oklab,var(--fg)_88%,#000)] px-[var(--space-4)] py-[var(--space-2)] text-xs uppercase tracking-[0.2em] text-[color-mix(in_oklab,var(--bg)_85%,#fff)]">
               <span>{previewTitle}</span>
-              <div className="text-[11px] text-slate-300">Aperçu</div>
+              <div className="text-[11px] text-[color-mix(in_oklab,var(--bg)_82%,#fff)]">Aperçu</div>
             </div>
-            <pre className="max-h-[60vh] overflow-auto px-5 py-4 text-[0.92rem] leading-[1.6] whitespace-pre-wrap font-mono">
+            <pre className="notion-codeblock max-h-[60vh] overflow-auto whitespace-pre-wrap font-mono">
               {previewText}
             </pre>
           </div>
         ) : (
-          <div className="space-y-2 rounded-2xl border border-slate-200/80 bg-slate-50/70 px-4 py-4">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{previewTitle}</div>
-            <pre className="whitespace-pre-wrap text-sm leading-6 text-slate-800">{previewText}</pre>
+          <div className="space-y-[var(--space-xs)] rounded-[var(--r-l)] border border-[color:var(--border)] bg-[color:var(--bg-soft)] px-[var(--space-4)] py-[var(--space-4)]">
+            <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--fg-muted)]">{previewTitle}</div>
+            <pre className="notion-codeblock whitespace-pre-wrap text-sm leading-6 text-[color:var(--fg)]">{previewText}</pre>
           </div>
         )
       )}

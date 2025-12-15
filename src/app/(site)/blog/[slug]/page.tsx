@@ -1,5 +1,7 @@
 import { Blocks } from "@/components/notion/Blocks";
-import { Container } from "@/components/layout/Container";
+import { PageSection } from "@/components/layout/PageSection";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 import { getPageBundle, getPostsIndex } from "@/lib/content-store";
 import { unstable_cache } from "next/cache";
 import { notFound } from "next/navigation";
@@ -30,24 +32,16 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
   const excerpt = indexEntry?.excerpt ?? null;
 
   return (
-    <Container className="space-y-12 max-w-3xl">
-      <article className="space-y-8">
+    <PageSection variant="blog">
+      <article className="space-y-8 max-w-[72ch]">
         <header className="space-y-4">
-          <span className="inline-flex items-center gap-2 rounded-full border border-transparent bg-[var(--background-soft)] px-4 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[var(--muted-soft)]">
-            Journal · Article
-          </span>
-          <h1 className="text-[2.3rem] font-semibold leading-[1.2] tracking-[-0.02em]">{meta.title}</h1>
-          {excerpt && (
-            <p className="text-[1.05rem] leading-[1.7] text-[var(--muted-soft)]">{excerpt}</p>
-          )}
+          <span className="pill">Journal · Article</span>
+          <Heading level={1}>{meta.title}</Heading>
+          {excerpt ? <Text variant="lead">{excerpt}</Text> : null}
         </header>
 
-        <div className="surface-card px-0 pb-0 pt-0">
-          <div className="space-y-5 px-6 pb-8 pt-8 sm:px-8">
-            <Blocks blocks={blocks} currentSlug={`blog/${slug}`} />
-          </div>
-        </div>
+        <Blocks blocks={blocks} currentSlug={`blog/${slug}`} />
       </article>
-    </Container>
+    </PageSection>
   );
 }

@@ -44,10 +44,9 @@ function getDate(property: PageObjectResponse['properties'][string] | undefined)
   return null;
 }
 
-function getRelationId(property: PageObjectResponse['properties'][string] | undefined): string | null {
-  if (!property || property.type !== 'relation') return null;
-  const rel = property.relation?.[0];
-  return rel?.id ?? null;
+function getRelationIds(property: PageObjectResponse['properties'][string] | undefined): string[] {
+  if (!property || property.type !== 'relation') return [];
+  return (property.relation ?? []).map((r) => r.id).filter(Boolean) as string[];
 }
 
 function normalize(text: string | null | undefined): string {
@@ -81,7 +80,8 @@ function parseCohort(page: PageObjectResponse): CohortMeta | null {
   const slug = getRichText(findProp(properties, ['slug'])) ?? null;
   if (!slug) return null;
 
-  const hubNotionId = getRelationId(findProp(properties, ['hub'])) ?? '';
+  const hubNotionIds = getRelationIds(findProp(properties, ['hub'])) ?? [];
+  const hubNotionId = hubNotionIds[0] ?? '';
   if (!hubNotionId) return null;
 
   const startDate = getDate(
@@ -107,6 +107,7 @@ function parseCohort(page: PageObjectResponse): CohortMeta | null {
   return {
     slug,
     hubNotionId,
+    hubNotionIds,
     startDate,
     endDate,
     timezone: timezone || DEFAULT_TZ,

@@ -25,16 +25,15 @@ export function CheckboxWidget({ config, storageKey }: { config: CheckboxWidgetC
   }, [mounted, key, checked]);
 
   return (
-    <label className="todo flex items-start gap-3 rounded-[20px] border px-5 py-4 text-[0.98rem] leading-[1.6] cursor-pointer select-none">
+    <label className="todo flex items-start gap-[var(--space-3)] rounded-[var(--r-lg)] border border-[color:var(--border)] px-[var(--space-5)] py-[var(--space-4)] text-[0.98rem] leading-[1.6] cursor-pointer select-none">
       <input type="checkbox" className="sr-only" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
-      <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-md border text-[0.75rem] font-semibold" data-checked={checked ? 'true' : 'false'}>
+      <span className="mt-1 inline-flex h-5 w-5 items-center justify-center rounded-md border border-[color:var(--border)] text-[0.75rem] font-semibold text-[color:var(--fg)]" data-checked={checked ? 'true' : 'false'}>
         {checked ? <span>✓</span> : null}
       </span>
       <div className="flex-1">
         <div className={checked ? "line-through opacity-55" : undefined}>{config.label}</div>
-        {config.description ? <div className="mt-2 text-[0.92rem] text-slate-600">{config.description}</div> : null}
+        {config.description ? <div className="mt-[var(--space-2)] text-[0.92rem] text-[color:var(--muted)]">{config.description}</div> : null}
       </div>
     </label>
   );
 }
-

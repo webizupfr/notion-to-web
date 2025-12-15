@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 import type { PlanPromptWidgetConfig } from "@/lib/widget-parser";
 
 export function PlanPromptWidget({ config, storageKey }: { config: PlanPromptWidgetConfig; storageKey: string }) {
@@ -49,28 +51,33 @@ Merci de créer :
   const found = answers.length > 0;
 
   return (
-    <section className="widget-surface p-5 space-y-4">
+    <section className="surface-card space-y-[var(--space-m)]">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">{config.title ?? 'Prompt — PM à partir de la checklist'}</h3>
+        <Heading level={3} className="text-[1.12rem] leading-[1.3]">
+          {config.title ?? 'Prompt — PM à partir de la checklist'}
+        </Heading>
         <button onClick={copy} className="btn btn-primary text-xs">Copier</button>
       </div>
       {!found ? (
-        <div className="rounded-xl border bg-yellow-50/80 p-3 text-sm text-slate-700">
+        <Text
+          variant="small"
+          className="rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--warning)_14%,var(--bg))] p-[var(--space-3)] text-[color:var(--fg)] shadow-sm"
+        >
           Aucune réponse trouvée pour l’alias « {config.sourceAlias} ». Remplis d’abord la checklist associée (widget plan_table avec alias identique).
-        </div>
+        </Text>
       ) : null}
 
       <label className="block space-y-1">
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-600">Nom de l’app</span>
+        <span className="text-xs font-semibold uppercase tracking-wider text-[color:var(--muted)]">Nom de l’app</span>
         <input
           value={appName}
           onChange={(e) => setAppName(e.target.value)}
           placeholder="Ex: Ice‑Breaker Generator"
-          className="w-full rounded-lg border bg-white/80 px-3 py-2 text-sm"
+          className="w-full rounded-[var(--r-md)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
         />
       </label>
 
-      <pre className="code-block rounded-2xl border bg-white/80 p-4 text-[0.95rem] leading-[1.5] whitespace-pre-wrap">
+      <pre className="code-block rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] p-[var(--space-4)] text-[0.95rem] leading-[1.5] whitespace-pre-wrap text-[color:var(--fg)] shadow-sm">
         <code>{prompt}</code>
       </pre>
     </section>

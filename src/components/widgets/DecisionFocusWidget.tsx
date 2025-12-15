@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 import type { DecisionFocusWidgetConfig, DecisionFocusField } from "@/lib/widget-parser";
 
 type FieldState = {
@@ -93,14 +95,16 @@ export function DecisionFocusWidget({ config, storageKey }: { config: DecisionFo
   };
 
   return (
-    <section className="widget-surface space-y-5 p-5 md:p-6">
+    <section className="surface-card space-y-[var(--space-m)]">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          {config.title ? <h3 className="text-lg font-semibold text-slate-800">{config.title}</h3> : null}
-          {config.subtitle ? <p className="mt-1 max-w-2xl text-sm text-slate-600">{config.subtitle}</p> : (
-            <p className="mt-1 max-w-2xl text-sm text-slate-600">
+          {config.title ? <Heading level={3} className="text-[1.12rem] leading-[1.35] text-[color:var(--fg)]">{config.title}</Heading> : null}
+          {config.subtitle ? (
+            <Text variant="small" className="mt-1 max-w-2xl text-[color:var(--muted)]">{config.subtitle}</Text>
+          ) : (
+            <Text variant="small" className="mt-1 max-w-2xl text-[color:var(--muted)]">
               Sélectionnez 1 à 2 évolutions prioritaires. Restez focalisé sur l’impact et la faisabilité.
-            </p>
+            </Text>
           )}
         </div>
         <button
@@ -119,43 +123,43 @@ export function DecisionFocusWidget({ config, storageKey }: { config: DecisionFo
           const impactLabel = field.impactLabel ?? "Impact visé";
           const effortLabel = field.effortLabel ?? "Effort estimé";
           return (
-            <article key={field.id} className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-sm">
+            <article key={field.id} className="rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] p-[var(--space-4)] shadow-sm">
               <header className="mb-3 flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-slate-800">{field.label}</h4>
-                {field.optional ? <span className="text-xs text-slate-400">Optionnel</span> : null}
+                <h4 className="text-sm font-semibold text-[color:var(--fg)]">{field.label}</h4>
+                {field.optional ? <span className="text-xs text-[color:var(--muted)]">Optionnel</span> : null}
               </header>
 
               <div className="space-y-3">
                 <label className="flex flex-col gap-2">
-                  <span className="text-xs font-medium text-slate-600">Action</span>
+                  <span className="text-xs font-medium text-[color:var(--muted)]">Action</span>
                   <textarea
                     rows={3}
                     value={current.action}
                     placeholder={field.placeholder ?? "Quelle évolution souhaitez-vous tester ?"}
                     onChange={(event) => updateField(field.id, "action", event.target.value)}
-                    className="min-h-[92px] resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                    className="min-h-[92px] resize-y rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--primary)_28%,transparent)]"
                   />
                 </label>
 
                 <label className="flex flex-col gap-2">
-                  <span className="text-xs font-medium text-slate-600">{impactLabel}</span>
+                  <span className="text-xs font-medium text-[color:var(--muted)]">{impactLabel}</span>
                   <textarea
                     rows={2}
                     value={current.impact}
                     placeholder={field.impactPlaceholder ?? "Pourquoi est-ce prioritaire ? Quelle valeur attendue ?"}
                     onChange={(event) => updateField(field.id, "impact", event.target.value)}
-                    className="min-h-[72px] resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                    className="min-h-[72px] resize-y rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--primary)_28%,transparent)]"
                   />
                 </label>
 
                 <label className="flex flex-col gap-2">
-                  <span className="text-xs font-medium text-slate-600">{effortLabel}</span>
+                  <span className="text-xs font-medium text-[color:var(--muted)]">{effortLabel}</span>
                   <input
                     type="text"
                     value={current.effort}
                     placeholder={field.effortPlaceholder ?? "Temps / ressources / complexité"}
                     onChange={(event) => updateField(field.id, "effort", event.target.value)}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                    className="rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--primary)_28%,transparent)]"
                   />
                 </label>
               </div>
@@ -164,9 +168,9 @@ export function DecisionFocusWidget({ config, storageKey }: { config: DecisionFo
         })}
       </div>
 
-      <div className="rounded-2xl border border-slate-200/60 bg-white/70 p-4 text-sm text-slate-600">
+      <div className="rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] p-[var(--space-4)] text-sm text-[color:var(--muted)] shadow-sm">
         {output ? (
-          <pre className="whitespace-pre-wrap text-sm text-slate-700">{output}</pre>
+          <pre className="whitespace-pre-wrap text-sm text-[color:var(--fg)]">{output}</pre>
         ) : (
           <p>Complétez au moins une action pour générer votre mini-plan d’ajustements.</p>
         )}
@@ -174,4 +178,3 @@ export function DecisionFocusWidget({ config, storageKey }: { config: DecisionFo
     </section>
   );
 }
-

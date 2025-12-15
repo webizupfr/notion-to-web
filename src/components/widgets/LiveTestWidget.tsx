@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 import type { LiveTestWidgetConfig, LiveTestRule } from "@/lib/widget-parser";
 
 const DEFAULT_RULES: LiveTestRule[] = [
@@ -12,11 +14,11 @@ const DEFAULT_RULES: LiveTestRule[] = [
 
 function Badge({ color = "gray", children }: { color?: string; children: React.ReactNode }) {
   const map: Record<string, string> = {
-    violet: "bg-violet-100 text-violet-700 border-violet-300",
-    green: "bg-emerald-100 text-emerald-700 border-emerald-300",
-    gray: "bg-slate-100 text-slate-700 border-slate-300",
-    slate: "bg-slate-100 text-slate-700 border-slate-300",
-    red: "bg-rose-100 text-rose-700 border-rose-300",
+    violet: "border-[color-mix(in_oklab,var(--accent)_50%,transparent)] bg-[color-mix(in_oklab,var(--accent)_14%,#fff)] text-[color-mix(in_oklab,var(--accent)_85%,#0f1728)]",
+    green: "border-[color-mix(in_oklab,var(--success)_50%,transparent)] bg-[color-mix(in_oklab,var(--success)_14%,#fff)] text-[color-mix(in_oklab,var(--success)_85%,#0f1728)]",
+    gray: "border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_92%,#fff)] text-[color:var(--muted)]",
+    slate: "border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_92%,#fff)] text-[color:var(--muted)]",
+    red: "border-[color-mix(in_oklab,var(--danger)_50%,transparent)] bg-[color-mix(in_oklab,var(--danger)_14%,#fff)] text-[color-mix(in_oklab,var(--danger)_85%,#0f1728)]",
   };
   const cls = map[color] ?? map.gray;
   return <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm ${cls}`}>{children}</span>;
@@ -48,28 +50,28 @@ export function LiveTestWidget({ config, storageKey }: { config: LiveTestWidgetC
   const reset = () => setAnswers(questions.map(() => false));
 
   return (
-    <section className="widget-surface p-5 space-y-4">
-      {config.title ? <h3 className="text-lg font-semibold">{config.title}</h3> : null}
-      {config.description ? <p className="text-sm text-slate-600">{config.description}</p> : null}
+    <section className="surface-card space-y-[var(--space-m)]">
+      {config.title ? <Heading level={3}>{config.title}</Heading> : null}
+      {config.description ? <Text variant="muted">{config.description}</Text> : null}
 
-      <div className="overflow-hidden rounded-xl border">
+      <div className="overflow-hidden rounded-[var(--r-l)] border border-[color:var(--border)] bg-[color:var(--bg-soft)] shadow-sm">
         <table className="w-full text-[0.98rem]">
-          <thead className="bg-slate-50/70">
+          <thead className="bg-[color-mix(in_oklab,var(--bg-soft)_90%,white_10%)]">
             <tr>
-              <th className="px-4 py-3 text-left font-semibold text-slate-700">Question</th>
-              <th className="px-4 py-3 text-right font-semibold text-slate-700">Oui ?</th>
+              <th className="px-[var(--space-4)] py-[var(--space-3)] text-left font-semibold text-[color:var(--fg)]">Question</th>
+              <th className="px-[var(--space-4)] py-[var(--space-3)] text-right font-semibold text-[color:var(--fg)]">Oui ?</th>
             </tr>
           </thead>
           <tbody>
             {questions.map((q, i) => (
-              <tr key={`q-${i}`} className="border-t">
-                <td className="px-4 py-3">{q}</td>
-                <td className="px-4 py-3 text-right">
+              <tr key={`q-${i}`} className="border-t border-[color:var(--border)]">
+                <td className="px-[var(--space-4)] py-[var(--space-3)] text-[color:var(--fg)]">{q}</td>
+                <td className="px-[var(--space-4)] py-[var(--space-3)] text-right">
                   <input
                     type="checkbox"
                     checked={answers[i]}
                     onChange={(e) => setAnswers((prev) => prev.map((v, idx) => (idx === i ? e.target.checked : v)))}
-                    className="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-2"
+                    className="h-5 w-5 rounded border-[color:var(--border)] text-[color:var(--success)] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--success)_24%,transparent)]"
                   />
                 </td>
               </tr>
@@ -81,13 +83,13 @@ export function LiveTestWidget({ config, storageKey }: { config: LiveTestWidgetC
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Badge color={verdict.color}>{verdict.label}</Badge>
-          <span className="text-sm text-slate-500">{yesCount} / {questions.length} Oui</span>
+          <Text variant="small" className="text-[color:var(--muted)]">{yesCount} / {questions.length} Oui</Text>
         </div>
         <button onClick={reset} className="btn btn-ghost text-xs">Réinitialiser</button>
       </div>
 
       {/* Legend */}
-      <div className="rounded-xl border bg-white/60 p-3 text-sm text-slate-600">
+      <div className="surface-panel text-sm text-[color:var(--muted)]">
         <div className="flex flex-wrap gap-4">
           {rules.map((r, idx) => (
             <div key={`r-${idx}`} className="flex items-center gap-2">

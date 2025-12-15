@@ -137,7 +137,7 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
       {/* Bouton toggle mobile */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed top-4 left-4 z-50 lg:hidden flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg shadow-lg hover:bg-primary/90 transition-colors"
+        className="fixed top-4 left-4 z-50 lg:hidden flex items-center gap-2 bg-[color:var(--primary)] text-[color:var(--bg)] px-[var(--space-4)] py-[var(--space-2)] rounded-[var(--r-md)] shadow-[var(--shadow-soft)] hover:bg-[color-mix(in_oklab,var(--primary)_90%,#000)] transition-colors"
       >
         <span className="text-lg" aria-hidden="true">{parentIconNode}</span>
         <span className="font-medium">{parentTitle}</span>
@@ -147,7 +147,7 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
       {/* Overlay mobile */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-[color:rgba(0,0,0,0.5)] z-40 lg:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -155,11 +155,11 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
       {/* Sidebar */}
       <aside className={`
         fixed lg:sticky top-0 lg:top-14 left-0 lg:left-auto h-screen lg:h-[calc(100vh-3.5rem)] w-full lg:w-64 xl:w-72
-        border-r border-border/60 bg-white/90 backdrop-blur-md shadow-[0_12px_32px_-24px_rgba(12,18,28,0.25)] z-40
+        border-r border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_90%,#fff)] backdrop-blur-md shadow-[var(--shadow-soft)] z-40
         transform transition-transform duration-300 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-      <nav className="flex h-full flex-col overflow-y-auto px-5 py-6 space-y-8">
+      <nav className="flex h-full flex-col overflow-y-auto px-[var(--space-5)] py-[var(--space-6)] space-y-[var(--space-8)]">
         {/* Titre principal avec lien vers la page parent */}
         <div className="space-y-3 border-b border-border/40 pb-5">
           {/* No icon in sidebar as requested */}
@@ -167,8 +167,8 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
             href={`/${parentSlug}`}
             className={`group flex items-center gap-2 text-xl font-bold transition-all ${
               isParentActive
-                ? 'text-primary'
-                : 'text-foreground hover:text-primary'
+                ? 'text-[color:var(--primary)]'
+                : 'text-[color:var(--fg)] hover:text-[color:var(--primary)]'
             }`}
             onClick={() => setIsOpen(false)}
           >
@@ -180,7 +180,7 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
             {parentTitle}
           </Link>
           {isHub && hubDescription && (
-            <p className="text-sm leading-6 text-muted-soft">
+            <p className="text-sm leading-6 text-[color:var(--muted)]">
               {hubDescription}
             </p>
           )}
@@ -189,7 +189,7 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
         {/* Navigation hiérarchique (accès rapide) */}
         {filteredNavigation.length > 0 && (
           <div className="space-y-3">
-            <div className="text-xs font-bold uppercase tracking-wider text-foreground/70">Accès rapide</div>
+            <div className="text-xs font-bold uppercase tracking-wider text-[color:var(--fg)]/70">Accès rapide</div>
             <ul className="space-y-4">
               {filteredNavigation.map((item, idx) => {
               if (item.type === 'section' && item.children) {
@@ -293,7 +293,9 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
         {/* Quick access list (days by week) */}
         {isHub && !isModuleMode && weekList.length > 0 && (
           <div className="mt-8 space-y-3 border-t border-border/30 pt-6">
-            <div className="text-xs font-bold uppercase tracking-wider text-foreground/70">{unitPlural} disponibles</div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+              {unitPlural} disponibles
+            </div>
             <div className="space-y-2">
               {weekList.map((w) => {
                 const open = openWeeks[w] ?? false;
@@ -308,7 +310,7 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
                       <span className="text-base" aria-hidden>{open ? '–' : '+'}</span>
                     </button>
                     {open && (
-                      <ul className="space-y-1 px-3 pb-3">
+                      <ul className="space-y-1.5 px-3 pb-3">
                         {days.map((d) => {
                           const isActive = currentPath === d.slug;
                           const displayTitle = d.title?.trim() || `Jour ${d.order}`;
@@ -316,8 +318,10 @@ export function PageSidebar({ parentTitle, parentSlug, parentIcon, navigation, i
                             <li key={d.id}>
                               <Link
                                 href={`/${d.slug}`}
-                                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition ${
-                                  isActive ? 'bg-primary/10 text-foreground border border-primary/30' : 'text-muted hover:bg-background-soft hover:text-foreground border border-transparent'
+                                className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition border ${
+                                  isActive
+                                    ? 'bg-primary/12 text-foreground border-primary/45 shadow-[0_10px_24px_-14px_rgba(15,23,40,0.45)] translate-y-[-1px]'
+                                    : 'text-muted hover:bg-background-soft hover:text-foreground hover:-translate-y-[1px] border-transparent'
                                 }`}
                                 onClick={() => setIsOpen(false)}
                               >

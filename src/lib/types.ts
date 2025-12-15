@@ -109,6 +109,7 @@ export type LearningPath = {
 export type CohortMeta = {
   slug: string;
   hubNotionId: string;
+  hubNotionIds?: string[];
   startDate: string;
   endDate?: string | null;
   timezone: string;

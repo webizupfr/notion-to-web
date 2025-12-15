@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 import type { TimeCalcWidgetConfig } from "@/lib/widget-parser";
 
 type Row = { id: string; name: string; minutes: string; times: string };
@@ -40,50 +42,54 @@ export function TimeCalcWidget({ config, storageKey }: { config: TimeCalcWidgetC
   const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 2 });
 
   return (
-    <section className="widget-surface p-5 space-y-4">
-      {config.title ? <h3 className="text-lg font-semibold">{config.title}</h3> : <h3 className="text-lg font-semibold">Calculateur d’économies de temps</h3>}
-      {config.description ? <p className="text-sm text-slate-600">{config.description}</p> : null}
+    <section className="surface-card space-y-[var(--space-m)]">
+      {config.title ? (
+        <Heading level={3} className="text-[1.12rem] leading-[1.3]">{config.title}</Heading>
+      ) : (
+        <Heading level={3} className="text-[1.12rem] leading-[1.3]">Calculateur d’économies de temps</Heading>
+      )}
+      {config.description ? <Text variant="small" className="text-[color:var(--muted)]">{config.description}</Text> : null}
 
-      <div className="overflow-hidden rounded-xl border">
+      <div className="overflow-hidden rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_96%,#fff)] shadow-sm">
         <table className="w-full text-[0.98rem]">
-          <thead className="bg-slate-50/70">
+          <thead className="bg-[color-mix(in_oklab,var(--bg)_90%,#fff)]">
             <tr>
-              <th className="px-3 py-2 text-left font-semibold text-slate-700">Nom de la tâche</th>
-              <th className="px-3 py-2 text-left font-semibold text-slate-700">Temps / exécution (min)</th>
-              <th className="px-3 py-2 text-left font-semibold text-slate-700">Fréquence / semaine</th>
+              <th className="px-[var(--space-3)] py-[var(--space-2)] text-left font-semibold text-[color:var(--fg)]">Nom de la tâche</th>
+              <th className="px-[var(--space-3)] py-[var(--space-2)] text-left font-semibold text-[color:var(--fg)]">Temps / exécution (min)</th>
+              <th className="px-[var(--space-3)] py-[var(--space-2)] text-left font-semibold text-[color:var(--fg)]">Fréquence / semaine</th>
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.id} className="border-t">
-                <td className="px-3 py-2">
+              <tr key={row.id} className="border-t border-[color:var(--border)]">
+                <td className="px-[var(--space-3)] py-[var(--space-2)]">
                   <input
                     value={row.name}
                     onChange={(e) => update(row.id, { name: e.target.value })}
                     placeholder="ex: Reporting hebdo"
-                    className="w-full rounded-lg border bg-white/80 px-3 py-2 text-sm"
+                    className="w-full rounded-[var(--r-md)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
                   />
                 </td>
-                <td className="px-3 py-2">
+                <td className="px-[var(--space-3)] py-[var(--space-2)]">
                   <input
                     value={row.minutes}
                     onChange={(e) => update(row.id, { minutes: e.target.value })}
                     placeholder="ex: 20"
                     inputMode="numeric"
-                    className="w-32 rounded-lg border bg-white/80 px-3 py-2 text-sm"
+                    className="w-32 rounded-[var(--r-md)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
                   />
                 </td>
-                <td className="px-3 py-2">
+                <td className="px-[var(--space-3)] py-[var(--space-2)]">
                   <input
                     value={row.times}
                     onChange={(e) => update(row.id, { times: e.target.value })}
                     placeholder="ex: 3"
                     inputMode="numeric"
-                    className="w-24 rounded-lg border bg-white/80 px-3 py-2 text-sm"
+                    className="w-24 rounded-[var(--r-md)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
                   />
                 </td>
-                <td className="px-3 py-2 text-right">
+                <td className="px-[var(--space-3)] py-[var(--space-2)] text-right">
                   <button onClick={() => removeRow(row.id)} className="btn btn-ghost text-xs">🗑️</button>
                 </td>
               </tr>
@@ -97,11 +103,11 @@ export function TimeCalcWidget({ config, storageKey }: { config: TimeCalcWidgetC
         <button onClick={reset} className="btn btn-ghost text-xs">Réinitialiser</button>
       </div>
 
-      <div className="rounded-xl border bg-white/60 p-4 text-sm">
-        <p><strong>Temps hebdo total :</strong> {fmt(weeklyMinutes)} min = {fmt(weeklyHours)} h/semaine</p>
-        <p><strong>Temps économisé par mois :</strong> ~{fmt(monthlyHours)} h/mois</p>
+      <div className="rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_92%,#fff)] p-[var(--space-4)] text-sm text-[color:var(--fg)] shadow-sm">
+        <Text variant="small"><strong>Temps hebdo total :</strong> {fmt(weeklyMinutes)} min = {fmt(weeklyHours)} h/semaine</Text>
+        <Text variant="small"><strong>Temps économisé par mois :</strong> ~{fmt(monthlyHours)} h/mois</Text>
         {value !== null ? (
-          <p><strong>Valeur mensuelle estimée :</strong> {(config.currency ?? '€')}{fmt(value)}</p>
+          <Text variant="small"><strong>Valeur mensuelle estimée :</strong> {(config.currency ?? '€')}{fmt(value)}</Text>
         ) : null}
       </div>
     </section>

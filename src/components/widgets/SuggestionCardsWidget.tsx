@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Heading } from "@/components/ui/Heading";
 import type { SuggestionCardsWidgetConfig } from "@/lib/widget-parser";
 
 export function SuggestionCardsWidget({ config, storageKey }: { config: SuggestionCardsWidgetConfig; storageKey: string }) {
@@ -30,28 +31,26 @@ export function SuggestionCardsWidget({ config, storageKey }: { config: Suggesti
   };
 
   return (
-    <section className="space-y-4 widget-surface p-5">
-      {config.title ? (
-        <h3 className="text-lg font-semibold">{config.title}</h3>
-      ) : null}
+    <section className="surface-card space-y-[var(--space-m)]">
+      {config.title ? <Heading level={3}>{config.title}</Heading> : null}
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-[var(--space-m)] md:grid-cols-3">
         {config.cards.map((card, i) => {
           const choice = card.suggestions[indices[i]];
           return (
-            <article key={`${storageKey}-${i}`} className="rounded-3xl border bg-white/70 backdrop-blur p-5 relative">
-              <div className="flex items-start justify-between">
-                <h4 className="font-semibold text-[1.05rem]">{card.title}</h4>
+            <article key={`${storageKey}-${i}`} className="surface-panel relative space-y-[var(--space-xs)]">
+              <div className="flex items-start justify-between gap-[var(--space-s)]">
+                <Heading level={3}>{card.title}</Heading>
                 <button
                   type="button"
                   aria-label="Rafraîchir la suggestion"
-                  className="ml-2 rounded-full border px-2 text-sm leading-none text-slate-600 hover:bg-white"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--border)] text-sm text-[color:var(--fg)] hover:bg-[color-mix(in_srgb,var(--bg-soft)_94%,white_6%)]"
                   onClick={() => reroll(i)}
                 >
                   ↻
                 </button>
               </div>
-              <ul className="mt-3 list-disc pl-5 text-[0.98rem] leading-[1.65]">
+              <ul className="mt-[var(--space-xs)] list-disc space-y-[var(--space-xs)] pl-[var(--space-m)] leading-[1.6] text-[color:var(--fg)]">
                 <li>{choice}</li>
               </ul>
             </article>
@@ -60,7 +59,9 @@ export function SuggestionCardsWidget({ config, storageKey }: { config: Suggesti
       </div>
 
       <div className="flex justify-end">
-        <button type="button" onClick={rerollAll} className="btn btn-ghost text-xs">Changer tout</button>
+        <button type="button" onClick={rerollAll} className="btn btn-ghost text-xs">
+          Changer tout
+        </button>
       </div>
     </section>
   );

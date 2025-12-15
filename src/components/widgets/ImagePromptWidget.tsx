@@ -94,7 +94,7 @@ export function ImagePromptWidget({ config, storageKey }: { config: ImagePromptW
   };
 
   return (
-    <section className="space-y-5 widget-surface px-5 py-6">
+    <section className="surface-card space-y-[var(--space-m)]">
 
       <div className="grid gap-4">
         {config.sections.map((section) => {
@@ -102,7 +102,7 @@ export function ImagePromptWidget({ config, storageKey }: { config: ImagePromptW
             const selected = new Set(chipValues[section.id] ?? []);
             return (
               <div key={section.id} className="space-y-2">
-                <div className="text-sm font-medium text-slate-700">{section.label}</div>
+                <div className="text-sm font-medium text-[color:var(--fg)]">{section.label}</div>
                 {section.options && section.options.length ? (
                   <div className="flex flex-wrap gap-2">
                     {section.options.map((option) => {
@@ -113,7 +113,9 @@ export function ImagePromptWidget({ config, storageKey }: { config: ImagePromptW
                           type="button"
                           onClick={() => toggleChip(section.id, option)}
                           className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition ${
-                            isActive ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-slate-200 text-slate-600 hover:border-emerald-200 hover:text-emerald-600'
+                            isActive
+                              ? 'border-[color-mix(in_oklab,var(--success)_50%,transparent)] bg-[color-mix(in_oklab,var(--success)_12%,#fff)] text-[color-mix(in_oklab,var(--success)_85%,#0f1728)]'
+                              : 'border-[color:var(--border)] text-[color:var(--muted)] hover:border-[color-mix(in_oklab,var(--accent)_40%,transparent)] hover:text-[color-mix(in_oklab,var(--accent)_80%,#0f1728)]'
                           }`}
                         >
                           <span>{option}</span>
@@ -128,7 +130,7 @@ export function ImagePromptWidget({ config, storageKey }: { config: ImagePromptW
 
           return (
             <div key={section.id} className="space-y-1">
-              <label className="block text-sm font-medium text-slate-700" htmlFor={`${storageKey}-${section.id}`}>
+              <label className="block text-sm font-medium text-[color:var(--fg)]" htmlFor={`${storageKey}-${section.id}`}>
                 {section.label}
               </label>
               <textarea
@@ -137,33 +139,33 @@ export function ImagePromptWidget({ config, storageKey }: { config: ImagePromptW
                 onChange={(event) => updateText(section.id, event.target.value)}
                 placeholder={section.placeholder}
                 rows={section.placeholder && section.placeholder.length > 120 ? 4 : 3}
-                className="w-full rounded-2xl border border-slate-200 bg-white/90 px-4 py-3 text-sm shadow-sm focus:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100"
+                className="w-full rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-4)] py-[var(--space-3)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
               />
             </div>
           );
         })}
       </div>
 
-      <div className="widget-actions text-xs text-slate-500">
+      <div className="widget-actions text-xs text-[color:var(--muted)]">
         <button
           onClick={() => setShowPreview(true)}
           className="btn btn-primary text-xs"
         >
           Générer
         </button>
-        <button onClick={handleCopy} className="inline-flex items-center gap-1 rounded-full border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-emerald-300 hover:text-emerald-600">
+        <button onClick={handleCopy} className="inline-flex items-center gap-1 rounded-full border border-[color:var(--border)] px-3 py-1.5 text-xs font-medium text-[color:var(--muted)] transition hover:border-[color-mix(in_oklab,var(--accent)_40%,transparent)] hover:text-[color-mix(in_oklab,var(--accent)_80%,#0f1728)]">
           <span aria-hidden>📋</span>
           Copier
         </button>
-        <button onClick={handleReset} className="text-xs text-slate-400 hover:text-slate-600">
+        <button onClick={handleReset} className="text-xs text-[color:var(--muted)] hover:text-[color:var(--fg)]">
           Réinitialiser
         </button>
       </div>
 
       {showPreview && (
-        <div className="space-y-2 rounded-2xl border border-slate-200/80 bg-slate-50/70 px-4 py-4">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Prompt visuel</div>
-          <pre className="whitespace-pre-wrap text-sm leading-6 text-slate-800">{preview}</pre>
+        <div className="space-y-2 rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-4)] py-[var(--space-4)] shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Prompt visuel</div>
+          <pre className="whitespace-pre-wrap text-sm leading-6 text-[color:var(--fg)]">{preview}</pre>
         </div>
       )}
     </section>

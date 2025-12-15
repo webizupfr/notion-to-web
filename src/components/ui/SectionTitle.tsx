@@ -8,8 +8,8 @@ type SectionTitleProps = {
 };
 
 const stylesByLevel: Record<Required<SectionTitleProps>["as"], string> = {
-  h2: "font-display text-[1.85rem] font-semibold leading-[1.18] tracking-[-0.015em] text-[var(--foreground)]",
-  h3: "font-display text-[1.4rem] font-semibold leading-[1.28] tracking-[-0.01em] text-[var(--foreground)]",
+  h2: "font-display text-[1.85rem] font-semibold leading-[1.18] tracking-[-0.015em] text-[color:var(--fg)]",
+  h3: "font-display text-[1.4rem] font-semibold leading-[1.28] tracking-[-0.01em] text-[color:var(--fg)]",
 };
 
 export function SectionTitle({ children, eyebrow, description, as = "h2" }: SectionTitleProps) {
@@ -17,13 +17,13 @@ export function SectionTitle({ children, eyebrow, description, as = "h2" }: Sect
   return (
     <header className="space-y-2">
       {eyebrow ? (
-        <span className="eyebrow text-[11px] font-semibold uppercase tracking-[0.18em] text-muted">
+        <span className="eyebrow text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--muted)]">
           {eyebrow}
         </span>
       ) : null}
       <HeadingTag className={stylesByLevel[as]}>{children}</HeadingTag>
       {description ? (
-        <p className="max-w-2xl text-[1rem] leading-[1.58] text-muted-soft">{description}</p>
+        <p className="max-w-2xl text-[1rem] leading-[1.58] text-[color:var(--muted)]/85">{description}</p>
       ) : null}
     </header>
   );

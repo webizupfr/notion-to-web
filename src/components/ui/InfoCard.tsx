@@ -7,66 +7,66 @@ type Variant = "info" | "success" | "warning" | "danger" | "neutral" | "grey" | 
 // Harmonized base + subtle interior variation per tone (radial tint using accent)
 const variantStyles: Record<Variant, { bg: string; border: string; accent: string; overlay?: string | null; fallbackIcon: ReactNode | null; label: string }> = {
   info: {
-    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--background-soft) 92%,#fff))",
+    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--bg) 92%,#fff))",
     border: "color-mix(in oklab, var(--border) 70%, transparent)",
-    accent: "#3B5CCB",
-    overlay: "rgba(59,92,203,0.05)",
+    accent: "var(--accent)",
+    overlay: "color-mix(in oklab, var(--accent) 12%, transparent)",
     fallbackIcon: <IconInfo size={18} />,
     label: "IA générative",
   },
   exercise: {
-    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--background-soft) 92%,#fff))",
+    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--bg) 92%,#fff))",
     border: "color-mix(in oklab, var(--border) 70%, transparent)",
-    accent: "#d88a4d",
-    overlay: "rgba(216,138,77,0.06)",
+    accent: "var(--accent)",
+    overlay: "color-mix(in oklab, var(--accent) 12%, transparent)",
     fallbackIcon: <IconListChecks size={18} />,
     label: "",
   },
   success: {
-    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--background-soft) 92%,#fff))",
+    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--bg) 92%,#fff))",
     border: "color-mix(in oklab, var(--border) 70%, transparent)",
-    accent: "#2ca56b",
-    overlay: "rgba(44,165,107,0.06)",
+    accent: "var(--success)",
+    overlay: "color-mix(in oklab, var(--success) 12%, transparent)",
     fallbackIcon: <IconCheckCircle size={18} />,
     label: "Action",
   },
   warning: {
-    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--background-soft) 92%,#fff))",
+    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--bg) 92%,#fff))",
     border: "color-mix(in oklab, var(--border) 70%, transparent)",
-    accent: "#d88a4d",
-    overlay: "rgba(216,138,77,0.06)",
+    accent: "var(--warning)",
+    overlay: "color-mix(in oklab, var(--warning) 12%, transparent)",
     fallbackIcon: <IconAlertTriangle size={18} />,
     label: "",
   },
   danger: {
-    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--background-soft) 92%,#fff))",
+    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--bg) 92%,#fff))",
     border: "color-mix(in oklab, var(--border) 70%, transparent)",
-    accent: "#d45050",
-    overlay: "rgba(212,80,80,0.06)",
+    accent: "var(--danger)",
+    overlay: "color-mix(in oklab, var(--danger) 12%, transparent)",
     fallbackIcon: <IconOctagon size={18} />,
     label: "Important",
   },
   neutral: {
-    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--background-soft) 94%,#fff))",
+    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--bg) 94%,#fff))",
     border: "color-mix(in oklab, var(--border) 80%, transparent)",
-    accent: "#94A3B8",
-    overlay: "rgba(15,23,40,0.04)",
+    accent: "var(--muted)",
+    overlay: "color-mix(in oklab, var(--muted) 10%, transparent)",
     fallbackIcon: null,
     label: "Note",
   },
   grey: {
-    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--background-soft) 94%,#fff))",
+    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--bg) 94%,#fff))",
     border: "color-mix(in oklab, var(--border) 80%, transparent)",
-    accent: "#94A3B8",
-    overlay: "rgba(148,163,184,0.06)",
+    accent: "var(--muted)",
+    overlay: "color-mix(in oklab, var(--muted) 12%, transparent)",
     fallbackIcon: null,
     label: "",
   },
   connector: {
-    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--background-soft) 92%,#fff))",
+    bg: "linear-gradient(180deg,#fff,color-mix(in oklab,var(--bg) 92%,#fff))",
     border: "color-mix(in oklab, var(--border) 70%, transparent)",
-    accent: "#9A6B4F",
-    overlay: "rgba(154,107,79,0.05)",
+    accent: "color-mix(in oklab, var(--accent) 80%, #7a5a3c)",
+    overlay: "color-mix(in oklab, var(--accent) 10%, transparent)",
     fallbackIcon: <IconChevronRight size={16} />,
     label: "",
   },
@@ -159,7 +159,7 @@ export function InfoCard({
 
   return (
     <div
-      className={`info-card relative overflow-hidden rounded-[14px] ${elevationClass} ${padding} ${config.className ?? ""}`}
+      className={`info-card relative overflow-hidden rounded-[var(--r-md)] ${elevationClass} ${padding} ${config.className ?? ""}`}
       data-variant={variant}
       data-layout={layoutVariant}
       style={{
@@ -173,17 +173,17 @@ export function InfoCard({
       {resolvedBar ? (
         <span aria-hidden className="pointer-events-none absolute inset-y-0 left-0" style={{ width: config.barWidth, backgroundColor: styles.accent }} />
       ) : null}
-      <div className="flex flex-col gap-3 text-[0.98rem] leading-[1.6] text-slate-700">
+      <div className="flex flex-col gap-3 text-[0.98rem] leading-[1.6] text-[color:var(--fg)]/78">
         {(label || title || displayIcon) ? (
           <div className="info-card-header flex items-center gap-2">
             {displayIcon ? <span className="info-card-icon text-base flex-shrink-0 text-[var(--foreground)]" aria-hidden>{displayIcon}</span> : null}
             {label ? (
-              <span className="info-card-label inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600 border border-slate-200/70 bg-white/70">
+              <span className="info-card-label inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-[color:var(--fg)]/70 border border-[color:var(--border)] bg-white/70">
                 {label}
               </span>
             ) : null}
             {title ? (
-              <span className="info-card-title text-[0.98rem] font-semibold text-[var(--foreground)] leading-tight">{title}</span>
+              <span className="info-card-title text-[0.98rem] font-semibold text-[color:var(--fg)] leading-tight">{title}</span>
             ) : null}
           </div>
         ) : null}

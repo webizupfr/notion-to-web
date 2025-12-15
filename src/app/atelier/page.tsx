@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { unstable_cache } from "next/cache";
 
+import { PageSection } from "@/components/layout/PageSection";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 import { getWorkshopsIndex } from "@/lib/content-store";
 
 export const revalidate = 0;
@@ -14,51 +17,51 @@ export default async function WorkshopsIndexPage() {
 
   if (!index || index.items.length === 0) {
     return (
-      <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-16 sm:px-12">
-        <header className="space-y-3">
-          <h1 className="text-3xl font-semibold text-slate-900">Ateliers</h1>
-          <p className="text-base text-slate-600">Aucun atelier n’est disponible pour le moment.</p>
-        </header>
-      </section>
+      <PageSection variant="content">
+        <div className="space-y-[var(--space-m)]">
+          <Heading level={1}>Ateliers</Heading>
+          <Text variant="muted">Aucun atelier n’est disponible pour le moment.</Text>
+        </div>
+      </PageSection>
     );
   }
 
   return (
-    <section className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-16 sm:px-12">
-      <header className="space-y-3">
-        <span className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
-          Ateliers
-        </span>
-        <h1 className="text-3xl font-semibold text-slate-900">Sélection de workshops</h1>
-        <p className="text-base text-slate-600">Sélectionnez un atelier dérivé de nos hubs pédagogiques.</p>
-      </header>
+    <PageSection variant="content">
+      <div className="space-y-[var(--space-l)]">
+        <header className="space-y-[var(--space-s)]">
+          <span className="pill">Ateliers</span>
+          <Heading level={1}>Sélection de workshops</Heading>
+          <Text variant="muted">Sélectionnez un atelier dérivé de nos hubs pédagogiques.</Text>
+        </header>
 
-      <div className="grid gap-6 sm:grid-cols-2">
-        {index.items.map((item) => (
-          <Link
-            key={item.slug}
-            href={`/atelier/${item.slug}`}
-            className="group flex flex-col justify-between rounded-2xl border border-white/50 bg-white/70 p-6 shadow-sm backdrop-blur transition hover:-translate-y-1 hover:border-amber-300"
-          >
-            <div className="space-y-2">
-              {item.visibility === 'private' ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                  <span aria-hidden>🔒</span> Privé
-                </span>
-              ) : null}
-              <h2 className="text-lg font-semibold text-slate-900 group-hover:text-amber-600">
-                {item.title}
-              </h2>
-              <p className="text-xs uppercase tracking-wide text-slate-500">
-                Hub: {item.hubSlug}
-              </p>
-            </div>
-            <span className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-amber-600">
-              Découvrir →
-            </span>
-          </Link>
-        ))}
+        <div className="grid gap-[var(--space-m)] sm:grid-cols-2">
+          {index.items.map((item) => (
+            <Link
+              key={item.slug}
+              href={`/atelier/${item.slug}`}
+              className="surface-card group"
+            >
+              <div className="space-y-[var(--space-xs)]">
+                {item.visibility === "private" ? (
+                  <span className="pill inline-flex items-center gap-[var(--space-xs)]">
+                    <span aria-hidden>🔒</span> Privé
+                  </span>
+                ) : null}
+                <Heading level={2} className="group-hover:text-[color:var(--primary)] transition-colors">
+                  {item.title}
+                </Heading>
+                <Text variant="small" className="uppercase tracking-[0.12em] text-[color:var(--fg-muted)]">
+                  Hub : {item.hubSlug}
+                </Text>
+              </div>
+              <span className="mt-[var(--space-m)] inline-flex items-center gap-[var(--space-xs)] text-[color:var(--primary)]">
+                Découvrir →
+              </span>
+            </Link>
+          ))}
+        </div>
       </div>
-    </section>
+    </PageSection>
   );
 }

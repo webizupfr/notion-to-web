@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 import type { PersonaBuilderWidgetConfig, PersonaField } from "@/lib/widget-parser";
 
 type Store = { profile: Record<string, string>; hypotheses: Record<string, string> };
@@ -98,53 +100,58 @@ export function PersonaBuilderWidget({ config, storageKey }: { config: PersonaBu
   const reset = () => { setProfile({}); setHypo({}); setName(''); try { localStorage.removeItem(storeKey); } catch {} };
 
   return (
-    <section className="widget-surface p-5 space-y-5">
+    <section className="surface-card space-y-[var(--space-m)]">
+      <header className="space-y-[var(--space-xs)]">
+        <Heading level={3}>📓 Fiche persona (builder)</Heading>
+        <Text variant="muted">Renseigne le profil et les hypothèses pour générer une fiche prête à partager.</Text>
+      </header>
+
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-3">
-          <div className="text-sm font-semibold text-slate-700">1) Qui vit le problème</div>
+          <Heading level={3}>1) Qui vit le problème</Heading>
           <label className="block space-y-1">
-            <span className="text-xs font-medium text-slate-600">Nom du persona</span>
-            <input value={name} onChange={(e)=>setName(e.target.value)} placeholder="Ex: Clara (alternante)" className="w-full rounded-xl border bg-white/90 px-3 py-2 text-sm" />
+            <Text variant="small" className="font-medium text-[color:var(--muted)]">Nom du persona</Text>
+            <input value={name} onChange={(e)=>setName(e.target.value)} placeholder="Ex: Clara (alternante)" className="w-full rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]" />
           </label>
           {profileFields.map((f) => (
             <label key={f.id} className="block space-y-1">
-              <span className="text-xs font-medium text-slate-600">{f.label}</span>
+              <Text variant="small" className="font-medium text-[color:var(--muted)]">{f.label}</Text>
               <textarea
                 value={profile[f.id] ?? ''}
                 onChange={(e)=>setProfile((p)=>({ ...p, [f.id]: e.target.value }))}
                 placeholder={f.placeholder}
                 rows={4}
-                className="w-full rounded-xl border bg-white/90 px-3 py-2 text-sm"
+                className="w-full rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
               />
             </label>
           ))}
         </div>
         <div className="space-y-3">
-          <div className="text-sm font-semibold text-slate-700">2) Nos hypothèses à vérifier</div>
+          <Heading level={3}>2) Nos hypothèses à vérifier</Heading>
           {hypoFields.map((f) => (
             <label key={f.id} className="block space-y-1">
-              <span className="text-xs font-medium text-slate-600">{f.label}</span>
+              <Text variant="small" className="font-medium text-[color:var(--muted)]">{f.label}</Text>
               <textarea
                 value={hypo[f.id] ?? ''}
                 onChange={(e)=>setHypo((h)=>({ ...h, [f.id]: e.target.value }))}
                 placeholder={f.placeholder}
                 rows={4}
-                className="w-full rounded-xl border bg-white/90 px-3 py-2 text-sm"
+                className="w-full rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
               />
             </label>
           ))}
         </div>
       </div>
 
-      <div className="widget-actions text-xs text-slate-500">
+      <div className="widget-actions text-xs text-[color:var(--muted)]">
         <button onClick={copy} className="btn btn-ghost text-xs">Copier la fiche</button>
         <button onClick={download} className="btn btn-ghost text-xs">Télécharger</button>
         <button onClick={reset} className="btn btn-ghost text-xs">Réinitialiser</button>
       </div>
 
-      <div className="space-y-2 rounded-2xl border border-slate-200/80 bg-slate-50/70 px-4 py-4">
-        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Aperçu de la fiche</div>
-        <pre className="whitespace-pre-wrap text-sm leading-6 text-slate-800">{output}</pre>
+      <div className="surface-panel space-y-[var(--space-xs)]">
+        <Text variant="small" className="uppercase tracking-[0.12em] text-[color:var(--muted)]">Aperçu de la fiche</Text>
+        <pre className="notion-codeblock whitespace-pre-wrap"><code>{output}</code></pre>
       </div>
     </section>
   );

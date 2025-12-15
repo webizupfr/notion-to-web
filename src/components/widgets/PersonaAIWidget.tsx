@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 import type { PersonaAIWidgetConfig } from "@/lib/widget-parser";
 
 export function PersonaAIWidget({ config, storageKey }: { config: PersonaAIWidgetConfig; storageKey: string }) {
@@ -63,31 +65,33 @@ export function PersonaAIWidget({ config, storageKey }: { config: PersonaAIWidge
   const copy = async (text: string) => { try { await navigator.clipboard.writeText(text); } catch {} };
 
   return (
-    <section className="widget-surface p-5 space-y-5">
-      <div className="text-sm font-semibold">🧠 Espace IA — challenger & compléter</div>
+    <section className="surface-card space-y-[var(--space-m)]">
+      <header className="space-y-[var(--space-xs)]">
+        <Heading level={3}>🧠 Espace IA — challenger & compléter</Heading>
+        <Text variant="muted">Copie le prompt ou la fiche générée pour challenger ton persona.</Text>
+      </header>
 
       {blindSpots.length ? (
-        <div className="rounded-xl border bg-white/70 px-3 py-2 text-sm text-slate-700">
-          Champs manquants/à préciser: {blindSpots.join(', ')}
+        <div className="surface-panel border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--warning)_12%,var(--bg-soft))] text-[color:var(--fg)]">
+          <Text variant="small">Champs manquants/à préciser : {blindSpots.join(", ")}</Text>
         </div>
       ) : null}
 
-      <div className="space-y-2">
+      <div className="space-y-[var(--space-xs)]">
         <div className="flex items-center justify-between">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Prompt IA (à coller dans ton chat)</div>
+          <Text variant="small" className="uppercase tracking-[0.12em] text-[color:var(--muted)]">Prompt IA (à coller dans ton chat)</Text>
           <div className="widget-actions text-xs"><button onClick={()=>copy(challengePrompt)} className="btn btn-ghost text-xs">Copier</button></div>
         </div>
-        <pre className="code-block rounded-2xl border bg-white/80 p-4 text-[0.95rem] leading-[1.5] whitespace-pre-wrap"><code>{challengePrompt}</code></pre>
+        <pre className="notion-codeblock"><code>{challengePrompt}</code></pre>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-[var(--space-xs)]">
         <div className="flex items-center justify-between">
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Fiche (draft) générée à partir de tes entrées</div>
+          <Text variant="small" className="uppercase tracking-[0.12em] text-[color:var(--muted)]">Fiche (draft) générée à partir de tes entrées</Text>
           <div className="widget-actions text-xs"><button onClick={()=>copy(draftSheet)} className="btn btn-ghost text-xs">Copier</button></div>
         </div>
-        <pre className="code-block rounded-2xl border bg-white/80 p-4 text-[0.95rem] leading-[1.5] whitespace-pre-wrap"><code>{draftSheet}</code></pre>
+        <pre className="notion-codeblock"><code>{draftSheet}</code></pre>
       </div>
     </section>
   );
 }
-

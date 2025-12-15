@@ -51,6 +51,8 @@ const POSTS_DB = process.env.NOTION_POSTS_DB;
 const HUBS_DB = process.env.NOTION_HUBS_DB;
 const WORKSHOPS_DB = process.env.NOTION_WORKSHOPS_DB;
 const SPRINTS_DB = process.env.NOTION_SPRINTS_DB;
+const LEARNING_UNITS_DB = process.env.NOTION_LEARNING_UNITS_DB;
+const LEARNING_ACTIVITIES_DB = process.env.NOTION_LEARNING_ACTIVITIES_DB;
 const CRON_SECRET = process.env.CRON_SECRET;
 const SYNC_FAILURE_WEBHOOK = process.env.SYNC_FAILURE_WEBHOOK;
 
@@ -1099,7 +1101,8 @@ async function syncPage(page: PageObjectResponse, opts: SyncOptions) {
         handledDatabases.add(collection.databaseId);
         await setDbBundleCache({
           databaseId: collection.databaseId,
-          cursor: collection.viewId || '_',
+          viewId: collection.viewId ?? null,
+          cursor: '_',
           bundle: collection.bundle,
           syncedAt: syncedAtIso,
         });
@@ -1230,6 +1233,7 @@ async function syncPage(page: PageObjectResponse, opts: SyncOptions) {
     });
     await setDbBundleCache({
       databaseId,
+      viewId: mirroredBundle.viewId ?? null,
       cursor: '_',
       bundle: mirroredBundle,
       syncedAt: new Date().toISOString(),
@@ -1368,7 +1372,16 @@ async function syncHub(
 
   // Attempt to detect inline databases for Jour / Activité and build learning path
   try {
-    const learning = await buildLearningPathFromPage(hub.id, meta.slug);
+    let learning: LearningPath | null = null;
+
+    if (LEARNING_UNITS_DB && LEARNING_ACTIVITIES_DB) {
+      learning = await buildLearningPathFromDatabases(hub, meta.slug);
+    }
+
+    if (!learning) {
+      learning = await buildLearningPathFromPage(hub.id, meta.slug);
+    }
+
     if (learning && learning.days.length) {
       const enriched = await getPageBundle(meta.slug);
       if (enriched) {
@@ -1620,6 +1633,247 @@ async function buildLearningPathFromPage(pageId: string, hubSlug: string): Promi
     unitLabelSingular: unitDb.labels.singular,
     unitLabelPlural: unitDb.labels.plural,
   } satisfies LearningPath;
+}
+
+async function buildLearningPathFromDatabases(
+  hub: PageObjectResponse,
+  hubSlug: string
+): Promise<LearningPath | null> {
+  const unitsDbId = LEARNING_UNITS_DB;
+  const activitiesDbId = LEARNING_ACTIVITIES_DB;
+
+  if (!unitsDbId || !activitiesDbId) return null;
+
+  try {
+    let kind: 'days' | 'modules' = 'days';
+    let unitLabelSingular = 'Jour';
+    let unitLabelPlural = 'Jours';
+    let slugPrefix = 'jour';
+
+    const unitPatterns: Array<{
+      test: (value: string) => boolean;
+      kind: 'days' | 'modules';
+      singular: string;
+      plural: string;
+      slugPrefix: string;
+    }> = [
+      {
+        test: (value) => value.includes('jour'),
+        kind: 'days',
+        singular: 'Jour',
+        plural: 'Jours',
+        slugPrefix: 'jour',
+      },
+      {
+        test: (value) => value.includes('module'),
+        kind: 'modules',
+        singular: 'Module',
+        plural: 'Modules',
+        slugPrefix: 'module',
+      },
+      {
+        test: (value) => value.includes('session'),
+        kind: 'modules',
+        singular: 'Session',
+        plural: 'Sessions',
+        slugPrefix: 'session',
+      },
+      {
+        test: (value) => value.includes('phase'),
+        kind: 'modules',
+        singular: 'Phase',
+        plural: 'Phases',
+        slugPrefix: 'phase',
+      },
+      {
+        test: (value) => value.includes('sprint'),
+        kind: 'modules',
+        singular: 'Sprint',
+        plural: 'Sprints',
+        slugPrefix: 'sprint',
+      },
+    ];
+
+    try {
+      const db = await notion.databases.retrieve({ database_id: unitsDbId });
+      const title = ((db as { title?: Array<{ plain_text?: string }> }).title?.[0]?.plain_text ?? '').trim();
+      const t = normalize(title);
+      const pattern = unitPatterns.find((entry) => entry.test(t));
+      if (pattern) {
+        kind = pattern.kind;
+        unitLabelSingular = pattern.singular;
+        unitLabelPlural = pattern.plural;
+        slugPrefix = pattern.slugPrefix;
+      }
+    } catch {
+      // ignore DB title errors, keep defaults
+    }
+
+    const getNum = (prop: PageObjectResponse['properties'][string] | undefined): number | null => {
+      if (!prop) return null;
+      if (prop.type === 'number') return prop.number ?? null;
+      if (prop.type === 'rich_text') {
+        const raw = prop.rich_text?.[0]?.plain_text ?? '';
+        const n = Number(raw);
+        return Number.isFinite(n) ? n : null;
+      }
+      return null;
+    };
+    const getText = (prop: PageObjectResponse['properties'][string] | undefined): string | null => {
+      if (!prop) return null;
+      if (prop.type === 'title') return prop.title?.[0]?.plain_text ?? null;
+      if (prop.type === 'rich_text') return prop.rich_text?.[0]?.plain_text ?? null;
+      if (prop.type === 'url') return prop.url ?? null;
+      return null;
+    };
+    const getSelect = (prop: PageObjectResponse['properties'][string] | undefined): string | null => {
+      if (prop?.type === 'select') return prop.select?.name ?? null;
+      if (prop?.type === 'status') {
+        return (prop as unknown as { status?: { name?: string } }).status?.name ?? null;
+      }
+      return null;
+    };
+    const getDate = (prop: PageObjectResponse['properties'][string] | undefined): string | null => {
+      if (prop?.type === 'date') return prop.date?.start ?? null;
+      return null;
+    };
+    const getRelation = (prop: PageObjectResponse['properties'][string] | undefined): string[] => {
+      if (prop?.type === 'relation') return prop.relation?.map((r) => r.id) ?? [];
+      return [];
+    };
+    const findProp = (
+      properties: PageObjectResponse['properties'],
+      names: string[]
+    ): PageObjectResponse['properties'][string] | undefined => {
+      const keys = Object.keys(properties);
+      const normalized = keys.map((k) => ({ k, n: normalize(k) }));
+      for (const want of names) {
+        const wn = normalize(want);
+        const hit = normalized.find((x) => x.n.includes(wn));
+        if (hit) return properties[hit.k];
+      }
+      return undefined;
+    };
+
+    // Units (all rows in the units DB) – fetch all pages, not just first 200
+    const unitPagesAll = (await collectDatabasePagesSafe(unitsDbId, 'learning-units')).filter(
+      (p) => p.object === 'page'
+    );
+    if (!unitPagesAll.length) return null;
+
+    // Filtrer les unités rattachées à ce hub via la relation "Hubs" / "hub"
+    const hubCanonical = canonicalId(hub.id);
+    const unitPages = unitPagesAll.filter((page) => {
+      const relProp = findProp(page.properties, ['hub', 'hubs', 'db hubs']);
+      const relIds = getRelation(relProp);
+      if (!relIds.length) return false;
+      return relIds.some((id) => {
+        const cid = canonicalId(id);
+        if (hubCanonical && cid) return cid === hubCanonical;
+        return id === hub.id;
+      });
+    });
+
+    if (!unitPages.length) return null;
+
+    // All activities (we'll attach them via relation to units) – fetch all pages
+    const activityPages = (await collectDatabasePagesSafe(
+      activitiesDbId,
+      'learning-activities'
+    )).filter((p) => p.object === 'page');
+
+    const dayEntries: DayEntry[] = unitPages.map((page) => {
+      const props = page.properties;
+      const title = getText(findProp(props, ['titre', 'title', 'name'])) ?? unitLabelSingular;
+      const order = getNum(findProp(props, ['ordre', 'order', 'index'])) ?? 1;
+      const state = getSelect(findProp(props, ['etat', 'état', 'state', 'status'])) ?? null;
+      const summary =
+        getText(findProp(props, ['resume', 'résumé', 'summary', 'description'])) ?? null;
+      const unlockDate =
+        getDate(findProp(props, ['date_deblocage', 'unlock', 'date'])) ?? null;
+      const unlockOffsetDays = getNum(
+        findProp(props, ['decalage', 'décalage', 'offset', 'unlock_offset'])
+      );
+      const slugBaseRaw =
+        getText(findProp(props, ['slug'])) ??
+        `${slugPrefix}-${String(order).padStart(2, '0')}`;
+      const slugBase = slugBaseRaw.toLowerCase();
+      const slugPart = slugBase
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      const slug = `${hubSlug}/${slugPart}`.replace(/\/{2,}/g, '/');
+      // Construire les steps pour ce jour en filtrant directement les activités liées
+      const steps = activityPages
+        .flatMap((a) => {
+          const ap = a.properties;
+          // Ne prendre en compte que la relation explicite "jour" pour lier activité ↔ jour
+          const relationProp = findProp(ap, ['jour']);
+          const relIds = getRelation(relationProp);
+          const dayCanonical = canonicalId(page.id);
+          const isLinked = relIds.some((rid) => {
+            const cid = canonicalId(rid);
+            return cid && dayCanonical && cid === dayCanonical;
+          });
+          if (!isLinked) return [];
+
+          const title = getText(findProp(ap, ['titre', 'title', 'name'])) ?? 'Étape';
+          const order = getNum(findProp(ap, ['ordre', 'order', 'index'])) ?? 1;
+          const type =
+            getSelect(findProp(ap, ['type', 'category'])) ??
+            getText(findProp(ap, ['type', 'category']));
+          const duration = getText(findProp(ap, ['duree', 'durée', 'duration']));
+          const url = getText(findProp(ap, ['lien', 'url']));
+          const instructions = getText(
+            findProp(ap, ['instructions', 'contenu', 'content', 'texte'])
+          );
+
+          const step: ActivityStep = {
+            id: a.id,
+            order,
+            title,
+            type,
+            duration,
+            url,
+            instructions,
+          };
+          return [step];
+        })
+        .filter((s) => {
+          const t = normalize(s.type ?? '');
+          if (!t) return true;
+          if (/^(step|etape|étape|intro)/.test(t)) return true;
+          if (/option/.test(t)) return false;
+          return true;
+        })
+        .sort((a, b) => a.order - b.order);
+
+      return {
+        id: page.id,
+        order,
+        slug,
+        title,
+        summary,
+        state,
+        unlockDate,
+        unlockOffsetDays,
+        steps,
+      } satisfies DayEntry;
+    });
+
+    dayEntries.sort((a, b) => a.order - b.order);
+
+    return {
+      days: dayEntries,
+      kind,
+      unitLabelSingular,
+      unitLabelPlural,
+    } satisfies LearningPath;
+  } catch (error) {
+    console.warn('[sync] buildLearningPathFromDatabases failed', error);
+    return null;
+  }
 }
 
 async function syncHubsInParallel(

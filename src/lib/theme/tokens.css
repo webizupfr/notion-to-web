@@ -1,37 +1,76 @@
-/* Design tokens (aliasés sur les variables déjà en place) */
+/* Design tokens Impulsion V1 : palette, spacing, radius, shadows, typo */
 
 :root {
-  /* Couleurs (navy + ivoire + lime feutré) */
-  --ink: var(--foreground);
-  --ink-2: color-mix(in oklab, var(--foreground) 90%, #6b7280);
-  --muted-ink: var(--muted);
-  --bg: var(--background);
-  --bg-soft: var(--background-soft);
-  --surface: color-mix(in oklab, var(--background-soft) 96%, #ffffff);
-  --surface-elevated: color-mix(in oklab, var(--background-soft) 90%, #ffffff);
-  --surface-hover: color-mix(in oklab, var(--background-soft) 86%, #ffffff);
-  --brand-lime: #c7f000;
-  --brand-navy: #0c1322;
+  /* palette */
+  --primary: #ffb300;
+  --primary-hover: color-mix(in srgb, var(--primary) 92%, white 8%);
+  --primary-contrast: #1a1a1a;
+  --primary-soft: color-mix(in srgb, var(--primary) 25%, white 75%);
 
-  /* Espacements (px) */
-  --space-1: 4px;
-  --space-2: 8px;
+  --bg: #f4f4f4;
+  --bg-card: #ffffff;
+  --bg-soft: #fafafa;
+  --bg-elevated: color-mix(in srgb, var(--bg-card) 92%, white 8%);
+
+  --fg: #1a1a1a;
+  --muted: #6a6a6a;
+  --fg-soft: #9b9b9b;
+
+  --success: #2ca56b;
+  --warning: #f59e0b;
+  --danger: #d45050;
+
+  --border: rgba(26, 26, 26, 0.12);
+  --ring: color-mix(in srgb, var(--primary) 40%, #1a1a1a);
+
+  /* spacing */
+  --space-xs: 4px;
+  --space-s: 8px;
+  --space-m: 16px;
+  --space-l: 24px;
+  --space-xl: 40px;
+  --space-2xl: 64px;
+  /* legacy aliases */
+  --space-1: var(--space-xs);
+  --space-2: var(--space-s);
   --space-3: 12px;
-  --space-4: 16px;
-  --space-5: 24px;
+  --space-4: var(--space-m);
+  --space-5: var(--space-l);
   --space-6: 32px;
-  --space-7: 40px;
+  --space-7: var(--space-xl);
   --space-8: 48px;
-  --space-9: 56px;
-  --space-10: 64px;
+  --space-9: var(--space-2xl);
+  --space-10: 80px;
+  --space-11: 96px;
+  --space-12: 120px;
 
-  /* Radii */
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-xl: 20px;
+  /* radius */
+  --r-s: 6px;
+  --r-m: 12px;
+  --r-l: 18px;
+  --r-xl: 24px;
+  /* legacy aliases */
+  --r-sm: var(--r-s);
+  --r-md: var(--r-m);
+  --r-lg: var(--r-l);
+  --r-xl: var(--r-xl);
 
-  /* Ombres resserrées */
-  --shadow-soft: 0 12px 32px -18px rgba(15, 23, 42, 0.16);
-  --shadow-elevated: 0 26px 68px -32px rgba(8, 12, 18, 0.24);
-  --shadow-subtle: 0 8px 22px -16px rgba(15, 23, 42, 0.14);
+  /* shadows */
+  --shadow-s: 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-m: 0 4px 10px rgba(0, 0, 0, 0.08);
+  --shadow-l: 0 8px 20px rgba(0, 0, 0, 0.09);
+  /* legacy aliases */
+  --shadow-soft: var(--shadow-m);
+  --shadow-subtle: var(--shadow-s);
+  --shadow-elev: var(--shadow-l);
+
+  /* typo scale (Outfit) */
+  --font-base: 1rem;
+  --step--1: 0.88rem;
+  --step-0: 0.94rem;
+  --step-1: 1.05rem;
+  --step-2: 1.17rem;
+  --step-3: 1.32rem;
+  --step-4: 1.5rem;
+  --step-5: 1.85rem;
 }

@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Heading } from "@/components/ui/Heading";
 import type { PromptTemplateWidgetConfig } from "@/lib/widget-parser";
 import { renderTemplate } from "@/lib/widget-parser";
 
 export function PromptTemplateWidget({ config, storageKey }: { config: PromptTemplateWidgetConfig; storageKey: string }) {
   const theme = config.theme ?? "light";
-  const wide = Boolean((config as { wide?: boolean }).wide);
 
   const hintFor = (name: string): string | undefined => {
     const n = name.toUpperCase();
@@ -102,18 +102,17 @@ export function PromptTemplateWidget({ config, storageKey }: { config: PromptTem
   const wrapperClass = useMemo(() => {
     if (theme === "dark") {
       return [
-        "overflow-hidden rounded-[22px] border shadow-subtle",
-        "border-slate-900/40 bg-slate-900 text-slate-50",
-        wide ? "px-0" : "px-0",
-        "py-0",
+        "overflow-hidden rounded-[var(--r-xl)] border shadow-[var(--shadow-subtle)]",
+        "border-[color-mix(in_oklab,var(--fg)_14%,transparent)] bg-[color-mix(in_oklab,var(--fg)_94%,#000)] text-[color:var(--bg)]",
+        "px-0 py-0",
       ].join(" ");
     }
-    return "widget-surface p-5 space-y-5";
-  }, [theme, wide]);
+    return "surface-card space-y-[var(--space-m)]";
+  }, [theme]);
 
   const headerClass =
     theme === "dark"
-      ? "flex items-center justify-between gap-3 border-b border-white/10 bg-slate-900/60 px-4 py-3 text-xs uppercase tracking-[0.2em] text-slate-50"
+      ? "flex items-center justify-between gap-3 border-b border-[color-mix(in_oklab,var(--bg)_14%,transparent)] bg-[color-mix(in_oklab,var(--fg)_88%,#000)] px-[var(--space-4)] py-[var(--space-3)] text-xs uppercase tracking-[0.2em] text-[color-mix(in_oklab,var(--bg)_85%,#fff)]"
       : "flex items-center justify-between";
 
   const controlsClass =
@@ -123,56 +122,56 @@ export function PromptTemplateWidget({ config, storageKey }: { config: PromptTem
 
   const primaryBtnClass =
     theme === "dark"
-      ? "rounded-full bg-white px-4 py-1.5 text-[11px] font-semibold text-slate-900 shadow-sm transition hover:bg-slate-100"
+      ? "rounded-full bg-[color:var(--bg)] px-[var(--space-4)] py-[0.375rem] text-[11px] font-semibold text-[color:var(--fg)] shadow-sm transition hover:shadow-md"
       : "btn btn-primary text-xs";
 
   const ghostBtnClass =
     theme === "dark"
-      ? "rounded-full border border-white/10 px-3 py-1 text-[11px] font-medium text-slate-200 transition hover:border-white/30 hover:text-white"
+      ? "rounded-full border border-[color-mix(in_oklab,var(--bg)_22%,transparent)] px-3 py-1 text-[11px] font-medium text-[color-mix(in_oklab,var(--bg)_82%,#fff)] transition hover:border-[color-mix(in_oklab,var(--bg)_40%,transparent)] hover:text-[color:var(--bg)]"
       : "btn btn-ghost text-xs";
 
   const subtleBtnClass =
     theme === "dark"
-      ? "text-[11px] text-slate-300 hover:text-white disabled:opacity-40 disabled:cursor-default"
+      ? "text-[11px] text-[color-mix(in_oklab,var(--bg)_80%,#fff)] hover:text-[color:var(--bg)] disabled:opacity-40 disabled:cursor-default"
       : "btn btn-ghost text-xs";
 
   const labelClass =
     theme === "dark"
-      ? "text-xs font-semibold uppercase tracking-wider text-slate-100"
-      : "text-xs font-semibold uppercase tracking-wider text-slate-600";
+      ? "text-xs font-semibold uppercase tracking-wider text-[color:var(--bg)]"
+      : "text-xs font-semibold uppercase tracking-wider text-[color:var(--muted)]";
 
   const inputClass = (hasValue: boolean) =>
     theme === "dark"
       ? [
-          "w-full rounded-xl border bg-slate-900/60 px-3 py-2 text-sm text-slate-50 placeholder:text-slate-500",
-          hasValue ? "border-slate-700" : "border-amber-300/80",
-          "focus:outline-none focus:ring-2 focus:ring-white/10",
+          "w-full rounded-[var(--r-lg)] border bg-[color-mix(in_oklab,var(--fg)_92%,#000)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--bg)] placeholder:text-[color-mix(in_oklab,var(--bg)_70%,#fff)]",
+          hasValue ? "border-[color-mix(in_oklab,var(--bg)_24%,transparent)]" : "border-[color-mix(in_oklab,var(--accent)_50%,transparent)]",
+          "focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--bg)_22%,transparent)]",
         ].join(" ")
       : [
-          "w-full rounded-xl border bg-white/80 px-3 py-2 text-sm",
-          hasValue ? "border-slate-200" : "border-amber-300",
-          "focus:outline-none focus:ring-2 focus:ring-emerald-100 focus:border-emerald-400",
+          "w-full rounded-[var(--r-lg)] border bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-sm",
+          hasValue ? "border-[color:var(--border)]" : "border-[color-mix(in_oklab,var(--accent)_45%,transparent)]",
+          "focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)] focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)]",
         ].join(" ");
 
   const outputWrapperClass =
     theme === "dark"
-      ? "mt-2 rounded-2xl border border-slate-800 bg-slate-900/80 p-4 text-[0.95rem] leading-[1.5] whitespace-pre-wrap"
-      : "mt-2 rounded-2xl border bg-white/80 p-4 text-[0.95rem] leading-[1.5] whitespace-pre-wrap";
+      ? "mt-2 rounded-[var(--r-xl)] border border-[color-mix(in_oklab,var(--bg)_18%,transparent)] bg-[color-mix(in_oklab,var(--fg)_92%,#000)] p-[var(--space-4)] text-[0.95rem] leading-[1.5] whitespace-pre-wrap text-[color:var(--bg)]"
+      : "mt-2 rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] p-[var(--space-4)] text-[0.95rem] leading-[1.5] whitespace-pre-wrap text-[color:var(--fg)] shadow-sm";
 
   const outputPlaceholderClass =
     theme === "dark"
-      ? "rounded-2xl border border-dashed border-amber-300/80 bg-slate-900/70 p-4 text-sm text-slate-200"
-      : "rounded-2xl border border-dashed border-amber-200 bg-white/70 p-4 text-sm text-slate-600";
+      ? "rounded-[var(--r-xl)] border border-dashed border-[color-mix(in_oklab,var(--accent)_60%,transparent)] bg-[color-mix(in_oklab,var(--fg)_90%,#000)] p-[var(--space-4)] text-sm text-[color:var(--bg)]"
+      : "rounded-[var(--r-xl)] border border-dashed border-[color-mix(in_oklab,var(--accent)_50%,transparent)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] p-[var(--space-4)] text-sm text-[color:var(--muted)]";
 
   return (
     <section className={wrapperClass}>
       <div className={headerClass}>
         {config.title ? (
-          <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-50">
+          <Heading level={3} className="text-sm font-semibold uppercase tracking-[0.2em] text-[color:inherit]">
             {config.title}
-          </h3>
+          </Heading>
         ) : (
-          <span className="text-xs font-semibold uppercase tracking-[0.2em]">
+          <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:inherit]">
             Prompt template
           </span>
         )}
@@ -226,12 +225,12 @@ export function PromptTemplateWidget({ config, storageKey }: { config: PromptTem
                     "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition";
                   const activeClasses =
                     theme === "dark"
-                      ? "border-emerald-400 bg-emerald-900 text-emerald-200"
-                      : "border-emerald-400 bg-emerald-50 text-emerald-700";
+                      ? "border-[color-mix(in_oklab,var(--bg)_26%,transparent)] bg-[color-mix(in_oklab,var(--fg)_86%,#000)] text-[color:var(--bg)]"
+                      : "border-[color-mix(in_oklab,var(--success)_45%,transparent)] bg-[color-mix(in_oklab,var(--success)_12%,#fff)] text-[color-mix(in_oklab,var(--success)_85%,#0f1728)]";
                   const inactiveClasses =
                     theme === "dark"
-                      ? "border-slate-600 text-slate-200 hover:border-emerald-300 hover:text-emerald-200"
-                      : "border-slate-200 text-slate-600 hover:border-emerald-200 hover:text-emerald-600";
+                      ? "border-[color-mix(in_oklab,var(--bg)_26%,transparent)] text-[color-mix(in_oklab,var(--bg)_82%,#fff)] hover:border-[color-mix(in_oklab,var(--accent)_40%,transparent)] hover:text-[color:var(--bg)]"
+                      : "border-[color:var(--border)] text-[color:var(--muted)] hover:border-[color-mix(in_oklab,var(--accent)_40%,transparent)] hover:text-[color-mix(in_oklab,var(--accent)_80%,#0f1728)]";
                   return (
                     <button
                       key={option}
@@ -256,7 +255,7 @@ export function PromptTemplateWidget({ config, storageKey }: { config: PromptTem
         ))}
       </div>
 
-      <div className="space-y-2 px-5 pb-5">
+      <div className="space-y-2 px-[var(--space-5)] pb-[var(--space-5)]">
         <span className={labelClass}>Prompt généré</span>
         {showGenerated ? (
           <pre className={outputWrapperClass}>

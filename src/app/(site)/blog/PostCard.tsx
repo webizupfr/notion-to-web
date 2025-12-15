@@ -1,6 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
+
 export type PostCardData = {
   slug: string;
   title: string;
@@ -31,13 +34,13 @@ export function PostCard({ post }: { post: PostCardData }) {
 
       {/* Texte */}
       <div className="p-5">
-        <h2 className="text-[1.15rem] font-semibold leading-[1.35] text-slate-900">
+        <Heading level={2} className="text-[1.15rem] leading-[1.35] text-slate-900">
           {post.title}
-        </h2>
+        </Heading>
         {post.excerpt ? (
-          <p className="mt-2 text-[0.95rem] leading-[1.65] text-slate-600 line-clamp-3">
+          <Text className="mt-2 text-[0.95rem] leading-[1.65] text-slate-600 line-clamp-3">
             {post.excerpt}
-          </p>
+          </Text>
         ) : null}
 
         <span className="mt-4 inline-flex items-center gap-1 text-xs font-medium text-slate-700">

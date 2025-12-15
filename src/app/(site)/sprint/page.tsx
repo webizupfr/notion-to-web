@@ -1,6 +1,10 @@
-import Link from "next/link";
 import { unstable_cache } from "next/cache";
 
+import { MarketingHero } from "@/components/layout/MarketingHero";
+import { LearningHubCard } from "@/components/learning";
+import { Heading } from "@/components/ui/Heading";
+import { PageSection } from "@/components/layout/PageSection";
+import { Text } from "@/components/ui/Text";
 import { getSprintsIndex } from "@/lib/content-store";
 
 export const revalidate = 0;
@@ -17,51 +21,48 @@ export default async function SprintIndexPage() {
 
   if (!index || items.length === 0) {
     return (
-      <section className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-16 sm:px-12">
-        <header className="space-y-3">
-          <h1 className="text-3xl font-semibold text-slate-900">Sprints & hackathons</h1>
-          <p className="text-base text-slate-600">Aucun sprint n’est disponible pour le moment.</p>
-        </header>
-      </section>
+      <>
+        <MarketingHero
+          eyebrow="Sprints pédagogiques"
+          title="Sprints & Bootcamps"
+          subtitle="Des espaces pédagogiques conçus pour accompagner vos séminaires, hackathons et semaines intensives."
+        />
+        <PageSection variant="content">
+          <Text variant="muted">Aucun sprint n’est disponible pour le moment.</Text>
+        </PageSection>
+      </>
     );
   }
 
   return (
-    <section className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-6 py-16 sm:px-12">
-      <header className="space-y-3">
-        <span className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
-          Sprints
-        </span>
-        <h1 className="text-3xl font-semibold text-slate-900">Sprints & hackathons actifs</h1>
-        <p className="text-base text-slate-600">Choisissez un sprint pour consulter les modules et leur calendrier de déverrouillage.</p>
-      </header>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        {items.map((item) => (
-          <Link
-            key={item.slug}
-            href={`/sprint/${item.slug}`}
-            className="group flex flex-col justify-between rounded-2xl border border-white/50 bg-white/70 p-6 shadow-sm backdrop-blur transition hover:-translate-y-1 hover:border-teal-300"
-          >
-            <div className="space-y-2">
-              {item.visibility === 'private' ? (
-                <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                  <span aria-hidden>🔒</span> Privé
-                </span>
-              ) : null}
-              <h2 className="text-lg font-semibold text-slate-900 group-hover:text-teal-600">
-                {item.title}
-              </h2>
-              <p className="text-xs uppercase tracking-wide text-slate-500">
-                Fuseau horaire: {item.timezone}
-              </p>
-            </div>
-            <span className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-teal-600">
-              Voir les modules →
-            </span>
-          </Link>
-        ))}
-      </div>
-    </section>
+    <>
+      <MarketingHero
+        eyebrow="Sprints pédagogiques"
+        title="Sprints & Bootcamps"
+        subtitle="Des espaces pédagogiques conçus pour accompagner vos séminaires, hackathons et semaines intensives."
+      />
+      <PageSection variant="content">
+        <div className="space-y-[var(--space-m)]">
+          <Heading level={2}>Sprints disponibles</Heading>
+          <div className="grid gap-[var(--space-l)] sm:grid-cols-2">
+            {items.map((item) => {
+              const meta = [
+                { label: "Format", value: item.visibility === "private" ? "Privé" : "Ouvert" },
+                { label: "Fuseau", value: item.timezone },
+              ];
+              return (
+                <LearningHubCard
+                  key={item.slug}
+                  mode="sprint"
+                  title={item.title}
+                  href={`/sprint/${item.slug}`}
+                  meta={meta}
+                />
+              );
+            })}
+          </div>
+        </div>
+      </PageSection>
+    </>
   );
 }

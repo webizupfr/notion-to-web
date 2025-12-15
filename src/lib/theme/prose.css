@@ -1,77 +1,293 @@
-/* Styles typographiques pour le contenu Notion */
+/* Prose Impulsion V1 : styles texte long (Notion, blog, pages) */
 
 .prose {
-  max-width: 72ch;
+  max-width: 62ch;
+  color: var(--fg);
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
-.prose.max-w-none,
-.ui-card .prose {
+.prose.prose-wide {
   max-width: none;
 }
 
-.prose h1 {
-  font-size: clamp(2.5rem, 3.6vw, 2.9rem);
-  line-height: 1.1;
-  letter-spacing: -0.02em;
-  font-weight: 700;
+.prose-inline {
+  display: inline;
 }
 
-.prose h2 {
-  font-size: clamp(2rem, 2.9vw, 2.3rem);
-  line-height: 1.2;
-  letter-spacing: -0.015em;
-  font-weight: 600;
-}
-
+.prose h1,
+.prose h2,
 .prose h3 {
-  font-size: clamp(1.55rem, 2.1vw, 1.85rem);
-  line-height: 1.28;
-  letter-spacing: -0.01em;
-  font-weight: 600;
+  font-family: var(--font-display);
+  color: var(--fg);
+  margin: var(--space-xl) 0 var(--space-m);
 }
+
+.prose h1 { font-size: clamp(1.75rem, 2.5vw, 2.1rem); line-height: 1.08; font-weight: 700; letter-spacing: -0.03em; }
+.prose h2 { font-size: clamp(1.35rem, 2vw, 1.65rem); line-height: 1.12; font-weight: 600; letter-spacing: -0.02em; }
+.prose h3 { font-size: clamp(1.12rem, 1.6vw, 1.32rem); line-height: 1.18; font-weight: 600; letter-spacing: -0.01em; }
 
 .prose p {
-  font-size: clamp(1.05rem, 1.3vw, 1.125rem);
-  line-height: 1.65;
+  margin: 0 0 var(--space-s);
+  color: var(--fg);
 }
 
-.prose .eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 12px;
+.prose p + h2,
+.prose p + h3,
+.prose ul + h2,
+.prose ul + h3,
+.prose ol + h2,
+.prose ol + h3 {
+  margin-top: var(--space-xl);
 }
 
-.prose :where(blockquote) {
-  margin: 1.5rem 0;
+.prose ul,
+.prose ol {
+  margin: 0 0 var(--space-s) var(--space-l);
   padding: 0;
-  background: none;
-  border-left: none;
-  font-style: inherit;
+  color: var(--fg);
 }
 
-/* Callouts polymorphes (directives data-* posées par Blocks.tsx) */
-.callout[data-callout-tone="yellow"],
-.callout[data-callout-color*="yellow"] {
-  background: color-mix(in oklab, var(--brand-amber) 10%, #fff);
-  border-color: color-mix(in oklab, var(--brand-amber) 40%, transparent);
+.prose li + li {
+  margin-top: var(--space-xs);
 }
 
-.callout[data-callout-tone="blue"],
-.callout[data-callout-color*="blue"] {
-  background: color-mix(in oklab, #60a5fa 10%, #fff);
-  border-color: color-mix(in oklab, #60a5fa 35%, transparent);
+.prose strong {
+  font-weight: 600;
+  color: var(--fg);
 }
 
-.callout[data-callout-tone="red"],
-.callout[data-callout-color*="red"] {
-  background: color-mix(in oklab, #f87171 10%, #fff);
-  border-color: color-mix(in oklab, #f87171 35%, transparent);
+.prose em {
+  font-style: italic;
 }
 
-.callout[data-callout-tone="green"],
-.callout[data-callout-color*="green"] {
-  background: color-mix(in oklab, #34d399 12%, #fff);
-  border-color: color-mix(in oklab, #34d399 35%, transparent);
+.prose a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.prose a:hover {
+  color: color-mix(in srgb, var(--primary) 88%, var(--fg));
+  text-decoration-color: color-mix(in srgb, var(--primary) 65%, transparent);
+}
+
+.prose blockquote {
+  margin: var(--space-m) 0;
+  padding: var(--space-s) var(--space-m);
+  background: color-mix(in srgb, var(--bg-soft) 96%, #ffffff 4%);
+  border: 1px solid color-mix(in srgb, var(--fg-soft) 22%, transparent);
+  border-left: 3px solid color-mix(in srgb, var(--primary-soft) 70%, var(--primary));
+  border-radius: var(--r-m);
+  color: var(--fg);
+}
+
+.prose code {
+  font-size: 0.94em;
+  background: color-mix(in srgb, var(--bg-soft) 92%, #ffffff 8%);
+  color: var(--fg);
+  padding: 0.16em 0.42em;
+  border-radius: var(--r-s);
+  border: 1px solid color-mix(in srgb, var(--fg-soft) 20%, transparent);
+}
+
+.prose pre {
+  background: var(--bg-soft);
+  border: 1px solid color-mix(in srgb, var(--fg-soft) 20%, transparent);
+  border-radius: var(--r-m);
+  padding: var(--space-m);
+  overflow-x: auto;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--fg);
+}
+
+.prose hr {
+  margin: var(--space-l) 0;
+  border-color: color-mix(in srgb, var(--fg-soft) 20%, transparent);
+}
+
+.prose img,
+.prose video {
+  border-radius: var(--r-l);
+}
+
+.prose figcaption {
+  color: var(--fg-soft);
+  font-size: 0.88rem;
+  margin-top: var(--space-xs);
+}
+
+/* Rich text annotations */
+.rt {
+  color: var(--fg);
+}
+.rt-bold { font-weight: 700; }
+.rt-italic { font-style: italic; }
+.rt-underline { text-decoration: underline; }
+.rt-strike { text-decoration: line-through; }
+.rt-code {
+  background: color-mix(in srgb, var(--bg-soft) 92%, #ffffff 8%);
+  border: 1px solid color-mix(in srgb, var(--fg-soft) 20%, transparent);
+  border-radius: var(--r-s);
+  padding: 0.12em 0.4em;
+  font-size: 0.95em;
+}
+.rt-link {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+.rt-link:hover {
+  color: color-mix(in srgb, var(--primary) 88%, var(--fg));
+  text-decoration-color: color-mix(in srgb, var(--primary) 65%, transparent);
+}
+
+/* Tonal colors */
+.rt-color-default { color: var(--fg); }
+.rt-color-gray { color: var(--muted); }
+.rt-color-brown,
+.rt-color-orange { color: var(--primary); }
+.rt-color-yellow { color: var(--warning); }
+.rt-color-green { color: var(--success); }
+.rt-color-blue,
+.rt-color-purple,
+.rt-color-pink { color: var(--ring); }
+.rt-color-red { color: var(--danger); }
+
+.rt-bg-default,
+.rt-bg-gray,
+.rt-bg-brown,
+.rt-bg-orange,
+.rt-bg-yellow,
+.rt-bg-green,
+.rt-bg-blue,
+.rt-bg-purple,
+.rt-bg-pink,
+.rt-bg-red {
+  padding: 0.12em 0.4em;
+  border-radius: var(--r-s);
+  color: var(--fg);
+}
+.rt-bg-default,
+.rt-bg-gray { background: color-mix(in srgb, var(--bg-soft) 92%, #ffffff 8%); }
+.rt-bg-brown,
+.rt-bg-orange { background: color-mix(in srgb, var(--primary-soft) 35%, #ffffff 65%); }
+.rt-bg-yellow { background: color-mix(in srgb, var(--warning) 25%, #ffffff 75%); }
+.rt-bg-green { background: color-mix(in srgb, var(--success) 22%, #ffffff 78%); }
+.rt-bg-blue,
+.rt-bg-purple,
+.rt-bg-pink { background: color-mix(in srgb, var(--ring) 25%, #ffffff 75%); }
+.rt-bg-red { background: color-mix(in srgb, var(--danger) 25%, #ffffff 75%); }
+
+/* Notion-specific helpers */
+.prose .prose-paragraph {
+  margin: 0 0 var(--space-m);
+}
+
+.prose .prose-list {
+  margin: 0 0 var(--space-m) var(--space-l);
+}
+
+.prose .prose-list-bulleted {
+  list-style: disc;
+}
+
+.prose .prose-list-numbered {
+  list-style: decimal;
+}
+
+.prose .prose-list-nested {
+  margin-left: var(--space-l);
+}
+
+.prose .prose-list li {
+  margin-bottom: var(--space-xs);
+}
+
+.notion-quote {
+  --quote-pill-bg: color-mix(in oklab, var(--primary-soft) 32%, var(--bg-soft));
+  --quote-pill-fg: color-mix(in oklab, var(--fg) 96%, #121320);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.45rem 1.05rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+  line-height: 1.2;
+  background: var(--quote-pill-bg);
+  color: var(--quote-pill-fg);
+  box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
+  margin: clamp(var(--space-3), 1.5vw, var(--space-4)) 0;
+  width: fit-content;
+  flex-wrap: wrap;
+}
+
+.notion-quote__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 0 4px color-mix(in oklab, currentColor 35%, transparent);
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.notion-quote[data-tone="default"],
+.notion-quote[data-tone="gray"],
+.notion-quote:not([data-tone]) {
+  --quote-pill-bg: color-mix(in oklab, var(--primary-soft) 24%, var(--bg-soft));
+  --quote-pill-fg: color-mix(in oklab, var(--fg) 94%, #191c29);
+}
+
+.notion-quote[data-tone="brown"] {
+  --quote-pill-bg: color-mix(in oklab, var(--warning) 22%, #fff8f1);
+  --quote-pill-fg: #5a3a1f;
+}
+
+.notion-quote[data-tone="orange"],
+.notion-quote[data-tone="yellow"] {
+  --quote-pill-bg: color-mix(in oklab, var(--warning) 26%, #fffdf5);
+  --quote-pill-fg: color-mix(in oklab, var(--warning) 65%, #5c3a00);
+}
+
+.notion-quote[data-tone="green"] {
+  --quote-pill-bg: color-mix(in oklab, var(--success) 24%, #f3fff7);
+  --quote-pill-fg: color-mix(in oklab, var(--success) 70%, #0f2918);
+}
+
+.notion-quote[data-tone="blue"],
+.notion-quote[data-tone="purple"] {
+  --quote-pill-bg: color-mix(in oklab, var(--ring) 25%, #f4f7ff);
+  --quote-pill-fg: color-mix(in oklab, var(--ring) 80%, #0b1a33);
+}
+
+.notion-quote[data-tone="pink"],
+.notion-quote[data-tone="red"] {
+  --quote-pill-bg: color-mix(in oklab, var(--danger) 20%, #fff4f5);
+  --quote-pill-fg: color-mix(in oklab, var(--danger) 75%, #4a0916);
+}
+
+.marketing-page .marketing-section[data-tone="dark"] .notion-quote {
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.marketing-page .marketing-section[data-tone="dark"] .notion-quote[data-tone="default"],
+.marketing-page .marketing-section[data-tone="dark"] .notion-quote[data-tone="gray"],
+.marketing-page .marketing-section[data-tone="dark"] .notion-quote:not([data-tone]) {
+  --quote-pill-bg: color-mix(in oklab, rgba(255, 255, 255, 0.18) 60%, transparent);
+  --quote-pill-fg: #f8fbff;
+}
+
+.notion-codeblock {
+  background: var(--bg-soft);
+  border: 1px solid color-mix(in srgb, var(--fg-soft) 20%, transparent);
+  border-radius: var(--r-m);
+  padding: var(--space-m);
+  box-shadow: var(--shadow-s);
 }

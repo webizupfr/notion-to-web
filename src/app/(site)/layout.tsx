@@ -14,7 +14,7 @@ export default function SitesLayout({ children }: { children: ReactNode }) {
         Aller au contenu principal
       </a>
       <Header size={size} />
-      <main id="main-content" className="flex-1 px-6 pb-20 sm:px-8">
+      <main id="main-content" className="flex-1 pb-20">
         {children}
         <SpeedInsights />
       </main>

@@ -10,6 +10,14 @@ import type {
 import { notion } from "@/lib/notion";
 import { cacheGet, cacheSet } from "@/lib/cache";
 
+export type DbItemCell = {
+  key: string;
+  label: string;
+  type: string;
+  text: string | null;
+  value: unknown;
+};
+
 export type DbItem = {
   id: string;
   title: string;
@@ -18,10 +26,13 @@ export type DbItem = {
   cover?: string | null;
   tags?: string[];
   url?: string | null;
+  cells?: DbItemCell[];
 };
 
 export type DbBundle = {
-  view: "list" | "gallery";
+  view: "list" | "gallery" | "table";
+  viewId?: string | null;
+  viewName?: string | null;
   name: string;
   items: DbItem[];
   nextCursor?: string | null;
@@ -122,6 +133,112 @@ function filterPages(results: QueryDatabaseResponse["results"]): PageObjectRespo
   );
 }
 
+function buildCellsFromPage(
+  database: GetDatabaseResponse,
+  page: PageObjectResponse
+): DbItemCell[] {
+  const result: DbItemCell[] = [];
+  const dbProps = database.properties ?? {};
+  const pageProps = page.properties ?? {};
+
+  for (const [key, prop] of Object.entries(pageProps)) {
+    const meta = dbProps[key];
+    const label = meta?.name ?? key;
+    const type = (meta?.type as string | undefined) ?? prop?.type ?? "text";
+
+    const cell: DbItemCell = {
+      key,
+      label,
+      type,
+      text: null,
+      value: null,
+    };
+
+    switch (prop?.type) {
+      case "title": {
+        const text = prop.title?.map((t) => t.plain_text).join("").trim() || null;
+        cell.text = text;
+        cell.value = text;
+        break;
+      }
+      case "rich_text": {
+        const text = prop.rich_text?.map((t) => t.plain_text).join("").trim() || null;
+        cell.text = text;
+        cell.value = text;
+        break;
+      }
+      case "url":
+        cell.text = prop.url ?? null;
+        cell.value = prop.url ?? null;
+        break;
+      case "email":
+        cell.text = prop.email ?? null;
+        cell.value = prop.email ?? null;
+        break;
+      case "phone_number":
+        cell.text = prop.phone_number ?? null;
+        cell.value = prop.phone_number ?? null;
+        break;
+      case "number":
+        cell.text =
+          typeof prop.number === "number" && Number.isFinite(prop.number)
+            ? String(prop.number)
+            : prop.number === null
+              ? null
+              : String(prop.number ?? "");
+        cell.value = prop.number ?? null;
+        break;
+      case "select":
+        cell.text = prop.select?.name ?? null;
+        cell.value = prop.select?.name ?? null;
+        break;
+      case "status":
+        cell.text = prop.status?.name ?? null;
+        cell.value = prop.status?.name ?? null;
+        break;
+      case "multi_select": {
+        const tags = prop.multi_select?.map((tag) => tag.name) ?? [];
+        cell.text = tags.length ? tags.join(", ") : null;
+        cell.value = tags;
+        break;
+      }
+      case "people": {
+        const people =
+          prop.people?.map((person) => {
+            if ("name" in person && person.name) return person.name;
+            return person.id;
+          }) ?? [];
+        cell.text = people.length ? people.join(", ") : null;
+        cell.value = people;
+        break;
+      }
+      case "date":
+        cell.text = prop.date?.start ?? null;
+        cell.value = prop.date ?? null;
+        break;
+      case "checkbox":
+        cell.text = prop.checkbox ? "Yes" : "No";
+        cell.value = prop.checkbox;
+        break;
+      case "files":
+        cell.text = prop.files?.[0]?.name ?? null;
+        cell.value = prop.files?.map((file) => {
+          if ("external" in file) return file.external.url;
+          if ("file" in file) return file.file.url;
+          return null;
+        });
+        break;
+      default:
+        cell.text = null;
+        cell.value = null;
+    }
+
+    result.push(cell);
+  }
+
+  return result;
+}
+
 type NotionAccessError = Error & { code: string };
 
 function noAccessError(id: string): NotionAccessError {
@@ -130,9 +247,17 @@ function noAccessError(id: string): NotionAccessError {
   return error;
 }
 
+type FetchBundleOptions = {
+  pageSize?: number;
+  startCursor?: string;
+  viewId?: string | null;
+  viewType?: DbBundle["view"] | null;
+  viewName?: string | null;
+};
+
 export async function fetchDatabaseBundle(
   databaseId: string,
-  opts?: { pageSize?: number; startCursor?: string }
+  opts?: FetchBundleOptions
 ): Promise<DbBundle> {
   let database: GetDatabaseResponse;
   try {
@@ -147,7 +272,8 @@ export async function fetchDatabaseBundle(
   }
   const version = (database as { last_edited_time?: string }).last_edited_time as string;
   const cursor = opts?.startCursor ?? "_";
-  const cacheKey = `db:${databaseId}:${version}:cursor:${cursor}`;
+  const viewKey = opts?.viewId ?? "_";
+  const cacheKey = `db:${databaseId}:${version}:view:${viewKey}:cursor:${cursor}`;
   const cached = cacheGet<DbBundle>(cacheKey);
   if (cached) return cached;
 
@@ -175,14 +301,18 @@ export async function fetchDatabaseBundle(
     cover: getCover(page),
     tags: getTags(page.properties, tagsKey),
     url: page.url,
+    cells: buildCellsFromPage(database, page),
   }));
 
   const withCover = items.filter((item) => !!item.cover).length;
-  const view: "list" | "gallery" =
+  const inferredView: DbBundle["view"] =
     items.length > 0 && withCover >= Math.ceil(items.length * 0.6) ? "gallery" : "list";
+  const view = opts?.viewType ?? inferredView;
 
   const bundle: DbBundle = {
     view,
+    viewId: opts?.viewId ?? null,
+    viewName: opts?.viewName ?? null,
     name: (database as DatabaseObjectResponse).title?.[0]?.plain_text ?? "Collection",
     items,
     nextCursor: response.next_cursor ?? null,

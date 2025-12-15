@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, memo } from "react";
+import { Heading } from "@/components/ui/Heading";
+import { Text } from "@/components/ui/Text";
 import type { FillBlanksWidgetConfig } from "@/lib/widget-parser";
 
 type Segment = { type: 'text'; text: string } | { type: 'field'; name: string; label?: string };
@@ -56,7 +58,7 @@ const InlineInput = memo(function InlineInput({ name, value, placeholder, onChan
       defaultValue={value}
       onInput={(e) => onChange((e.target as HTMLInputElement).value)}
       placeholder={placeholder ?? name}
-      className="mx-1 inline-block min-w-[12ch] rounded-md border border-amber-300 bg-white/80 px-2 py-1 text-[0.95rem] italic outline-none focus:ring-2"
+      className="mx-1 inline-block min-w-[12ch] rounded-[var(--r-md)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-2)] py-[var(--space-1)] text-[0.95rem] italic text-[color:var(--fg)] shadow-sm outline-none focus:border-[color-mix(in_oklab,var(--primary)_55%,transparent)] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_28%,transparent)]"
       spellCheck={false}
       autoComplete="off"
     />
@@ -105,12 +107,12 @@ export function FillBlanksWidget({ config, storageKey }: { config: FillBlanksWid
   );
 
   return (
-    <section className="widget-surface p-5 space-y-4">
-      {config.title ? <h3 className="text-lg font-semibold">{config.title}</h3> : null}
-      <p className="text-sm text-slate-600">Remplis les blancs puis passe en « Mode capture » pour prendre une capture d’écran.</p>
+    <section className="surface-card space-y-[var(--space-m)]">
+      {config.title ? <Heading level={3} className="text-[1.12rem] leading-[1.35]">{config.title}</Heading> : null}
+      <Text variant="small" className="text-[color:var(--muted)]">Remplis les blancs puis passe en « Mode capture » pour prendre une capture d’écran.</Text>
 
       {!capture ? (
-        <blockquote className="rounded-2xl border bg-white/85 p-4 text-[1.05rem] leading-[1.75] whitespace-pre-wrap">
+        <blockquote className="rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] p-[var(--space-4)] text-[1.05rem] leading-[1.75] whitespace-pre-wrap text-[color:var(--fg)] shadow-sm">
           {segments.map((seg, idx) => (
             seg.type === 'text'
               ? <span key={`t:${idx}`}>{seg.text}</span>
@@ -118,7 +120,7 @@ export function FillBlanksWidget({ config, storageKey }: { config: FillBlanksWid
           ))}
         </blockquote>
       ) : (
-        <blockquote className="rounded-2xl border bg-white p-6 text-[1.15rem] leading-[1.75] whitespace-pre-wrap">
+        <blockquote className="rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_96%,#fff)] p-[var(--space-5)] text-[1.15rem] leading-[1.75] whitespace-pre-wrap text-[color:var(--fg)] shadow-sm">
           {segments.map((seg, idx) => {
             if (seg.type === 'text') return <span key={idx}>{seg.text}</span>;
             const v = values[seg.name];
