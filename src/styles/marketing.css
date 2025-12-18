@@ -11,13 +11,11 @@
 .marketing-page .marketing-stack {
   display: flex;
   flex-direction: column;
-  gap: clamp(var(--space-4), 2.2vw, var(--space-7));
 }
 
 .marketing-page .marketing-top {
   display: flex;
   flex-direction: column;
-  gap: clamp(var(--space-4), 2vw, var(--space-6));
 }
 
 .marketing-page .marketing-sections {
@@ -35,7 +33,7 @@
 
   position: relative;
   z-index: 0;
-  padding-block: clamp(var(--space-6), 4.5vw, var(--space-9));
+  padding-block: clamp(var(--space-4), 3vw, var(--space-6));
   border-radius: 0; /* plus de grosse carte globale */
   background: var(--section-bg);
   box-shadow: none;
@@ -66,6 +64,7 @@
   --primary: #111827;
 
   --section-divider: rgba(153, 110, 82, 0.3);
+  
 }
 
 /* Highlight — ivoire froid / papier premium */
@@ -98,9 +97,8 @@
 
 .marketing-page .marketing-section .marketing-section__container {
   width: 100%;
-  max-width: 1060px;
+  max-width: 960px;
   margin-inline: auto;
-  padding-inline: clamp(var(--space-5), 4vw, var(--space-7));
   box-sizing: border-box;
   position: relative;
   z-index: 1;
@@ -109,24 +107,27 @@
 .marketing-page .marketing-section .marketing-section__body {
   display: flex;
   flex-direction: column;
-  gap: clamp(var(--space-3), 1.5vw, var(--space-4));}
+    --section-body-gap: clamp(var(--space-2), 1vw, var(--space-3));
+  gap: var(--section-body-gap);
+
+}
 
 .marketing-page .marketing-section .marketing-section__body--default {
-  padding-block: clamp(var(--space-4), 2.5vw, var(--space-6));
+  padding-block: clamp(var(--space-6), 4vw, var(--space-8));
 }
 
 .marketing-page .marketing-section .marketing-section__body--dense {
-  padding-block: clamp(var(--space-3), 1.8vw, var(--space-4));
-  gap: clamp(var(--space-3), 1.8vw, var(--space-4));
+  padding-block: clamp(var(--space-3), 2.5vw, var(--space-4));
+  gap: clamp(var(--space-2), 1.4vw, var(--space-3));
 }
 
 .marketing-page .marketing-section .marketing-section__body--wide {
-  padding-block: clamp(var(--space-5), 4vw, var(--space-8));
+  padding-block: clamp(var(--space-5), 4vw, var(--space-7));
 }
 
 /* overrides pour les tons dark (après variantes pour éviter couleur ternie) */
 .marketing-page .marketing-section[data-tone="dark"] .marketing-section__body {
-  padding-block: clamp(var(--space-6), 4.5vw, var(--space-10));
+  padding-block: clamp(var(--space-5), 3.5vw, var(--space-8));
 }
 .marketing-page .marketing-section[data-tone="dark"] .marketing-section__body,
 .marketing-page .marketing-section[data-tone="dark"] .marketing-section__body p,
@@ -257,8 +258,8 @@
 .marketing-page .marketing-divider {
   border: 0;
   height: 2px;
-  margin: clamp(var(--space-5), 4vw, var(--space-8)) auto;
-  max-width: 1060px;
+  margin: clamp(var(--space-4), 3vw, var(--space-6)) auto;
+  max-width: 980px;
   background: linear-gradient(
     90deg,
     transparent,
@@ -285,7 +286,7 @@
   line-height: 1.1;
   letter-spacing: -0.03em;
   font-weight: 750;
-  margin-bottom: clamp(var(--space-3), 1.8vw, var(--space-4));
+  margin-bottom: clamp(var(--space-1), 0.8vw, var(--space-2));
 }
 
 .marketing-page .marketing-section h3 {
@@ -293,19 +294,31 @@
   line-height: 1.2;
   letter-spacing: -0.01em;
   font-weight: 600;
-  margin-bottom: var(--space-2);
+  margin-bottom: clamp(var(--space-1), 0.6vw, var(--space-2));
 }
 
 .marketing-page .marketing-section p:first-of-type,
 .marketing-page .marketing-section .marketing-heading__lead {
-  font-size: clamp(1rem, 1.7vw, 1.25rem);
-  line-height: 1.75;
+  font-size: clamp(1rem, 1.6vw, 1.18rem);
+  line-height: 1.55;
+  max-width: 72ch;
   color: color-mix(in oklab, var(--fg) 88%, white);
+  margin-top: var(--space-1);
 }
 
 .marketing-page .marketing-section p + p {
   color: color-mix(in oklab, var(--fg) 78%, white);
-  line-height: 1.65;
+  margin-top: var(--space-xs);
+}
+
+.marketing-page .marketing-section .prose + .prose {
+  margin-top: var(--space-2);
+}
+
+.marketing-page .marketing-section p,
+.marketing-page .marketing-section li {
+  line-height: 1.5;
+  max-width: 72ch;
 }
 
 .marketing-page .marketing-section[data-tone="dark"] h2,
@@ -315,15 +328,59 @@
   color: #f8fbff;
 }
 
+.marketing-page .surface-panel .prose,
+.marketing-page .content-panel .prose {
+  max-width: none;
+}
+
+.marketing-page .collection .item-excerpt {
+  font-size: 0.82rem !important;
+  line-height: 1.35;
+  margin-top: 0;
+  max-width: none;
+  color: color-mix(in oklab, var(--fg) 75%, var(--muted));
+}
+
+.marketing-page .marketing-section__body .notion-heading {
+  margin-top: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+.marketing-page .marketing-section__body .notion-quote + .notion-heading {
+  margin-top: var(--space-1);
+}
+.marketing-page .marketing-section__body .notion-heading:first-child {
+  margin-top: 0;
+}
+.marketing-page .marketing-section__body .notion-heading:last-child {
+  margin-bottom: var(--space-1);
+}
+.marketing-page .marketing-section__body > .notion-quote + .notion-heading,
+.marketing-page .marketing-section__body > .notion-heading + .prose {
+  margin-top: calc(-0.4 * var(--section-body-gap));
+}
+
+.marketing-page .marketing-heading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.marketing-page .marketing-heading__eyebrow {
+  margin-bottom: 0;
+}
+.marketing-page .marketing-heading__lead {
+  margin-top: 0;
+}
+
+
 .marketing-page .marketing-heading__eyebrow {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-2);
   font-size: 0.78rem;
   text-transform: uppercase;
   letter-spacing: 0.15em;
   color: color-mix(in oklab, var(--primary) 75%, white);
+  margin-bottom: clamp(var(--space-1), 0.6vw, var(--space-1));
 }
 
 .marketing-page .marketing-eyebrow-pill {
@@ -348,6 +405,25 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-m);
+}
+
+.marketing-page .notion-column:has(> :only-child .notion-media__inner) {
+  align-items: center;
+  justify-content: center;
+}
+
+.marketing-page .notion-column > .notion-image,
+.marketing-page .notion-column > .notion-media,
+.marketing-page .notion-column > .notion-media-frame,
+.marketing-page .notion-column > .notion-media figure,
+.marketing-page .notion-column > figure:has(.notion-media__inner),
+.marketing-page .notion-column > :is(.notion-media, .notion-image, .notion-media__inner),
+.marketing-page figure.notion-media,
+.marketing-page figure.notion-image {
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .marketing-page .notion-columns .notion-column:not([style*="width"]) {
@@ -389,7 +465,7 @@
   border-radius: clamp(var(--r-m), 1vw, 24px);
   border: 1px solid color-mix(in oklab, var(--border) 40%, transparent);
   background: color-mix(in oklab, var(--bg-soft) 96%, #ffffff 4%);
-  padding: clamp(var(--space-m), 2vw, var(--space-l));
+  padding: clamp(var(--space-s), 1.6vw, var(--space-m));
   box-shadow: none; /* plus de shadow fort */
 }
 
@@ -437,12 +513,50 @@
   background: color-mix(in oklab, white 98%, var(--bg-card));
 }
 
+.marketing-page .marketing-section[data-tone="dark"] .callout,
+.marketing-page .marketing-section[data-tone="dark"] .callout-note,
+.marketing-page .marketing-section[data-tone="dark"] .callout-warning,
+.marketing-page .marketing-section[data-tone="dark"] .callout-success,
+.marketing-page .marketing-section[data-tone="dark"] .callout-danger {
+  color: #1f242f;
+  background: color-mix(in oklab, rgba(255, 255, 255, 0.95) 85%, white);
+  border-color: rgba(15, 23, 42, 0.12);
+}
+.marketing-page .marketing-section[data-tone="dark"] .callout .callout__body,
+.marketing-page .marketing-section[data-tone="dark"] .callout .callout__body p,
+.marketing-page .marketing-section[data-tone="dark"] .callout .callout__body li,
+.marketing-page .marketing-section[data-tone="dark"] .callout .prose,
+.marketing-page .marketing-section[data-tone="dark"] .callout .prose * {
+  color: #1f242f;
+}
+
+.marketing-page .callout .callout__body {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.marketing-page .callout .callout__body {
+  display: grid;
+  gap: var(--space-xs); /* ou var(--space-1) */
+}
+
+.marketing-page .callout .callout__body p,
+.marketing-page .callout .callout__body ul,
+.marketing-page .callout .callout__body ol {
+  margin: 0;
+}
+.marketing-page .callout .callout__body p:not(:last-child) {
+  margin-bottom: var(--space-xs);
+}
+
+
 /* Nested callout reset */
 .marketing-page .callout .callout {
   border-radius: var(--r-m);
   box-shadow: none;
   background: color-mix(in oklab, var(--bg-card) 92%, white 8%);
 }
+
 
 /* /* -------------------------------------------------------------------------- */
 /* Media & Buttons                                                            */
@@ -472,8 +586,22 @@
   padding-block: var(--space-3);
   box-shadow: 0 18px 40px rgba(10, 14, 30, 0.18);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-  align-self: flex-start;       /* <- empêche l’étirement horizontal */
+  align-self: flex-start; /* <- empêche l’étirement horizontal */
+  border: none;
+  background: linear-gradient(120deg, #11172b, #3d4757);
+  color: #fff;
+  text-shadow: none;
+  margin-top: clamp(var(--space-2), 1vw, var(--space-4));
 
+}
+
+.marketing-page .marketing-section[data-tone="dark"] .notion-button {
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklab, var(--primary) 92%, #fff 8%),
+    color-mix(in oklab, var(--primary) 72%, #ffeeb7)
+  );
+  color: var(--primary-contrast, #1a1a1a);
 }
 
 .marketing-page .notion-button:hover {
@@ -504,4 +632,23 @@
 
 .marketing-page .h-5[aria-hidden="true"] {
   height: clamp(var(--space-4), 3vw, var(--space-6));
+}
+
+
+.marketing-page .section-intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.marketing-page .section-intro .marketing-heading__eyebrow {
+  margin-bottom: 0;
+}
+
+.marketing-page .section-intro h2 {
+  margin-bottom: 0;
+}
+
+.marketing-page .section-intro .marketing-heading__lead {
+  margin-top: 0;
 }

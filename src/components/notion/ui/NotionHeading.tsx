@@ -10,7 +10,7 @@ interface NotionHeadingProps {
 
 export function NotionHeading({ id, level, children }: NotionHeadingProps) {
   return (
-    <div className="mb-[var(--space-m)] mt-[var(--space-l)]">
+    <div className="notion-heading">
       <Heading id={id} level={level}>
         {children}
       </Heading>

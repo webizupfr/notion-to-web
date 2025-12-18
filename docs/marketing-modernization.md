@@ -56,6 +56,7 @@
 - [ ] Rédiger guidelines Notion : comment structurer callouts, colonnes, divider meta.  
 - [ ] Ajouter captures d’avant/après pour aligner produit/marketing.  
 - [ ] Mettre à jour README interne (ou ce fichier) avec check-list QA.
+- [x] Clarifier la propriété Notion `univers` : valeurs acceptées = `studio`, `lab`, `campus` (pilote la nav & styles marketing).
 
 ---
 

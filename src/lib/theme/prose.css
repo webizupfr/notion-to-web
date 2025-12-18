@@ -1,9 +1,9 @@
 /* Prose Impulsion V1 : styles texte long (Notion, blog, pages) */
 
 .prose {
-  max-width: 62ch;
+  max-width: none;
   color: var(--fg);
-  font-size: 0.95rem;
+  font-size: 1rem;
   line-height: 1.6;
 }
 
@@ -15,17 +15,22 @@
   display: inline;
 }
 
-.prose h1,
-.prose h2,
-.prose h3 {
+.prose h1 {
   font-family: var(--font-display);
   color: var(--fg);
   margin: var(--space-xl) 0 var(--space-m);
 }
 
-.prose h1 { font-size: clamp(1.75rem, 2.5vw, 2.1rem); line-height: 1.08; font-weight: 700; letter-spacing: -0.03em; }
-.prose h2 { font-size: clamp(1.35rem, 2vw, 1.65rem); line-height: 1.12; font-weight: 600; letter-spacing: -0.02em; }
-.prose h3 { font-size: clamp(1.12rem, 1.6vw, 1.32rem); line-height: 1.18; font-weight: 600; letter-spacing: -0.01em; }
+.prose h2,
+.prose h3 {
+  font-family: var(--font-display);
+  color: var(--fg);
+  margin: var(--space-xxs) 0 var(--space-xs);
+}
+
+.prose h1 { font-size: clamp(1.85rem, 2.8vw, 2.25rem); line-height: 1.1; font-weight: 700; letter-spacing: -0.03em; }
+.prose h2 { font-size: clamp(1.45rem, 2.2vw, 1.8rem); line-height: 1.14; font-weight: 600; letter-spacing: -0.02em; }
+.prose h3 { font-size: clamp(1.18rem, 1.8vw, 1.4rem); line-height: 1.2; font-weight: 600; letter-spacing: -0.01em; }
 
 .prose p {
   margin: 0 0 var(--space-s);

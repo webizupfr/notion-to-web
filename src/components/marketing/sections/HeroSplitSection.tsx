@@ -166,39 +166,42 @@ export function HeroSplitSection({
       "
       >
         {/* TEXTE */}
-        <div className="flex-1 max-w-lg lg:max-w-xl grid gap-4 lg:gap-5 text-left">
-          {eyebrow && (
-            <p className="text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-fg/60">
-              {eyebrow}
-            </p>
-          )}
+        <div className="flex-1 max-w-lg lg:max-w-xl text-left space-y-4 lg:space-y-5">
+          <div className="marketing-heading hero-heading">
+            {eyebrow ? (
+              <div className="marketing-heading__eyebrow">
+                <span className="marketing-eyebrow-pill">{eyebrow}</span>
+                <span className="marketing-heading__dash" aria-hidden />
+              </div>
+            ) : null}
 
-          {effectiveTitle && (
-            <h1 className="font-display font-extrabold text-[clamp(2rem,3vw,2.4rem)] leading-tight">
-              {effectiveTitle}
-            </h1>
-          )}
+            {effectiveTitle && (
+              <h1 className="font-display font-extrabold text-[clamp(2rem,3vw,2.4rem)] leading-tight">
+                {effectiveTitle}
+              </h1>
+            )}
 
-          {effectiveSubtitle && (
-            <p className="font-display mt-2 text-[clamp(1.1rem,2vw,1.4rem)] font-semibold text-fg/90">
-              {effectiveSubtitle}
-            </p>
-          )}
+            {effectiveSubtitle && (
+              <p className="font-display text-[clamp(1.1rem,2vw,1.4rem)] font-semibold text-fg/90">
+                {effectiveSubtitle}
+              </p>
+            )}
 
-          {lead && (
-            <p className="mt-3 text-[0.98rem] sm:text-[1.05rem] text-fg/80 leading-relaxed max-w-xl">
-              {lead}
-            </p>
-          )}
+            {lead && (
+              <p className="text-[0.98rem] sm:text-[1.05rem] text-fg/80 leading-relaxed max-w-xl">
+                {lead}
+              </p>
+            )}
 
-          {firstParagraph && (
-            <p className="mt-1 text-[0.9rem] sm:text-[0.95rem] text-fg/80 leading-relaxed max-w-xl">
-              {firstParagraph}
-            </p>
-          )}
+            {firstParagraph && (
+              <p className="text-[0.9rem] sm:text-[0.95rem] text-fg/80 leading-relaxed max-w-xl">
+                {firstParagraph}
+              </p>
+            )}
+          </div>
 
           {textBlocks.length > 0 && (
-            <div className="prose prose-notion max-w-2xl mt-3">
+            <div className="prose prose-notion max-w-2xl">
               <Blocks blocks={textBlocks} currentSlug={baseSlug} />
             </div>
           )}
@@ -207,14 +210,15 @@ export function HeroSplitSection({
             <a
               href={cta.href}
               className="
-                inline-flex items-center justify-center
-                mt-6
+                inline-flex w-auto max-w-max self-start items-center justify-center
                 rounded-full
                 px-6 py-3
                 text-[0.9rem] sm:text-[1rem]
-                font-semibold
-                bg-primary text-primary-foreground
-                shadow-md hover:shadow-lg
+                font-semibold tracking-tight
+                text-[color:var(--primary-contrast,#1a1a1a)]
+                bg-[radial-gradient(circle_at_20%_-20%,rgba(255,255,255,0.25),transparent_55%),color-mix(in_oklab,var(--primary)_85%,#fff)]
+                shadow-[0_20px_40px_rgba(15,11,40,0.25)]
+                hover:shadow-[0_24px_46px_rgba(15,11,40,0.28)]
                 transition-transform duration-150
                 hover:-translate-y-0.5
               "

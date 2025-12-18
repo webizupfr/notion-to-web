@@ -1192,7 +1192,7 @@ async function syncPage(page: PageObjectResponse, opts: SyncOptions) {
   if (strategyProp) meta.syncStrategy = strategyProp as PageMeta['syncStrategy'];
   if (universProp) {
     const u = String(universProp).toLowerCase();
-    meta.univers = (u === 'lab' ? 'lab' : 'studio') as PageMeta['univers'];
+    meta.univers = (u === 'lab' ? 'lab' : u === 'campus' ? 'campus' : 'studio') as PageMeta['univers'];
   }
   if (pageTypeProp) {
     const t = String(pageTypeProp).toLowerCase();

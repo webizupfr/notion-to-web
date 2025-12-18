@@ -23,11 +23,17 @@ export default function Home() {
       </MarketingHero>
 
       <PageSection variant="marketing">
-        <div className="grid gap-[var(--space-m)] sm:grid-cols-2">
+        <div className="grid gap-[var(--space-m)] sm:grid-cols-2 lg:grid-cols-3">
           <Link href="/studio" className="surface-card">
             <span className="pill">Le Studio</span>
             <Heading level={3}>Collectif, innovation, transformation</Heading>
             <Text variant="muted">Propulser les équipes et les projets stratégiques.</Text>
+          </Link>
+
+          <Link href="/campus" className="surface-card">
+            <span className="pill">Le Campus</span>
+            <Heading level={3}>Immersion, mise en pratique, coaching</Heading>
+            <Text variant="muted">Former vos talents dans un format intensif et premium.</Text>
           </Link>
 
           <Link href="/lab" className="surface-card">

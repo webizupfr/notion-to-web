@@ -28,7 +28,7 @@ export type PageMeta = {
   fullWidth: boolean;
   lastEdited?: string;
   // Univers de positionnement (déterminé par Notion ou par le slug)
-  univers?: "studio" | "lab";
+  univers?: "studio" | "lab" | "campus";
   // Typologie de page (optionnelle)
   pageType?: "landing" | "article" | "offre" | "programme";
   // Navigation hiérarchique (sections + pages groupées)

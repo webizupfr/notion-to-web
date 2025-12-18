@@ -63,5 +63,5 @@ export function NotionColumns({ columns, ratios }: NotionColumnsProps) {
 }
 
 export function NotionColumn({ children }: { children: ReactNode }) {
-  return <div className="notion-column space-y-[var(--space-m)]">{children}</div>;
+  return <div className="notion-column">{children}</div>;
 }

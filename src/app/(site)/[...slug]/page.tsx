@@ -101,9 +101,15 @@ export default async function Page({
   }
   
   // Déterminer l'univers (Notion prioritaire, sinon préfixe du slug)
-  const universAttr: "studio" | "lab" | undefined =
-    (meta.univers as "studio" | "lab" | undefined) ||
-    (slug.startsWith("lab") ? "lab" : slug.startsWith("studio") ? "studio" : undefined);
+  type UniversKind = "studio" | "lab" | "campus";
+  const slugUnivers: UniversKind | undefined = slug.startsWith("lab")
+    ? "lab"
+    : slug.startsWith("studio")
+      ? "studio"
+      : slug.startsWith("campus")
+        ? "campus"
+        : undefined;
+  const universAttr: UniversKind | undefined = (meta.univers as UniversKind | undefined) || slugUnivers;
 
   const effectiveVisibility = cohort?.visibility ?? meta.visibility;
   const effectivePassword = (cohort?.password ?? meta.password) || null;
@@ -765,9 +771,7 @@ export default async function Page({
   ) => {
     const SectionDivider = () => (
       <div className="section-divider" aria-hidden="true">
-        <span className="divider-pill">
-          <span className="divider-dot" />
-        </span>
+   
       </div>
     );
     const sections = mapSectionsWithPreset(
@@ -797,10 +801,21 @@ export default async function Page({
       const renderClassicSections = classicSections.length ? (
         <div className="marketing-sections">
           {classicSections.map((section, idx) => {
+            if (section.preset === "logos-band") {
+              const logosInline = renderMarketingSection({
+                preset: section.preset,
+                blocks: section.blocks as NotionBlock[],
+                title: section.header?.title ?? undefined,
+                lead: section.header?.lead ?? undefined,
+                eyebrow: section.header?.eyebrow ?? undefined,
+                baseSlug: slugForBlocks,
+              });
+              return <Fragment key={section.id}>{logosInline}</Fragment>;
+            }
             const tone = section.tone ?? (alternate ? toneCycle[idx % toneCycle.length] : "flat");
             return (
               <Fragment key={section.id}>
-                {idx > 0 && <SectionDivider />}
+                {idx > 0}
                 <section className="marketing-section" data-tone={tone}>
                   <DefaultMarketingSection
                     blocks={section.blocks as NotionBlock[]}

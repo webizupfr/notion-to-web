@@ -206,12 +206,12 @@ export function GalleryView({ items, basePath }: { items: DbItem[]; basePath: st
               />
             ) : null}
           </div>
-          <div className="space-y-2 px-[var(--space-6)] pb-[var(--space-6)] pt-[var(--space-5)]">
-            <h4 className="item-title font-semibold text-[var(--step-1)] leading-[1.4] transition group-hover:underline group-hover:underline-offset-4 text-[color:var(--fg)]">
+          <div className="space-y-1.5 px-[var(--space-6)] pb-[var(--space-6)] pt-[var(--space-5)]">
+            <h4 className="item-title font-semibold text-[0.95rem] leading-[1.3] transition group-hover:underline group-hover:underline-offset-4 text-[color:var(--fg)]">
               {item.title}
             </h4>
             {item.excerpt ? (
-              <p className="item-excerpt text-[var(--step-0)] leading-[1.6] text-balance line-clamp-3 text-[color:var(--muted)]">
+              <p className="item-excerpt text-[0.82rem] leading-[1.35] text-balance line-clamp-3 text-[color:var(--muted)]">
                 {item.excerpt}
               </p>
             ) : null}
