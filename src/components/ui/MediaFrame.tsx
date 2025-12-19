@@ -36,7 +36,9 @@ export function MediaFrame({
 
   const figureClass = withBackground
     ? "media-figure inline-block max-w-full overflow-hidden rounded-[var(--r-xl)] border border-[color:var(--border)]"
-    : "media-figure inline-block max-w-full rounded-[var(--r-xl)]";
+    : "media-figure inline-block max-w-full overflow-hidden rounded-[var(--r-xl)]";
+
+  const imageClass = "block h-auto w-full object-contain rounded-[var(--r-xl)]";
 
   return (
     <figure className={figureClass} style={figureStyle}>
@@ -46,7 +48,7 @@ export function MediaFrame({
         width={width ?? 1600}
         height={height ?? 900}
         sizes="100vw"
-        className={withBackground ? "block h-auto w-full object-contain" : "block h-auto w-full object-contain"}
+        className={imageClass}
         loading="lazy"
       />
       {caption ? (

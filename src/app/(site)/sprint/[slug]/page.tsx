@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
+import "@/styles/sprint.css";
 
 import { getSprintBundle } from "@/lib/content-store";
 import type { NotionBlock } from "@/lib/notion";
@@ -119,8 +120,8 @@ export default async function SprintPage({
         />
       </div>
 
-      <section className="flex-1 min-w-0 space-y-8">
-        <PageSection variant="content" size="wide">
+      <section className="flex-1 min-w-0 sprint-content">
+        <PageSection variant="content" size="wide" paddingY="tight">
           <div className="surface-card space-y-[var(--space-m)]">
             <header className="flex flex-col gap-[var(--space-s)] sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-[var(--space-xs)]">
@@ -153,7 +154,7 @@ export default async function SprintPage({
           </div>
         </PageSection>
 
-        <PageSection variant="content" id="modules" size="wide">
+        <PageSection variant="content" id="modules" size="wide" paddingY="tight">
           <div className="space-y-[var(--space-m)]">
             <Heading level={2}>Modules du sprint</Heading>
             <div className="grid gap-[var(--space-m)] sm:grid-cols-2">
@@ -195,7 +196,7 @@ export default async function SprintPage({
           </div>
         </PageSection>
 
-        <PageSection variant="content" size="wide">
+        <PageSection variant="content" size="wide" paddingY="tight">
           <div className="space-y-[var(--space-s)]">
             <Heading level={2}>Sprint Innovation : le Hub</Heading>
             {sprintSubtitle ? <Text>{sprintSubtitle}</Text> : null}
@@ -215,7 +216,7 @@ export default async function SprintPage({
           const sections = splitBlocksIntoSections(contextBlocks as NotionBlock[]);
           if (sections.length <= 1) {
             return (
-              <PageSection variant="content" size="wide">
+              <PageSection variant="content" size="wide" paddingY="tight">
                 <div className="content-panel section-band w-full">
                   <Blocks blocks={contextBlocks} currentSlug={navSlug} />
                 </div>
@@ -232,7 +233,7 @@ export default async function SprintPage({
                     variant="content"
                     tone={tone}
                     size="wide"
-                    className="py-[var(--space-5)] sm:py-[var(--space-6)]"
+                    paddingY="tight"
                   >
                     <div className="content-panel section-band w-full">
                       <Blocks blocks={section.blocks} currentSlug={navSlug} />

@@ -64,17 +64,28 @@ export default async function CohortHubPage({
   const days = (learningPath?.days ?? []) as import("@/lib/types").DayEntry[];
 
   const basePath = `hubs/${slug}/c/${cohortSlug}`;
-  const normalizeSlug = (s: string | undefined | null) => {
-    let cleaned = (s ?? "").replace(/^\/+/, "").replace(/^hubs\//, "");
-    if (cleaned.startsWith(`${slug}/`)) {
-      cleaned = cleaned.slice(slug.length + 1);
+  const stripLeadingSlash = (value: string) => value.replace(/^\/+/, "");
+  const ensureCohortScopedSlug = (value: string | undefined | null) => {
+    const raw = stripLeadingSlash(value ?? "");
+    if (!raw) return "";
+    if (raw.startsWith("hubs/")) return raw.replace(/\/+/g, "/");
+    if (raw === slug || raw === `${slug}/c/${cohortSlug}`) return basePath;
+    if (raw.startsWith(`${slug}/c/${cohortSlug}/`)) {
+      const suffix = raw.slice(`${slug}/c/${cohortSlug}`.length + 1);
+      return suffix ? `${basePath}/${suffix}`.replace(/\/+/g, "/") : basePath;
     }
-    return cleaned;
+    if (raw.startsWith(`${slug}/`)) {
+      const suffix = raw.slice(slug.length + 1);
+      return `${basePath}/${suffix}`.replace(/\/+/g, "/");
+    }
+    if (!raw.includes("/")) {
+      return `${basePath}/${raw}`.replace(/\/+/g, "/");
+    }
+    return raw.replace(/\/+/g, "/");
   };
   const withPrefix = (s: string | undefined | null) => {
-    const cleaned = normalizeSlug(s);
-    if (!cleaned) return "";
-    return `${basePath}/${cleaned}`.replace(/\/+/g, "/");
+    const scoped = ensureCohortScopedSlug(s);
+    return scoped ? scoped : "";
   };
 
   const sections = splitBlocksIntoSections((bundle.blocks ?? []) as NotionBlock[]);

@@ -92,6 +92,27 @@ function extractFirstParagraph(
   return { firstParagraph, remaining };
 }
 
+function extractEyebrowFromQuote(
+  blocks: NotionBlock[]
+): { eyebrow: string | null; remaining: NotionBlock[] } {
+  let eyebrow: string | null = null;
+  const remaining: NotionBlock[] = [];
+
+  for (const block of blocks) {
+    if (!eyebrow && block.type === "quote") {
+      const quote = (block as { quote?: { rich_text?: { plain_text?: string }[] } }).quote;
+      const text = richTextToPlain(quote?.rich_text);
+      if (text) {
+        eyebrow = text;
+        continue; // on retire ce quote du flux normal
+      }
+    }
+    remaining.push(block);
+  }
+
+  return { eyebrow, remaining };
+}
+
 function extractCtaFromBlocks(
   blocks: NotionBlock[]
 ): { cta: CTA | null; remaining: NotionBlock[] } {
@@ -135,16 +156,21 @@ export function HeroSplitSection({
   baseSlug,
 }: MarketingSectionProps) {
   const { content, media } = splitContentAndMedia(blocks);
-  const { cta, remaining } = extractCtaFromBlocks(content);
-  const { first: h1Text, second: h2Text, remaining: afterHeadings } =
-    extractFirstHeadings(remaining);
+
+const { eyebrow: quoteEyebrow, remaining: afterEyebrow } =
+  extractEyebrowFromQuote(content);
+
+const { cta, remaining } = extractCtaFromBlocks(afterEyebrow);
+
+const { first: h1Text, second: h2Text, remaining: afterHeadings } =
+  extractFirstHeadings(remaining);
   const { firstParagraph, remaining: tailBlocks } =
     extractFirstParagraph(afterHeadings);
   const textBlocks = tailBlocks.filter(
     (block) => !HEADING_TYPES.has(block.type as NotionBlock["type"])
   );
   const showMedia = media.length > 0;
-
+  const effectiveEyebrow = eyebrow ?? quoteEyebrow;
   const effectiveTitle = title || h1Text || null;
   const effectiveSubtitle = h2Text || (title && h1Text ? h1Text : null);
 
@@ -160,48 +186,64 @@ export function HeroSplitSection({
         items-center
         gap-8 lg:gap-12
         px-6 lg:px-10
-        pt-14 pb-16
-        lg:pt-18 lg:pb-14
-        min-h-[52vh] lg:min-h-[60vh]
+        pt-16 pb-20
+    lg:pt-20 lg:pb-18
+    min-h-[56vh] lg:min-h-[64vh]
       "
       >
         {/* TEXTE */}
-        <div className="flex-1 max-w-lg lg:max-w-xl text-left space-y-4 lg:space-y-5">
+<div className="flex-1 max-w-lg lg:max-w-xl text-left space-y-6">
           <div className="marketing-heading hero-heading">
-            {eyebrow ? (
-              <div className="marketing-heading__eyebrow">
-                <span className="marketing-eyebrow-pill">{eyebrow}</span>
-                <span className="marketing-heading__dash" aria-hidden />
-              </div>
-            ) : null}
+            
+
+            {effectiveEyebrow ? (
+  <div className="marketing-heading__eyebrow mb-5">
+    <span
+  className="
+    inline-flex items-center gap-2
+    rounded-full
+    px-4 py-2
+    text-[0.8rem] font-semibold tracking-[0.18em]
+    uppercase
+    bg-white/35 backdrop-blur-md
+    border border-black/10
+    shadow-[0_18px_40px_rgba(10,14,30,0.10)]
+  "
+>
+  <span className="h-2.5 w-2.5 rounded-full bg-black/70" aria-hidden />
+  {effectiveEyebrow}
+</span>
+    <span className="marketing-heading__dash" aria-hidden />
+  </div>
+) : null}
 
             {effectiveTitle && (
-              <h1 className="font-display font-extrabold text-[clamp(2rem,3vw,2.4rem)] leading-tight">
+  <h1 className="mt-5 font-display font-extrabold text-[clamp(2rem,3vw,2.4rem)] leading-[1.08] tracking-tight">
                 {effectiveTitle}
               </h1>
             )}
 
             {effectiveSubtitle && (
-              <p className="font-display text-[clamp(1.1rem,2vw,1.4rem)] font-semibold text-fg/90">
+  <p className="mt-5 font-display text-[clamp(1.1rem,2vw,1.4rem)] leading-snug font-semibold text-fg/90">
                 {effectiveSubtitle}
               </p>
             )}
 
             {lead && (
-              <p className="text-[0.98rem] sm:text-[1.05rem] text-fg/80 leading-relaxed max-w-xl">
+  <p className="mt-5 text-[0.98rem] sm:text-[1.05rem] text-fg/80 leading-relaxed max-w-xl">
                 {lead}
               </p>
             )}
 
             {firstParagraph && (
-              <p className="text-[0.9rem] sm:text-[0.95rem] text-fg/80 leading-relaxed max-w-xl">
+  <p className="mt-4 text-[0.9rem] sm:text-[0.95rem] text-fg/80 leading-relaxed max-w-xl">
                 {firstParagraph}
               </p>
             )}
           </div>
 
           {textBlocks.length > 0 && (
-            <div className="prose prose-notion max-w-2xl">
+<div className="prose prose-notion max-w-none">
               <Blocks blocks={textBlocks} currentSlug={baseSlug} />
             </div>
           )}
@@ -210,7 +252,7 @@ export function HeroSplitSection({
             <a
               href={cta.href}
               className="
-                inline-flex w-auto max-w-max self-start items-center justify-center
+                mt-5 inline-flex w-auto max-w-max self-start items-center justify-center
                 rounded-full
                 px-6 py-3
                 text-[0.9rem] sm:text-[1rem]

@@ -11,13 +11,13 @@ type Act = { id: string; tone: ActTone; lines: string[] };
 const TITLE = ["Impulsion", "Studio d’innovation."];
 
 const ACTS: Act[] = [
-  { id: "act-2", tone: "secondary", lines: ["Pas un cabinet.", "Pas une école.", "Pas une plateforme."] },
+  { id: "act-2", tone: "secondary", lines: ["Pas un cabinet de conseil.", "Pas une école.", "Pas une plateforme."] },
   {
     id: "act-3",
     tone: "primary",
     lines: ["Nous apprenons en construisant.", "Nous comprenons en expérimentant.", "Nous décidons en situation réelle."],
   },
-  { id: "act-4", tone: "primary", lines: ["L’innovation n’est pas une idée.", "C’est un système."] },
+  { id: "act-4", tone: "primary", lines: ["L’innovation ce n’est pas avoir des idées.", "C’est un processus."] },
   {
     id: "act-5",
     tone: "secondary",

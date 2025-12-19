@@ -23,6 +23,17 @@ function kvKeyForCloudinary(source: string) {
   return `cloudinary:${crypto.createHash('sha1').update(source).digest('hex')}`;
 }
 
+function isLikelySvg(sourceUrl: string, contentType?: string | null | undefined): boolean {
+  if (contentType && contentType.toLowerCase().includes('svg')) return true;
+  try {
+    const u = new URL(sourceUrl);
+    if (/\.svg($|(\?.*))/i.test(u.pathname)) return true;
+  } catch {
+    if (/\.svg($|(\?.*))/i.test(sourceUrl)) return true;
+  }
+  return false;
+}
+
 export type MirrorResult = {
   url: string;
   width?: number;
@@ -94,6 +105,8 @@ export async function mirrorRemoteImage(opts: {
   }
 
   const contentType = response.headers.get('content-type') ?? contentTypeHint ?? undefined;
+  const svgAsset = isLikelySvg(sourceUrl, contentType);
+  const payloadMime = svgAsset ? 'image/svg+xml' : (contentType || 'image/jpeg');
 
   // Extract intrinsic dimensions
   let width: number | undefined;
@@ -111,19 +124,24 @@ export async function mirrorRemoteImage(opts: {
 
   try {
     // Upload to Cloudinary
+    const uploadOptions: Parameters<typeof cloudinary.uploader.upload>[1] = {
+      public_id: targetKey,
+      folder: 'notion-pages',
+      resource_type: svgAsset ? 'image' : 'auto',
+      overwrite: true,
+      invalidate: true,
+    };
+    if (svgAsset) {
+      uploadOptions.format = 'svg';
+    } else {
+      uploadOptions.quality = 'auto';
+      uploadOptions.fetch_format = 'auto';
+      uploadOptions.flags = 'progressive';
+    }
+
     const result = await cloudinary.uploader.upload(
-      `data:${contentType || 'image/jpeg'};base64,${Buffer.from(arrayBuffer).toString('base64')}`,
-      {
-        public_id: targetKey,
-        folder: 'notion-pages',
-        resource_type: 'auto',
-        overwrite: true,
-        invalidate: true,
-        // Optimizations
-        quality: 'auto',
-        fetch_format: 'auto',
-        flags: 'progressive',
-      }
+      `data:${payloadMime};base64,${Buffer.from(arrayBuffer).toString('base64')}`,
+      uploadOptions
     );
 
     const cloudinaryUrl = result.secure_url;

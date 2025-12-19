@@ -107,7 +107,7 @@ export default async function StartToday({ days, unitLabelSingular, basePathPref
   return (
     <div className="rounded-2xl p-6 md:p-8 bg-amber-50 border border-amber-200 shadow-sm">
       <Text variant="small" className="text-amber-700 mb-2 uppercase tracking-wide">Aujourd’hui</Text>
-      <Heading level={2} className="text-[1.8rem] md:text-[2.1rem] leading-[1.2] mb-2">🎯 {unitLabel} {day.order} — {day.title}</Heading>
+      <Heading level={2} className="text-[1.8rem] md:text-[2.1rem] leading-[1.2] mb-2">🎯 {unitLabel} {day.order} : {day.title}</Heading>
       <Text className="text-slate-700 mb-5">{subtitle}</Text>
 
       {locked ? (

@@ -1,12 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
+import "@/styles/hub.css";
 
 import { getPageBundle } from "@/lib/content-store";
 import type { NotionBlock } from "@/lib/notion";
 import { PageSection } from "@/components/layout/PageSection";
 import { PageSidebar } from "@/components/layout/PageSidebar";
-import { LearningHeader } from "@/components/learning/LearningHeader";
 import { splitBlocksIntoSections } from "@/components/learning/sectioning";
 import { Blocks } from "@/components/notion/Blocks";
 import StartToday from "@/components/learning/StartToday";
@@ -46,7 +46,22 @@ export default async function HubPage({
   const days = (learningPath?.days ?? []) as import("@/lib/types").DayEntry[];
   const basePath = `hubs/${slug}`;
 
-  const sections = splitBlocksIntoSections((bundle.blocks ?? []) as NotionBlock[]);
+  const removePinnedCallouts = (blocksList: NotionBlock[]): NotionBlock[] => {
+    return blocksList.filter((block) => {
+      if ((block as { type?: string }).type !== "callout") return true;
+      const callout = (block as Extract<NotionBlock, { type: "callout" }>).callout;
+      const text = (callout.rich_text ?? [])
+        .map((r) => r.plain_text ?? "")
+        .join("")
+        .trim();
+      const icon = callout.icon;
+      const hasPinIcon = icon?.type === "emoji" && icon.emoji === "📌";
+      const hasPinText = text.startsWith("📌");
+      return !(hasPinIcon || hasPinText);
+    });
+  };
+
+  const sections = splitBlocksIntoSections(removePinnedCallouts((bundle.blocks ?? []) as NotionBlock[]));
   const renderSections = () => {
     if (!sections.length) return null;
     if (sections.length === 1) {
@@ -66,7 +81,6 @@ export default async function HubPage({
           variant="content"
           tone={tone}
           size="wide"
-          className="py-[var(--space-5)] sm:py-[var(--space-6)]"
         >
           <div className="content-panel section-band w-full">
             <Blocks blocks={section.blocks} currentSlug={`hubs/${slug}`} />
@@ -76,17 +90,24 @@ export default async function HubPage({
     });
   };
 
-  const normalizeSlug = (s: string | undefined | null) => {
-    let cleaned = (s ?? "").replace(/^\/+/, "").replace(/^hubs\//, "");
-    if (cleaned.startsWith(`${slug}/`)) {
-      cleaned = cleaned.slice(slug.length + 1);
+  const stripLeadingSlash = (value: string) => value.replace(/^\/+/, "");
+  const ensureHubScopedSlug = (value: string | undefined | null) => {
+    const raw = stripLeadingSlash(value ?? "");
+    if (!raw) return "";
+    if (raw.startsWith("hubs/")) return raw.replace(/\/+/g, "/");
+    if (raw === slug) return basePath;
+    if (raw.startsWith(`${slug}/`)) {
+      const suffix = raw.slice(slug.length + 1);
+      return `${basePath}/${suffix}`.replace(/\/+/g, "/");
     }
-    return cleaned;
+    if (!raw.includes("/")) {
+      return `${basePath}/${raw}`.replace(/\/+/g, "/");
+    }
+    return raw.replace(/\/+/g, "/");
   };
   const withPrefix = (s: string | undefined | null) => {
-    const cleaned = normalizeSlug(s);
-    if (!cleaned) return "";
-    return `${basePath}/${cleaned}`.replace(/\/+/g, "/");
+    const scoped = ensureHubScopedSlug(s);
+    return scoped ? scoped : "";
   };
 
   const navItems = navigation.map((item) => {
@@ -139,23 +160,12 @@ export default async function HubPage({
         />
       </div>
 
-      <section className="flex-1 min-w-0 space-y-8">
-        <PageSection variant="content" size="wide">
-          <LearningHeader
-            unitLabel="Programme"
-            unitNumber={null}
-            title={bundle.meta.title}
-            summary={bundle.meta.description ?? null}
-          />
-        </PageSection>
-
+      <section className="flex-1 min-w-0 hub-content">
         {renderSections()}
 
         {days.length ? (
           <PageSection variant="content" size="wide">
-            <div className="content-panel w-full">
               <StartToday days={daysWithPrefix} unitLabelSingular={unitLabelSingular} />
-            </div>
           </PageSection>
         ) : null}
       </section>

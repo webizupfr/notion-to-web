@@ -11,6 +11,7 @@ type PageSectionProps = {
   tone?: "default" | "alt";
   size?: "narrow" | "balanced" | "wide" | "fluid";
   innerPadding?: boolean;
+  paddingY?: "tight" | "normal" | "loose";
   /**
    * Wrap content in a max-width container (72ch) for long-form text.
    */
@@ -30,9 +31,17 @@ export function PageSection({
   tone = "default",
   size = "narrow",
   innerPadding = true,
+  paddingY = "normal",
   constrain = false,
   ...rest
 }: PageSectionProps) {
+  const paddingMap: Record<NonNullable<PageSectionProps["paddingY"]>, string> = {
+    tight: "py-[var(--space-3)] sm:py-[var(--space-4)]",
+    normal: "py-[var(--space-3)] sm:py-[var(--space-4)]",
+    loose: "py-[var(--space-3)] sm:py-[var(--space-4)]",
+  };
+  const paddingClass = paddingMap[paddingY] ?? paddingMap.normal;
+
   const shell = shells[variant];
   const cx = (...parts: Array<string | false | null | undefined>) =>
     parts.filter(Boolean).join(" ");
@@ -42,7 +51,7 @@ export function PageSection({
   return (
     <section
       className={cx(
-        "py-[var(--space-7)] sm:py-[var(--space-8)]",
+        paddingClass,
         tone === "alt" ? "section-tone-alt" : "section-tone-default",
         className
       )}

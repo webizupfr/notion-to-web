@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
+import "@/styles/sprint.css";
 
 import { getSprintBundle, getPageBundle } from "@/lib/content-store";
 import { Blocks } from "@/components/notion/Blocks";
@@ -176,8 +177,8 @@ export default async function SprintModulePage({
         />
       </div>
 
-      <section className="flex-1 min-w-0 space-y-8">
-        <PageSection variant="content" size="wide">
+      <section className="flex-1 min-w-0 sprint-content">
+        <PageSection variant="content" size="wide" paddingY="tight">
           <LearningHeader
             unitLabel={moduleDayLabel.startsWith("Jour") ? "Jour" : "Module"}
             unitNumber={currentModule.dayIndex !== null && currentModule.dayIndex !== undefined ? currentModule.dayIndex + 1 : currentModule.order}
@@ -193,7 +194,7 @@ export default async function SprintModulePage({
         </PageSection>
 
         {modulePage?.blocks?.length ? (
-          <PageSection variant="content">
+          <PageSection variant="content" paddingY="tight">
             <div className="surface-panel">
               <Blocks blocks={modulePage.blocks} currentSlug={`sprint/${slug}/${moduleSlug}`} />
             </div>
@@ -217,6 +218,11 @@ export default async function SprintModulePage({
               currentIndex={stepIdx}
               total={steps.length}
               currentStepId={currentStep?.id ?? ""}
+              completionCTA={{
+                progressKey: `sprint:${slug}:${moduleSlug}`,
+                returnTo: `/${parentSlug}`,
+                label: "Terminer ce module",
+              }}
             />
           </>
         ) : null}

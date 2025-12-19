@@ -443,6 +443,50 @@
   /* Typo helpers */
   .eyebrow { font-family: var(--font-display); text-transform: uppercase; letter-spacing: .08em; font-size: .78rem; color: color-mix(in oklab, var(--foreground) 65%, #94a3b8); }
   .lead    { font-size: 1.15rem; color: color-mix(in oklab, var(--foreground) 90%, #5b6475); }
+
+  .learning-complete-cta {
+    margin-top: var(--space-7);
+    padding-top: var(--space-6);
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    align-items: flex-start;
+  }
+
+  .learning-complete-cta__btn {
+    border-radius: 999px;
+    padding: 12px 18px;
+    border: none;
+    cursor: pointer;
+    background: linear-gradient(120deg, #11172b, #3d4757);
+    color: #fff;
+    box-shadow: 0 18px 40px rgba(10, 14, 30, 0.18);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .learning-complete-cta__btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 22px 54px rgba(10, 14, 30, 0.22);
+  }
+
+  .learning-complete-cta__hint {
+    margin: 0;
+    font-size: 0.95rem;
+    opacity: 0.7;
+  }
+
+  .learning-complete-cta--inline {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    align-items: flex-end;
+    gap: var(--space-1);
+  }
+  .learning-complete-cta--inline .learning-complete-cta__hint {
+    font-size: 0.85rem;
+    text-align: right;
+  }
 }
 
 .section-tone-default {
@@ -901,12 +945,23 @@
 .btn:active{ transform: translateY(0); transition-duration: .1s; }
 
 .btn-primary{
-  background: var(--primary);
-  color: var(--primary-contrast);
-  border-color: var(--primary);
-  box-shadow: var(--shadow-m);
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklab, var(--primary) 82%, #fff4c2),
+    color-mix(in oklab, var(--primary) 96%, #facc15)
+  );
+  color: #2b1b00;
+  border-color: color-mix(in oklab, var(--primary) 70%, #f59f0b);
+  box-shadow: 0 12px 25px rgba(245, 158, 11, 0.25);
 }
-.btn-primary:hover{ background: var(--primary-hover); box-shadow: var(--shadow-l); }
+.btn-primary:hover{
+  background: linear-gradient(
+    120deg,
+    color-mix(in oklab, var(--primary) 90%, #ffe8a3),
+    color-mix(in oklab, var(--primary) 98%, #ffd369)
+  );
+  box-shadow: 0 14px 32px rgba(245, 158, 11, 0.3);
+}
 
 .btn-accent,
 .btn-secondary{
@@ -1290,5 +1345,3 @@
 .notion-table tbody tr:hover {
   background: color-mix(in srgb, var(--bg-soft) 85%, white 15%);
 }
-
-

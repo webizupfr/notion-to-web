@@ -1221,8 +1221,9 @@ async function syncPage(page: PageObjectResponse, opts: SyncOptions) {
   }
 
   // Build navigation structure early so we can pass it to DB children
+  const slugForChildren = (meta as PageMeta).isHub ? `hubs/${slug}` : slug;
   console.log(`[sync] 🧭 Building navigation structure for "${slug}"...`);
-  const navigation = buildNavigationStructure(blocks, slug);
+  const navigation = buildNavigationStructure(blocks, slugForChildren);
 
   const linkedDbIds = await collectLinkedDatabaseIds(blocks);
   for (const databaseId of linkedDbIds) {
@@ -1245,7 +1246,7 @@ async function syncPage(page: PageObjectResponse, opts: SyncOptions) {
     console.log(`[sync] 🔄 Syncing database children for ${databaseId}...`);
     await syncDatabaseChildren(
       databaseId,
-      slug,
+      slugForChildren,
       {
         type: 'page',
         stats: opts.stats,
@@ -1254,7 +1255,7 @@ async function syncPage(page: PageObjectResponse, opts: SyncOptions) {
       },
       {
         parentTitle: meta.title,
-        parentSlug: slug,
+        parentSlug: slugForChildren,
         parentNavigation: navigation,
         isHub: Boolean((meta as PageMeta).isHub),
         hubDescription: (meta as PageMeta).description ?? null,
@@ -1275,7 +1276,7 @@ async function syncPage(page: PageObjectResponse, opts: SyncOptions) {
   let syncedChildren: Array<{ id: string; title: string; slug: string }> = [];
   if (canSyncChildren) {
     syncedChildren = await syncChildPages(
-      slug,
+      slugForChildren,
       page.id,
       blocks,
       {
@@ -1286,7 +1287,7 @@ async function syncPage(page: PageObjectResponse, opts: SyncOptions) {
       },
       {
         parentTitle: meta.title,
-        parentSlug: slug,
+        parentSlug: slugForChildren,
         parentNavigation: navigation,
         isHub: Boolean(meta.isHub),
         hubDescription: meta.description ?? null,

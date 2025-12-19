@@ -1,0 +1,27 @@
+/* Styles spécifiques aux pages Hub pour ajuster le rythme visuel sans toucher au marketing */
+
+@layer components {
+  .hub-content {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(var(--space-2), 1vw, var(--space-4));
+  }
+
+  .hub-content > * {
+    margin: 0;
+  }
+
+  .hub-content > section {
+    padding-block: clamp(var(--space-4), 2vw, var(--space-5)) !important;
+  }
+
+  .hub-content :where(h1, h2, h3) {
+    margin-top: var(--space-m);
+    margin-bottom: var(--space-s);
+  }
+
+  .hub-content :where(h1) {
+    padding-bottom: var(--space-xs);
+    border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  }
+}
