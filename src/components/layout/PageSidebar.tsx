@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import type { JSX, ReactNode } from 'react';
-import { IconChevronRight, IconMenu, IconX, IconHome, IconBookmark, IconStar, IconTarget, IconSparkles, IconCompass } from '@/components/ui/icons';
+import { IconBook, IconFileText, IconChevronRight, IconMenu, IconX } from '@/components/ui/icons';
 import type { DayEntry } from '@/lib/types';
 
 // Navigation item : section ou page
@@ -46,8 +46,6 @@ const stripPinEmoji = (value: string): string => {
   return cleaned || value.trim();
 };
 
-const quickNavIconSet = [IconBookmark, IconStar, IconTarget, IconSparkles, IconCompass] as const;
-
 const isUrl = (value: string | null | undefined): value is string => Boolean(value && /^https?:\/\//i.test(value));
 
 export function PageSidebar({
@@ -73,7 +71,7 @@ export function PageSidebar({
   const currentPath = pathname.startsWith('/') ? pathname.substring(1) : pathname;
   const isParentActive = currentPath === parentSlug;
   const parentIconNode = (
-    <SidebarIconVisual icon={parentIcon ?? null} fallback={<IconHome size={18} />} size={20} />
+    <SidebarIconVisual icon={parentIcon ?? null} fallback={<IconBook size={18} />} size={20} />
   );
   const filteredNavigation = useMemo(() => {
     if (!navigation.length) return [] as NavItem[];
@@ -134,6 +132,7 @@ export function PageSidebar({
     setOpenModuleGroups((prev) => ({ ...prev, [label]: !(prev[label] ?? false) }));
   };
 
+ 
   return (
     <>
       {/* Bouton toggle mobile */}
@@ -189,7 +188,6 @@ export function PageSidebar({
           onToggleModuleGroup={toggleModuleGroup}
           currentPath={currentPath}
           onNavigate={handleNavigate}
-          parentPath={parentSlug}
         />
 
         <SidebarActions actionsSlot={actionsSlot} variant={isHub ? 'hub' : 'sprint'} />
@@ -256,23 +254,28 @@ function SidebarHeader({
   onNavigate,
 }: SidebarHeaderProps) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl px-2 py-1">
-      <span
-        className={`inline-flex h-10 w-10 items-center justify-center rounded-xl bg-[color-mix(in_oklab,var(--bg)_80%,white_20%)] ${
-          isParentActive ? 'text-[color:var(--primary)]' : 'text-[color:var(--fg)]'
-        }`}
-      >
-        <SidebarIconVisual icon={parentIcon ?? null} fallback={<IconHome size={18} />} size={22} />
-      </span>
-      <Link
-        href={`/${parentSlug}`}
-        className={`block text-base font-semibold tracking-tight transition-colors ${
-          isParentActive ? 'text-[color:var(--primary)]' : 'text-[color:var(--fg)] hover:text-[color:var(--primary)]'
-        }`}
-        onClick={onNavigate}
-      >
-        {parentTitle}
-      </Link>
+    <div className="space-y-3 rounded-[28px] bg-[color-mix(in_oklab,var(--bg)_92%,white_8%)] p-5 shadow-[var(--shadow-soft)]">
+      <div className="flex items-center gap-4">
+        <span
+          className={`inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-inner ${
+            isParentActive ? 'ring-2 ring-[color:var(--primary)]' : 'ring-1 ring-[color:var(--border)]'
+          }`}
+        >
+          <SidebarIconVisual icon={parentIcon ?? null} fallback={<IconBook size={22} />} size={24} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <Link
+            href={`/${parentSlug}`}
+            className={`block text-lg font-bold tracking-tight transition-colors ${
+              isParentActive ? 'text-[color:var(--primary)]' : 'text-[color:var(--fg)] hover:text-[color:var(--primary)]'
+            }`}
+            onClick={onNavigate}
+          >
+            {parentTitle}
+          </Link>
+          
+        </div>
+      </div>
     </div>
   );
 }
@@ -292,52 +295,88 @@ function SidebarQuickNav({ navigation, currentPath, onNavigate }: SidebarQuickNa
     );
   }
 
-  let iconCursor = 0;
-  const renderLink = (slug: string, title: string, icon?: string | null) => {
-    const IconCandidate = quickNavIconSet[iconCursor % quickNavIconSet.length];
-    iconCursor += 1;
-    const isActive = currentPath === slug;
-    return (
-      <li key={slug}>
-        <Link
-          href={`/${slug}`}
-          className={`group flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-medium transition ${
-            isActive
-              ? 'bg-[color-mix(in_oklab,var(--primary)_12%,white_88%)] text-foreground shadow-[0_10px_28px_rgba(15,23,40,0.12)]'
-              : 'text-muted hover:bg-[color:var(--bg-soft)] hover:text-foreground'
-          }`}
-          onClick={onNavigate}
-        >
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-white shadow-inner/20 text-[color:var(--primary)]" aria-hidden>
-            <SidebarIconVisual icon={icon ?? null} fallback={<IconCandidate size={16} />} size={16} />
-          </span>
-          <span className="flex-1 truncate">{stripPinEmoji(title)}</span>
-          {isActive && (
-            <span className="text-primary" aria-hidden>
-              <IconChevronRight size={14} />
-            </span>
-          )}
-        </Link>
-      </li>
-    );
-  };
-
-  const flattened: Array<{ slug: string; title: string; icon?: string | null }> = [];
-  for (const item of navigation) {
-    if (item.type === 'section' && item.children) {
-      for (const child of item.children) {
-        if (!child.slug) continue;
-        flattened.push({ slug: child.slug, title: child.title, icon: child.icon });
-      }
-    } else if (item.type === 'page' && item.slug) {
-      flattened.push({ slug: item.slug, title: item.title, icon: item.icon });
-    }
-  }
-
   return (
     <div className="space-y-3">
       <div className="text-xs font-bold uppercase tracking-[0.3em] text-[color:var(--fg-muted)]">Accès rapide</div>
-      <ul className="space-y-2">{flattened.map((entry) => renderLink(entry.slug, entry.title, entry.icon))}</ul>
+      <div className="rounded-3xl border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_90%,white_10%)] p-4 shadow-[var(--shadow-soft)]">
+        <ul className="space-y-5">
+          {navigation.map((item, idx) => {
+            if (item.type === 'section' && item.children) {
+              return (
+                <li key={`section-${idx}`}>
+                  <div className="mb-2 flex items-center justify-between border-b border-dashed border-[color:var(--border)] pb-1 text-[11px] font-semibold uppercase tracking-[0.3em] text-[color:var(--muted)]">
+                    <span>{stripPinEmoji(item.title)}</span>
+                    <span className="text-[color:var(--muted)]">●</span>
+                  </div>
+                  <ul className="space-y-2">
+                    {item.children.map((child) => {
+                      const isActive = currentPath === child.slug;
+                      return (
+                        <li key={child.id}>
+                          <Link
+                            href={`/${child.slug}`}
+                            className={`group relative flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all ${
+                              isActive
+                                ? 'border border-primary/40 bg-[color-mix(in_oklab,var(--primary)_12%,white_88%)] text-foreground shadow-[0_12px_30px_rgba(15,23,40,0.12)]'
+                                : 'border border-transparent text-muted hover:-translate-y-[1px] hover:border-[color:var(--border)] hover:bg-[color:var(--bg-soft)] hover:text-foreground'
+                            }`}
+                            onClick={onNavigate}
+                          >
+                            <span
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-[color-mix(in_oklab,var(--primary)_10%,#fff)] text-[color:var(--primary)] shadow-inner/20"
+                              aria-hidden
+                            >
+                              <SidebarIconVisual icon={child.icon ?? null} fallback={<IconFileText size={16} />} size={16} />
+                            </span>
+                            <span className="flex-1">{stripPinEmoji(child.title)}</span>
+                            {isActive && (
+                              <span className="text-primary" aria-hidden>
+                                <IconChevronRight size={14} />
+                              </span>
+                            )}
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </li>
+              );
+            }
+
+            if (item.type === 'page' && item.slug) {
+              const isActive = currentPath === item.slug;
+              return (
+                <li key={item.id || `page-${idx}`}>
+                  <Link
+                    href={`/${item.slug}`}
+                    className={`group relative flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all border ${
+                      isActive
+                        ? 'border border-primary/40 bg-[color-mix(in_oklab,var(--primary)_12%,white_88%)] text-foreground shadow-[0_12px_30px_rgba(15,23,40,0.12)]'
+                        : 'border border-transparent text-muted hover:-translate-y-[1px] hover:border-[color:var(--border)] hover:bg-[color:var(--bg-soft)] hover:text-foreground'
+                    }`}
+                    onClick={onNavigate}
+                  >
+                    <span
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-[color-mix(in_oklab,var(--primary)_10%,#fff)] text-[color:var(--primary)] shadow-inner/20"
+                      aria-hidden
+                    >
+                      <SidebarIconVisual icon={item.icon ?? null} fallback={<IconFileText size={16} />} size={16} />
+                    </span>
+                    <span className="flex-1">{stripPinEmoji(item.title)}</span>
+                    {isActive && (
+                      <span className="text-primary" aria-hidden>
+                        <IconChevronRight size={14} />
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              );
+            }
+
+            return null;
+          })}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -355,7 +394,6 @@ type SidebarProgressProps = {
   onToggleModuleGroup: (label: string) => void;
   currentPath: string;
   onNavigate: () => void;
-  parentPath: string;
 };
 
 function SidebarProgress({
@@ -371,48 +409,14 @@ function SidebarProgress({
   onToggleModuleGroup,
   currentPath,
   onNavigate,
-  parentPath,
 }: SidebarProgressProps) {
-  if (!isHub) return null;
-
-  const hasWeeks = !isModuleMode && weekList.length > 0;
   const hasModules = isModuleMode && Boolean(moduleQuickGroups?.length);
+  if (!isHub && !hasModules) return null;
+
+  const hasWeeks = isHub && !isModuleMode && weekList.length > 0;
+  const moduleHeading = isHub ? "Modules par jour" : "Modules disponibles";
 
   if (!hasWeeks && !hasModules) return null;
-
-  const normalizedParent = parentPath.replace(/^\/+/, '').replace(/^hubs\//, '');
-  const deriveProgressKey = (fullSlug?: string | null) => {
-    if (!fullSlug) return null;
-    const normalizedFull = fullSlug.replace(/^\/+/, '').replace(/^hubs\//, '');
-    let daySegment = normalizedFull;
-    if (normalizedFull.startsWith(`${normalizedParent}/`)) {
-      daySegment = normalizedFull.slice(normalizedParent.length + 1);
-    }
-    const parentParts = normalizedParent.split('/').filter(Boolean);
-    if (!parentParts.length) return null;
-    const keyParts: string[] = ['hub', parentParts[0]];
-    if (parentParts[1] === 'c' && parentParts[2]) {
-      keyParts.push('c', parentParts[2]);
-    }
-    const daySlug = daySegment.split('/').filter(Boolean).pop();
-    if (daySlug) keyParts.push(daySlug);
-    return keyParts.join(':');
-  };
-
-  const isDayCompleted = (slug?: string | null) => {
-    if (!slug) return false;
-    const progressKey = deriveProgressKey(slug);
-    if (!progressKey) return false;
-    try {
-      if (typeof window === 'undefined') return false;
-      const raw = window.localStorage.getItem('sprint_progress');
-      if (!raw) return false;
-      const data = JSON.parse(raw) as Record<string, { done?: boolean }>;
-      return Boolean(data[progressKey]?.done);
-    } catch {
-      return false;
-    }
-  };
 
   return (
     <>
@@ -442,42 +446,44 @@ function SidebarProgress({
                     <span className="text-base" aria-hidden>{open ? '–' : '+'}</span>
                   </button>
                   {open && (
-                    <ul className="space-y-2 px-5 pb-4">
-                      {days.map((d) => {
-                        const isActive = currentPath === d.slug;
-                        const completed = isDayCompleted(d.slug);
-                        const displayTitle = d.title?.trim() || `Jour ${d.order}`;
-                        return (
-                          <li key={d.id}>
-                            <Link
-                              href={`/${d.slug}`}
-                              className={`flex items-center gap-3 rounded-2xl px-3 py-2 transition ${
-                                isActive
-                                  ? 'bg-[color-mix(in_oklab,var(--primary)_10%,#fff)] text-foreground shadow-[0_12px_24px_rgba(15,23,40,0.12)]'
-                                  : 'text-muted hover:bg-[color:var(--bg-soft)] hover:text-foreground'
-                              }`}
-                              onClick={onNavigate}
-                            >
+                    <div className="px-5 pb-4">
+                      <ul className="relative space-y-2 pb-1 before:absolute before:left-3 before:top-1 before:bottom-1 before:w-px before:bg-[color:var(--border)]">
+                        {days.map((d) => {
+                          const isActive = currentPath === d.slug;
+                          const displayTitle = d.title?.trim() || `Jour ${d.order}`;
+                          return (
+                            <li key={d.id} className="relative pl-6">
                               <span
-                                className={`h-2.5 w-2.5 rounded-full ${
-                                  completed
-                                    ? 'bg-emerald-500'
-                                    : isActive
-                                      ? 'bg-amber-400'
-                                      : 'bg-[color:var(--border)]'
+                                className={`absolute left-0 top-3 h-3 w-3 -translate-x-1/2 rounded-full border-2 ${
+                                  isActive
+                                    ? 'border-[color:var(--primary)] bg-[color:var(--primary)]'
+                                    : 'border-[color:var(--border)] bg-white'
                                 }`}
                               />
-                              <div className="min-w-0 flex-1">
-                                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--muted)]">
-                                  Jour {d.order}
-                                </p>
-                                <p className="truncate font-semibold">{displayTitle}</p>
-                              </div>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                              <Link
+                                href={`/${d.slug}`}
+                                className={`flex items-start gap-3 rounded-2xl px-3 py-2 text-sm transition ${
+                                  isActive
+                                    ? 'bg-[color-mix(in_oklab,var(--primary)_10%,#fff)] text-foreground shadow-[0_12px_24px_rgba(15,23,40,0.12)]'
+                                    : 'text-muted hover:bg-[color:var(--bg-soft)] hover:text-foreground'
+                                }`}
+                                onClick={onNavigate}
+                              >
+                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-[color-mix(in_oklab,var(--primary)_12%,white_88%)] text-[color:var(--primary)] text-xs font-semibold">
+                                  {d.order}
+                                </span>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate font-semibold">{displayTitle}</p>
+                                  {d.summary ? (
+                                    <p className="text-xs text-[color:var(--muted)]">{d.summary}</p>
+                                  ) : null}
+                                </div>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
                   )}
                 </div>
               );
@@ -488,7 +494,7 @@ function SidebarProgress({
 
       {hasModules ? (
         <div className="mt-8 space-y-4 border-t border-border/30 pt-6">
-          <div className="text-xs font-bold uppercase tracking-[0.3em] text-foreground/70">Modules par jour</div>
+          <div className="text-xs font-bold uppercase tracking-[0.3em] text-foreground/70">{moduleHeading}</div>
           <div className="space-y-3">
             {moduleQuickGroups!.map((group) => {
               const open = openModuleGroups[group.label] ?? false;

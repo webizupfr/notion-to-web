@@ -1,23 +1,36 @@
 "use client";
- 
 
-import Link from "next/link";
+import type { CSSProperties } from "react";
 import { GateForm } from "./GateForm";
+
+type GateVars = {
+  "--paper": string;
+  "--paper-2": string;
+  "--ink": string;
+  "--ink-soft": string;
+  "--mx": string;
+  "--my": string;
+  "--mat": number;
+};
+
+const rootStyles: CSSProperties & GateVars = {
+  "--paper": "#fbfaf6",
+  "--paper-2": "#f4efe3",
+  "--ink": "#1c1c1c",
+  "--ink-soft": "rgba(28,28,28,0.62)",
+  "--mx": "35%",
+  "--my": "30%",
+  "--mat": 1.1,
+};
 
 function Content({ next, error }: { next: string; error?: string | null }) {
   const hasError = Boolean(error);
 
   return (
-    <div id="gate-root" className="relative min-h-dvh overflow-hidden font-sans"
-      style={{
-        ["--paper" as any]: "#fbfaf6",
-        ["--paper-2" as any]: "#f4efe3",
-        ["--ink" as any]: "#1c1c1c",
-        ["--ink-soft" as any]: "rgba(28,28,28,0.62)",
-        ["--mx" as any]: "35%",
-        ["--my" as any]: "30%",
-        ["--mat" as any]: 1.1,
-      }}
+    <div
+      id="gate-root"
+      className="relative min-h-dvh overflow-hidden font-sans"
+      style={rootStyles}
     >
       {/* Background matière (même famille que la home) */}
       <div className="pointer-events-none absolute inset-0 -z-10">

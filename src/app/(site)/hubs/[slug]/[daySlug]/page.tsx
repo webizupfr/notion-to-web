@@ -179,7 +179,11 @@ export default async function HubDayPage({
                     className="py-[var(--space-5)] sm:py-[var(--space-6)]"
                   >
                     <div className="content-panel section-band w-full">
-                      <Blocks blocks={section.blocks} currentSlug={fallbackSlug || basePrefix} />
+                      <Blocks
+                        blocks={section.blocks}
+                        currentSlug={fallbackSlug || basePrefix}
+                        navigation={navItems}
+                      />
                     </div>
                   </PageSection>
                 );
@@ -187,7 +191,11 @@ export default async function HubDayPage({
             : (
               <PageSection variant="content" size="wide">
                 <div className="content-panel section-band w-full">
-                  <Blocks blocks={fallbackBlocks} currentSlug={fallbackSlug || basePrefix} />
+                  <Blocks
+                    blocks={fallbackBlocks}
+                    currentSlug={fallbackSlug || basePrefix}
+                    navigation={navItems}
+                  />
                 </div>
               </PageSection>
             )}

@@ -2,6 +2,7 @@ import 'server-only';
 
 import crypto from 'node:crypto';
 import { v2 as cloudinary } from 'cloudinary';
+import type { UploadApiOptions } from 'cloudinary';
 import { kv } from '@vercel/kv';
 
 // Configuration Cloudinary
@@ -124,7 +125,7 @@ export async function mirrorRemoteImage(opts: {
 
   try {
     // Upload to Cloudinary
-    const uploadOptions: Parameters<typeof cloudinary.uploader.upload>[1] = {
+    const uploadOptions: UploadApiOptions = {
       public_id: targetKey,
       folder: 'notion-pages',
       resource_type: svgAsset ? 'image' : 'auto',

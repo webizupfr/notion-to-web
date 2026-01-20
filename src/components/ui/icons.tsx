@@ -5,6 +5,7 @@ export {
   Octagon as IconOctagon,
   Home as IconHome,
   Bookmark as IconBookmark,
+  Book as IconBook,
   Star as IconStar,
   Target as IconTarget,
   Sparkles as IconSparkles,

@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import "@/styles/sprint.css";
 
 import { getSprintBundle, getPageBundle } from "@/lib/content-store";
+import type { NotionBlock } from "@/lib/notion";
 import { Blocks } from "@/components/notion/Blocks";
 import { PageSection } from "@/components/layout/PageSection";
 import { Heading } from "@/components/ui/Heading";
@@ -13,6 +14,7 @@ import { PageSidebar } from "@/components/layout/PageSidebar";
 import { ActivityContent } from "@/components/learning/ActivityContent";
 import { StepNavBar } from "@/components/learning/StepNavBar";
 import { LearningHeader } from "@/components/learning/LearningHeader";
+import { splitBlocksIntoSections } from "@/components/learning/sectioning";
 
 export const revalidate = 0;
 
@@ -59,6 +61,32 @@ export default async function SprintModulePage({
     if (password && key !== password) redirect(`/gate?next=/sprint/${slug}/${moduleSlug}&e=1`);
   }
 
+  const parentSlug = `sprint/${slug}`;
+  const contextNavigation = bundle.contextNavigation ?? [];
+  const moduleQuickGroups = (() => {
+    const groups = new Map<string, Array<{ id: string; title: string; slug: string; order: number }>>();
+    bundle.modules.forEach((module, index) => {
+      if (module.isLocked) return;
+      const label =
+        typeof module.dayIndex === "number" && !Number.isNaN(module.dayIndex)
+          ? `Jour ${module.dayIndex + 1}`
+          : "Modules";
+      const items = groups.get(label) ?? [];
+      const order = module.order > 0 ? module.order : index + 1;
+      items.push({
+        id: module.slug,
+        title: module.title,
+        slug: `sprint/${slug}/${module.slug}`,
+        order,
+      });
+      groups.set(label, items);
+    });
+    return Array.from(groups.entries()).map(([label, items]) => ({
+      label,
+      items: items.sort((a, b) => a.order - b.order),
+    }));
+  })();
+
   const moduleIndex = bundle.modules.findIndex((item) => item.slug === moduleSlug);
   const currentModule = moduleIndex >= 0 ? bundle.modules[moduleIndex] : undefined;
 
@@ -85,25 +113,75 @@ export default async function SprintModulePage({
     }
 
     const parentTitle = childBundle.meta.parentTitle ?? bundle.title;
-    const parentSlug = childBundle.meta.parentSlug ?? `sprint/${slug}`;
+    const fallbackParentSlug = childBundle.meta.parentSlug ?? parentSlug;
+    const fallbackBlocks = (childBundle.blocks ?? []) as NotionBlock[];
+    const fallbackSections = splitBlocksIntoSections(fallbackBlocks);
+    const renderFallbackBlocks = () => {
+      if (!fallbackSections.length) return null;
+      if (fallbackSections.length === 1) {
+        return (
+          <PageSection variant="content" size="wide" paddingY="tight">
+            <div className="content-panel section-band w-full">
+              <Blocks blocks={fallbackSections[0].blocks} currentSlug={childSlug} navigation={contextNavigation} />
+            </div>
+          </PageSection>
+        );
+      }
+      return fallbackSections.map((section, idx) => {
+        const tone = idx % 2 === 0 ? "default" : "alt";
+        return (
+          <PageSection
+            key={section.id}
+            variant="content"
+            tone={tone}
+            size="wide"
+            paddingY="tight"
+          >
+            <div className="content-panel section-band w-full">
+              <Blocks blocks={section.blocks} currentSlug={childSlug} navigation={contextNavigation} />
+            </div>
+          </PageSection>
+        );
+      });
+    };
 
     return (
-      <>
-        <PageSection variant="content">
-          <div className="space-y-[var(--space-s)]">
-            <Text variant="small" className="uppercase tracking-[0.14em] text-[color:var(--muted)]">
-              {parentTitle}
-            </Text>
-            <Heading level={1}>{childBundle.meta.title}</Heading>
-            <Link href={`/${parentSlug}`} className="btn btn-secondary w-fit">
-              ← Retour au sprint
-            </Link>
-          </div>
-        </PageSection>
-        <PageSection variant="content">
-          <Blocks blocks={childBundle.blocks} currentSlug={childSlug} />
-        </PageSection>
-      </>
+      <div className="mx-auto flex w-full max-w-[1800px] gap-10">
+        <div className="hidden lg:block lg:flex-shrink-0">
+          <PageSidebar
+            parentTitle={bundle.title}
+            parentSlug={parentSlug}
+            navigation={contextNavigation}
+            learningKind="modules"
+            moduleQuickGroups={moduleQuickGroups}
+          />
+        </div>
+
+        <div className="lg:hidden">
+          <PageSidebar
+            parentTitle={bundle.title}
+            parentSlug={parentSlug}
+            navigation={contextNavigation}
+            learningKind="modules"
+            moduleQuickGroups={moduleQuickGroups}
+          />
+        </div>
+
+        <section className="flex-1 min-w-0 sprint-content">
+          <PageSection variant="content" size="wide" paddingY="tight">
+            <div className="surface-card space-y-[var(--space-s)]">
+              <Text variant="small" className="uppercase tracking-[0.14em] text-[color:var(--muted)]">
+                {parentTitle}
+              </Text>
+              <Heading level={1}>{childBundle.meta.title}</Heading>
+              <Link href={`/${fallbackParentSlug}`} className="btn btn-secondary w-fit">
+                ← Retour au sprint
+              </Link>
+            </div>
+          </PageSection>
+          {renderFallbackBlocks()}
+        </section>
+      </div>
     );
   }
 
@@ -127,18 +205,16 @@ export default async function SprintModulePage({
     );
   }
 
+  const moduleNumber =
+    typeof currentModule.dayIndex === "number" && !Number.isNaN(currentModule.dayIndex)
+      ? currentModule.dayIndex + 1
+      : currentModule.order > 0
+        ? currentModule.order
+        : moduleIndex + 1;
   const moduleDayLabel =
     typeof currentModule.dayIndex === "number" && !Number.isNaN(currentModule.dayIndex)
       ? `Jour ${currentModule.dayIndex + 1}`
-      : `Module ${currentModule.order > 0 ? currentModule.order : moduleIndex + 1}`;
-
-  const parentSlug = `sprint/${slug}`;
-  const modulesNavigation =
-    bundle.modules.map((mod) => ({
-      type: "page" as const,
-      title: `${typeof mod.dayIndex === "number" ? `Jour ${mod.dayIndex + 1}` : `Module ${mod.order > 0 ? mod.order : 1}`} · ${mod.title}`,
-      slug: `sprint/${slug}/${mod.slug}`,
-    })) ?? [];
+      : `Module ${moduleNumber}`;
 
   const modulePage = await unstable_cache(
     async () => await getPageBundle(`sprint/${slug}/${moduleSlug}`),
@@ -165,7 +241,9 @@ export default async function SprintModulePage({
         <PageSidebar
           parentTitle={bundle.title}
           parentSlug={parentSlug}
-          navigation={modulesNavigation}
+          navigation={contextNavigation}
+          learningKind="modules"
+          moduleQuickGroups={moduleQuickGroups}
         />
       </div>
 
@@ -173,7 +251,9 @@ export default async function SprintModulePage({
         <PageSidebar
           parentTitle={bundle.title}
           parentSlug={parentSlug}
-          navigation={modulesNavigation}
+          navigation={contextNavigation}
+          learningKind="modules"
+          moduleQuickGroups={moduleQuickGroups}
         />
       </div>
 
@@ -181,7 +261,7 @@ export default async function SprintModulePage({
         <PageSection variant="content" size="wide" paddingY="tight">
           <LearningHeader
             unitLabel={moduleDayLabel.startsWith("Jour") ? "Jour" : "Module"}
-            unitNumber={currentModule.dayIndex !== null && currentModule.dayIndex !== undefined ? currentModule.dayIndex + 1 : currentModule.order}
+            unitNumber={moduleNumber}
             title={currentModule.title}
             summary={
               currentModule.description
@@ -196,7 +276,11 @@ export default async function SprintModulePage({
         {modulePage?.blocks?.length ? (
           <PageSection variant="content" paddingY="tight">
             <div className="surface-panel">
-              <Blocks blocks={modulePage.blocks} currentSlug={`sprint/${slug}/${moduleSlug}`} />
+              <Blocks
+                blocks={modulePage.blocks}
+                currentSlug={`sprint/${slug}/${moduleSlug}`}
+                navigation={contextNavigation}
+              />
             </div>
           </PageSection>
         ) : null}

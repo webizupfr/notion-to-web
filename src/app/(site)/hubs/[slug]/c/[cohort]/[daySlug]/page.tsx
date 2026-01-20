@@ -13,7 +13,7 @@ import { ActivityContent } from "@/components/learning/ActivityContent";
 import { HubFlag } from "@/components/layout/HubFlag";
 import { StepNavBar } from "@/components/learning/StepNavBar";
 import { Blocks } from "@/components/notion/Blocks";
-import { applyCohortOverlay, getCohortBySlug } from "@/lib/cohorts";
+import { applyCohortOverlay, getCohortBySlug, nowInTimezone } from "@/lib/cohorts";
 
 export const revalidate = 0;
 
@@ -141,6 +141,20 @@ export default async function CohortHubDayPage({
     ...day,
     slug: withPrefix(day.slug),
   }));
+  const timezone = cohort?.timezone ?? "Europe/Paris";
+  const { key: todayKey } = nowInTimezone(timezone);
+  const dateKeyFromIso = (iso: string | null | undefined) => (iso ? iso.split("T")[0] : null);
+  const releasedDaysRaw = daysWithPrefix.filter((day) => {
+    const locked = day.state ? /verrou/i.test(day.state) : false;
+    if (locked) return false;
+    const unlockKey = dateKeyFromIso(day.unlockDate ?? null);
+    if (!unlockKey) return true;
+    return unlockKey <= todayKey;
+  });
+  const releasedDaysForRender = releasedDaysRaw.map((day) => ({
+    ...day,
+    slug: withPrefix(day.slug),
+  }));
   const navItems = (bundle.meta.navigation ?? []).map((item) => {
     if (item.type === "section" && item.children) {
       return {
@@ -161,7 +175,7 @@ export default async function CohortHubDayPage({
     navigation: navItems,
     isHub: true,
     hubDescription: bundle.meta.description ?? null,
-    releasedDays: daysWithPrefix,
+    releasedDays: releasedDaysForRender,
     learningKind: learningPath?.kind,
     unitLabelSingular: learningPath?.unitLabelSingular,
     unitLabelPlural: learningPath?.unitLabelPlural,
@@ -186,6 +200,21 @@ export default async function CohortHubDayPage({
       return notFound();
     }
     const fallbackBlocks = (fallbackBundle.blocks ?? []) as NotionBlock[];
+    const removePinnedCallouts = (blocksList: NotionBlock[]): NotionBlock[] => {
+      return blocksList.filter((block) => {
+        if ((block as { type?: string }).type !== "callout") return true;
+        const callout = (block as Extract<NotionBlock, { type: "callout" }>).callout;
+        const text = (callout.rich_text ?? [])
+          .map((r) => r.plain_text ?? "")
+          .join("")
+          .trim();
+        const icon = callout.icon;
+        const hasPinIcon = icon?.type === "emoji" && (icon.emoji ?? "").includes("📌");
+        const hasPinText = text.startsWith("📌");
+        return !(hasPinIcon || hasPinText);
+      });
+    };
+    const filteredFallbackBlocks = removePinnedCallouts(fallbackBlocks);
     const fallbackSlug = ensureCohortScopedSlug(resolvedSlug);
 
     return (
@@ -202,7 +231,11 @@ export default async function CohortHubDayPage({
         <section className="flex-1 min-w-0 hub-content">
           <PageSection variant="content" size="wide">
             <div className="content-panel section-band w-full">
-              <Blocks blocks={fallbackBlocks} currentSlug={fallbackSlug || basePrefix} />
+              <Blocks
+                blocks={filteredFallbackBlocks}
+                currentSlug={fallbackSlug || basePrefix}
+                navigation={navItems}
+              />
             </div>
           </PageSection>
         </section>

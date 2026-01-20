@@ -41,7 +41,6 @@ export function CompleteModuleCTA({
       <button type="button" className="learning-complete-cta__btn" onClick={onComplete}>
         {label}
       </button>
-    
     </div>
   );
 }

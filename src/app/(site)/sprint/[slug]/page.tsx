@@ -73,17 +73,17 @@ export default async function SprintPage({
   const contextLabel =
     ((bundle.settings as { context?: string | null } | null | undefined)?.context ?? "").trim() || null;
   const navSlug = `sprint/${slug}`;
-  const modules = bundle.modules.map((module, index) => {
-    const number = module.order > 0 ? module.order : index + 1;
+  const modules = bundle.modules.map((mod, index) => {
+    const number = mod.order > 0 ? mod.order : index + 1;
     const dayLabel =
-      typeof module.dayIndex === "number" && !Number.isNaN(module.dayIndex)
-        ? `Jour ${module.dayIndex + 1}`
+      typeof mod.dayIndex === "number" && !Number.isNaN(mod.dayIndex)
+        ? `Jour ${mod.dayIndex + 1}`
         : `Module ${number}`;
     return {
-      ...module,
+      ...mod,
       number,
       dayLabel,
-      href: `/sprint/${slug}/${module.slug}`,
+      href: `/sprint/${slug}/${mod.slug}`,
     };
   });
 
@@ -94,29 +94,102 @@ export default async function SprintPage({
     `${bundle.modules.length} module${bundle.modules.length > 1 ? "s" : ""}`,
     contextLabel,
   ].filter(Boolean);
-  const navigation = modules.map((mod) => ({
-    type: "page" as const,
-    title: mod.title,
-    slug: `sprint/${slug}/${mod.slug}`,
-  }));
+
+  const removePinnedCallouts = (blocksList: NotionBlock[]): NotionBlock[] => {
+    return blocksList.filter((block) => {
+      if ((block as { type?: string }).type !== "callout") return true;
+      const callout = (block as Extract<NotionBlock, { type: "callout" }>).callout;
+      const text = (callout.rich_text ?? [])
+        .map((r) => r.plain_text ?? "")
+        .join("")
+        .trim();
+      const icon = callout.icon;
+      const hasPinIcon = icon?.type === "emoji" && (icon.emoji ?? "").includes("📌");
+      const hasPinText = text.startsWith("📌");
+      return !(hasPinIcon || hasPinText);
+    });
+  };
+  const contextSections = splitBlocksIntoSections(
+    removePinnedCallouts(contextBlocks as NotionBlock[])
+  );
+  const renderContextSections = () => {
+    if (!contextSections.length) return null;
+    if (contextSections.length <= 1) {
+      return (
+        <PageSection variant="content" size="wide" paddingY="tight">
+          <div className="content-panel section-band w-full">
+            <Blocks blocks={contextSections[0].blocks} currentSlug={navSlug} navigation={contextNavigation} />
+          </div>
+        </PageSection>
+      );
+    }
+    return (
+      <>
+        {contextSections.map((section, idx) => {
+          const tone = idx % 2 === 0 ? "default" : "alt";
+          return (
+            <PageSection
+              key={section.id}
+              variant="content"
+              tone={tone}
+              size="wide"
+              paddingY="tight"
+            >
+              <div className="content-panel section-band w-full">
+                <Blocks blocks={section.blocks} currentSlug={navSlug} navigation={contextNavigation} />
+              </div>
+            </PageSection>
+          );
+        })}
+      </>
+    );
+  };
+
+  const contextNavigation = bundle.contextNavigation ?? [];
+  const moduleQuickGroups = (() => {
+    const unlockedModules = modules.filter((mod) => !mod.isLocked);
+    if (!unlockedModules.length) return [];
+    const groups = new Map<string, Array<{ id: string; title: string; slug: string; order: number }>>();
+    for (const mod of unlockedModules) {
+      const label =
+        typeof mod.dayIndex === "number" && !Number.isNaN(mod.dayIndex)
+          ? `Jour ${mod.dayIndex + 1}`
+          : "Modules";
+      const items = groups.get(label) ?? [];
+      const order = mod.order > 0 ? mod.order : mod.number;
+      items.push({
+        id: mod.slug,
+        title: mod.title,
+        slug: `sprint/${slug}/${mod.slug}`,
+        order,
+      });
+      groups.set(label, items);
+    }
+    return Array.from(groups.entries()).map(([label, items]) => ({
+      label,
+      items: items.sort((a, b) => a.order - b.order),
+    }));
+  })();
 
   return (
     <div className="mx-auto flex w-full max-w-[1800px] gap-10">
       <div className="hidden lg:block lg:flex-shrink-0">
         <PageSidebar
           parentTitle={sprintTitle}
-          parentSlug={`sprint/${slug}`}
-          navigation={navigation}
+          parentSlug={navSlug}
+          navigation={contextNavigation}
           learningKind="modules"
+          moduleQuickGroups={moduleQuickGroups}
         />
       </div>
 
       <div className="lg:hidden">
         <PageSidebar
           parentTitle={sprintTitle}
-          parentSlug={`sprint/${slug}`}
-          navigation={navigation}
+          parentSlug={navSlug}
+          navigation={contextNavigation}
           learningKind="modules"
+          moduleQuickGroups={moduleQuickGroups}
         />
       </div>
 
@@ -154,29 +227,31 @@ export default async function SprintPage({
           </div>
         </PageSection>
 
+        {renderContextSections()}
+
         <PageSection variant="content" id="modules" size="wide" paddingY="tight">
           <div className="space-y-[var(--space-m)]">
             <Heading level={2}>Modules du sprint</Heading>
             <div className="grid gap-[var(--space-m)] sm:grid-cols-2">
-              {modules.map((module) => {
-                const countdown = timeUntil(module.unlockAtISO);
-                const locked = module.isLocked;
-                const moduleSubtitle = (module as { subtitle?: string | null }).subtitle ?? module.description ?? null;
-                const moduleDuration = formatDurationMinutes(module.duration);
-                const moduleLevel = module.tags?.[0] ?? null;
+              {modules.map((mod) => {
+                const countdown = timeUntil(mod.unlockAtISO);
+                const locked = mod.isLocked;
+                const moduleSubtitle = (mod as { subtitle?: string | null }).subtitle ?? mod.description ?? null;
+                const moduleDuration = formatDurationMinutes(mod.duration);
+                const moduleLevel = mod.tags?.[0] ?? null;
                 const stateLabel = locked ? (countdown ? `Verrouillé (${countdown})` : "Verrouillé") : "Accessible";
                 return (
                   <Link
-                    key={module.slug}
-                    href={module.href}
+                    key={mod.slug}
+                    href={mod.href}
                     className={`surface-card block transition-transform hover:-translate-y-[1px] ${locked ? "opacity-75" : ""}`}
                     data-state={locked ? "locked" : "unlocked"}
                   >
                     <Text variant="small" className="uppercase tracking-[0.12em] text-[color:var(--muted)]">
-                      {module.dayLabel}
+                      {mod.dayLabel}
                     </Text>
                     <Heading level={3} className="mt-[var(--space-xs)]">
-                      {module.title}
+                      {mod.title}
                     </Heading>
                     {moduleSubtitle ? (
                       <Text className="mt-[var(--space-xs)] text-[color:var(--muted)]">{moduleSubtitle}</Text>
@@ -195,55 +270,6 @@ export default async function SprintPage({
             </div>
           </div>
         </PageSection>
-
-        <PageSection variant="content" size="wide" paddingY="tight">
-          <div className="space-y-[var(--space-s)]">
-            <Heading level={2}>Sprint Innovation : le Hub</Heading>
-            {sprintSubtitle ? <Text>{sprintSubtitle}</Text> : null}
-            {contextLabel ? <Text className="text-[color:var(--muted)]">{contextLabel}</Text> : null}
-            <div className="flex flex-wrap gap-[var(--space-s)] pt-[var(--space-s)]">
-              <Link href="/contact" className="btn btn-primary">
-                Planifier un échange
-              </Link>
-              <Link href="#modules" className="btn btn-secondary">
-                Voir les modules
-              </Link>
-            </div>
-          </div>
-        </PageSection>
-
-        {contextBlocks?.length ? (() => {
-          const sections = splitBlocksIntoSections(contextBlocks as NotionBlock[]);
-          if (sections.length <= 1) {
-            return (
-              <PageSection variant="content" size="wide" paddingY="tight">
-                <div className="content-panel section-band w-full">
-                  <Blocks blocks={contextBlocks} currentSlug={navSlug} />
-                </div>
-              </PageSection>
-            );
-          }
-          return (
-            <>
-              {sections.map((section, idx) => {
-                const tone = idx % 2 === 0 ? "default" : "alt";
-                return (
-                  <PageSection
-                    key={section.id}
-                    variant="content"
-                    tone={tone}
-                    size="wide"
-                    paddingY="tight"
-                  >
-                    <div className="content-panel section-band w-full">
-                      <Blocks blocks={section.blocks} currentSlug={navSlug} />
-                    </div>
-                  </PageSection>
-                );
-              })}
-            </>
-          );
-        })() : null}
       </section>
     </div>
   );

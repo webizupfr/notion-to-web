@@ -546,7 +546,7 @@ async function syncSprints(opts: { stats: SyncStats; force?: boolean }, initialP
           stats: opts.stats,
         });
         try {
-          contextNavigation = buildNavigationStructure(contextBlocks, `sprint/${slug}`);
+          contextNavigation = await buildNavigationStructure(contextBlocks, `sprint/${slug}`);
         } catch {
           contextNavigation = null;
         }
@@ -1223,7 +1223,7 @@ async function syncPage(page: PageObjectResponse, opts: SyncOptions) {
   // Build navigation structure early so we can pass it to DB children
   const slugForChildren = (meta as PageMeta).isHub ? `hubs/${slug}` : slug;
   console.log(`[sync] 🧭 Building navigation structure for "${slug}"...`);
-  const navigation = buildNavigationStructure(blocks, slugForChildren);
+  const navigation = await buildNavigationStructure(blocks, slugForChildren);
 
   const linkedDbIds = await collectLinkedDatabaseIds(blocks);
   for (const databaseId of linkedDbIds) {
@@ -1903,45 +1903,89 @@ async function syncHubsInParallel(
  * - Les child pages sont groupées sous leur section
  * Note: Les slugs seront ajoutés après la sync des child pages
  */
-function buildNavigationStructure(
-  blocks: NotionBlock[], 
+async function buildNavigationStructure(
+  blocks: NotionBlock[],
   parentSlug: string
-): NavItem[] {
+): Promise<NavItem[]> {
   const navigation: NavItem[] = [];
   let currentSection: NavItem | null = null;
-  
+  const linkedPageCache = new Map<string, { title: string; slug: string; icon: string | null; fromSlugProp: boolean }>();
+
   console.log(`[buildNavigation] 🔍 Building navigation from ${blocks.length} blocks`);
-  
-  function traverse(blockList: NotionBlock[], depth = 0) {
+
+  const slugifyTitle = (value: string) =>
+    value
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+
+  const stripLeadingSlash = (value: string) => value.replace(/^\/+/, '');
+
+  const resolveLinkedPage = async (pageId: string) => {
+    if (linkedPageCache.has(pageId)) return linkedPageCache.get(pageId)!;
+    try {
+      const page = await getPage(pageId);
+      if (!isFullPage(page)) return null;
+      const title = extractTitle(findTitleProperty(page.properties));
+      const slugProp = firstRichText(findPropByName(page.properties, ['slug']));
+      const slug = stripLeadingSlash(slugProp ?? slugifyTitle(title));
+      const icon =
+        'icon' in page && page.icon
+          ? page.icon.type === 'emoji'
+            ? page.icon.emoji ?? null
+            : page.icon.type === 'file'
+            ? page.icon.file?.url ?? null
+            : page.icon.type === 'external'
+            ? page.icon.external?.url ?? null
+            : null
+          : null;
+      const resolved = {
+        title,
+        slug,
+        icon,
+        fromSlugProp: Boolean(slugProp),
+      };
+      linkedPageCache.set(pageId, resolved);
+      return resolved;
+    } catch {
+      linkedPageCache.set(pageId, { title: 'Page', slug: '', icon: null, fromSlugProp: false });
+      return null;
+    }
+  };
+
+  async function traverse(blockList: NotionBlock[], depth = 0) {
     const indent = '  '.repeat(depth);
-    
+
     for (const block of blockList) {
       // Détecter les callouts avec 📌 (punaise) comme sections
       if (block.type === 'callout') {
         const calloutBlock = block as Extract<NotionBlock, { type: 'callout' }>;
         const richTextArray = calloutBlock.callout?.rich_text || [];
-        const text = richTextArray.map((rt: { plain_text: string }) => rt.plain_text).join('');
+        const text = richTextArray.map((rt: { plain_text: string }) => rt.plain_text).join('').trim();
         const icon = calloutBlock.callout?.icon;
-        const iconEmoji = icon && 'emoji' in icon ? icon.emoji : '';
-        
-        // Si le callout a l'emoji 📌, c'est une section
-        if (iconEmoji === '📌') {
+        const iconEmoji = icon && 'emoji' in icon ? icon.emoji ?? '' : '';
+
+        const hasPinIcon = iconEmoji.includes('📌');
+        const hasPinText = text.startsWith('📌');
+        if (hasPinIcon || hasPinText) {
           console.log(`${indent}  ✅ Found section callout: "${text}"`);
-          
-          // Sauvegarder la section précédente si elle existe
+
           if (currentSection && currentSection.children && currentSection.children.length > 0) {
             navigation.push(currentSection);
           }
-          
-          // Créer une nouvelle section
+
           currentSection = {
             type: 'section',
-            title: text,
-            children: []
+            title: text.replace(/^\s*📌\s*/u, '').trim() || text,
+            children: [],
           };
         }
       }
-      
+
       // Détecter les child pages
       if (block.type === 'child_page') {
         const childPageBlock = block as Extract<NotionBlock, { type: 'child_page' }>;
@@ -1954,57 +1998,72 @@ function buildNavigationStructure(
           else if (pageIconData.type === 'file') pageIcon = pageIconData.file?.url ?? null;
         }
         console.log(`${indent}  ✅ Found child page: "${pageTitle}"`);
-        
-        // Créer un slug pour cette child page
-        const titleSlug = pageTitle
-          .toLowerCase()
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '') // Remove accents
-          .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
-          .replace(/\s+/g, '-') // Spaces to hyphens
-          .replace(/-+/g, '-') // Multiple hyphens to single
-          .replace(/^-|-$/g, ''); // Trim hyphens
-        
+
+        const titleSlug = slugifyTitle(pageTitle);
         const fullSlug = `${parentSlug}/${titleSlug}`;
-        
-        // Ajouter à la section courante ou comme page standalone
+
         if (currentSection && currentSection.children) {
           currentSection.children.push({
             id: block.id,
             title: pageTitle,
             slug: fullSlug,
-            icon: pageIcon
+            icon: pageIcon,
           });
         } else {
-          // Page sans section
           navigation.push({
             type: 'page',
             title: pageTitle,
             id: block.id,
             slug: fullSlug,
-            icon: pageIcon
+            icon: pageIcon,
           });
         }
       }
-      
+
+      if (block.type === 'link_to_page') {
+        const linkBlock = block as Extract<NotionBlock, { type: 'link_to_page' }>;
+        const link = linkBlock.link_to_page;
+        if (link?.type === 'page_id' && link.page_id) {
+          const linked = await resolveLinkedPage(link.page_id);
+          if (linked && linked.title && linked.slug) {
+            const baseSlug = linked.fromSlugProp ? linked.slug : `${parentSlug}/${linked.slug}`;
+            if (currentSection && currentSection.children) {
+              currentSection.children.push({
+                id: link.page_id,
+                title: linked.title,
+                slug: baseSlug,
+                icon: linked.icon,
+              });
+            } else {
+              navigation.push({
+                type: 'page',
+                title: linked.title,
+                id: link.page_id,
+                slug: baseSlug,
+                icon: linked.icon,
+              });
+            }
+          }
+        }
+      }
+
       // Parcourir les enfants
       const children = (block as AugmentedBlock).__children;
       if (children?.length) {
-        traverse(children, depth + 1);
+        await traverse(children, depth + 1);
       }
     }
   }
-  
-  traverse(blocks);
-  
-  // Ajouter la dernière section si elle existe
+
+  await traverse(blocks);
+
   if (currentSection) {
     const section = currentSection as NavItem;
     if (section.children && section.children.length > 0) {
       navigation.push(section);
     }
   }
-  
+
   console.log(`[buildNavigation] ✅ Built navigation with ${navigation.length} items`);
   navigation.forEach((item, idx) => {
     if (item.type === 'section' && item.children) {
@@ -2013,7 +2072,7 @@ function buildNavigationStructure(
       console.log(`  ${idx + 1}. Page: "${item.title}"`);
     }
   });
-  
+
   return navigation;
 }
 

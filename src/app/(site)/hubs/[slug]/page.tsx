@@ -55,7 +55,7 @@ export default async function HubPage({
         .join("")
         .trim();
       const icon = callout.icon;
-      const hasPinIcon = icon?.type === "emoji" && icon.emoji === "📌";
+      const hasPinIcon = icon?.type === "emoji" && (icon.emoji ?? "").includes("📌");
       const hasPinText = text.startsWith("📌");
       return !(hasPinIcon || hasPinText);
     });
@@ -68,7 +68,7 @@ export default async function HubPage({
       return (
         <PageSection variant="content" size="wide">
           <div className="content-panel section-band w-full">
-            <Blocks blocks={sections[0].blocks} currentSlug={`hubs/${slug}`} />
+            <Blocks blocks={sections[0].blocks} currentSlug={`hubs/${slug}`} navigation={navItems} />
           </div>
         </PageSection>
       );
@@ -83,7 +83,7 @@ export default async function HubPage({
           size="wide"
         >
           <div className="content-panel section-band w-full">
-            <Blocks blocks={section.blocks} currentSlug={`hubs/${slug}`} />
+            <Blocks blocks={section.blocks} currentSlug={`hubs/${slug}`} navigation={navItems} />
           </div>
         </PageSection>
       );

@@ -1,12 +1,14 @@
 import { Fragment } from "react";
 import type { ReactNode } from "react";
 import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
+import Link from "next/link";
 
 import { renderWidget } from "@/components/widgets/renderWidget";
 import { parseWidget } from "@/lib/widget-parser";
 import { resolveDatabaseIdFromBlock, type LinkedDatabaseBlock } from "@/lib/resolve-db-id";
 import type { NotionBlock } from "@/lib/notion";
-import { groupLists, type GroupedListBlock } from "./utils";
+import type { NavItem } from "@/lib/types";
+import { groupLists, slugify, type GroupedListBlock } from "./utils";
 import {
   NotionParagraph,
   NotionHeading,
@@ -58,6 +60,8 @@ import {
 
 type ButtonBlock = Extract<NotionBlock, { type: "button" }>;
 type TocEntry = { id: string; title: string; level: 1 | 2 | 3 };
+type NavLink = { id?: string; slug: string; title: string; icon?: string | null };
+type NavigationIndex = Map<string, NavLink>;
 
 const MEDIA_BLOCKS = new Set<NotionBlock["type"]>([
   "image",
@@ -70,6 +74,57 @@ const MEDIA_BLOCKS = new Set<NotionBlock["type"]>([
 ]);
 
 const warnedUnknown = new Set<string>();
+
+function canonicalizeId(value?: string | null): string {
+  return (value ?? "").replace(/-/g, "").toLowerCase();
+}
+
+function buildNavigationIndex(navigation?: NavItem[]): NavigationIndex | null {
+  if (!navigation?.length) return null;
+  const index: NavigationIndex = new Map();
+  const add = (id: string | undefined, link: NavLink) => {
+    if (!id || !link.slug) return;
+    index.set(canonicalizeId(id), link);
+  };
+
+  for (const item of navigation) {
+    if (item.type === "page" && item.slug) {
+      add(item.id, { id: item.id, slug: item.slug, title: item.title, icon: item.icon ?? null });
+      continue;
+    }
+    if (item.type === "section" && item.children?.length) {
+      for (const child of item.children) {
+        if (!child.slug) continue;
+        add(child.id, { id: child.id, slug: child.slug, title: child.title, icon: child.icon ?? null });
+      }
+    }
+  }
+
+  return index;
+}
+
+function resolveNavigationLink(index: NavigationIndex | null | undefined, id?: string | null): NavLink | null {
+  if (!index || !id) return null;
+  return index.get(canonicalizeId(id)) ?? null;
+}
+
+function normalizeInternalHref(slug: string) {
+  const trimmed = slug.replace(/^\/+/, "");
+  return trimmed ? `/${trimmed}` : "/";
+}
+
+function renderInternalPageLink({ slug, title, icon }: { slug: string; title: string; icon?: string | null }) {
+  const href = normalizeInternalHref(slug);
+  const emojiIcon = icon && !/^https?:\/\//i.test(icon) ? icon : null;
+  return (
+    <Link href={href} className="surface-card block transition hover:-translate-y-[1px]">
+      <div className="flex items-center gap-[var(--space-s)]">
+        {emojiIcon ? <span aria-hidden className="text-xl">{emojiIcon}</span> : null}
+        <span className="text-[1.02rem] font-semibold text-[var(--fg)]">{title}</span>
+      </div>
+    </Link>
+  );
+}
 
 function getBlockChildren(block: NotionBlock): NotionBlock[] {
   return (block as { __children?: NotionBlock[] }).__children ?? [];
@@ -224,7 +279,8 @@ function renderGroupedList(
   block: GroupedListBlock,
   currentSlug?: string,
   toc?: TocEntry[],
-  renderMode?: "default" | "day"
+  renderMode?: "default" | "day",
+  navigationIndex?: NavigationIndex | null
 ) {
   const type = block.type === "bulleted_list_group" ? "bulleted" : "numbered";
   return (
@@ -232,7 +288,13 @@ function renderGroupedList(
       type={type}
       items={block.items}
       renderChildren={(children) => (
-        <Blocks blocks={children} currentSlug={currentSlug} tocHeadings={toc} renderMode={renderMode} />
+        <Blocks
+          blocks={children}
+          currentSlug={currentSlug}
+          tocHeadings={toc}
+          renderMode={renderMode}
+          navigationIndex={navigationIndex}
+        />
       )}
     />
   );
@@ -243,25 +305,36 @@ export async function Blocks({
   currentSlug,
   tocHeadings,
   renderMode,
+  navigation,
+  navigationIndex,
 }: {
   blocks: NotionBlock[];
   currentSlug?: string;
   tocHeadings?: TocEntry[];
   renderMode?: "default" | "day";
+  navigation?: NavItem[];
+  navigationIndex?: NavigationIndex | null;
 }) {
   const headings = tocHeadings ?? collectHeadings(blocks);
+  const resolvedNavigationIndex = navigationIndex ?? buildNavigationIndex(navigation);
   const grouped = groupLists(blocks);
   const rendered = await Promise.all(
     grouped.map(async (group, idx) => {
       if ("items" in group) {
         const items = (group as GroupedListBlock).items;
         const key = items[0]?.id ?? `list-${idx}`;
-        const node = renderGroupedList(group as GroupedListBlock, currentSlug, headings, renderMode);
+        const node = renderGroupedList(
+          group as GroupedListBlock,
+          currentSlug,
+          headings,
+          renderMode,
+          resolvedNavigationIndex
+        );
         return <Fragment key={key}>{node}</Fragment>;
       }
       const block = group as NotionBlock;
       const key = block.id ?? `block-${idx}`;
-      const node = await renderBlockAsync(block, currentSlug, headings, renderMode);
+      const node = await renderBlockAsync(block, currentSlug, headings, renderMode, resolvedNavigationIndex);
       return <Fragment key={key}>{node}</Fragment>;
     })
   );
@@ -273,7 +346,8 @@ export async function renderBlockAsync(
   block: NotionBlock,
   currentSlug?: string,
   toc?: TocEntry[],
-  renderMode?: "default" | "day"
+  renderMode?: "default" | "day",
+  navigationIndex?: NavigationIndex | null
 ): Promise<ReactNode> {
   const type = (block as { type?: string }).type;
 
@@ -346,7 +420,13 @@ export async function renderBlockAsync(
           type={type === "bulleted_list_item" ? "bulleted" : "numbered"}
           items={[block as Extract<NotionBlock, { type: "bulleted_list_item" | "numbered_list_item" }>]}
           renderChildren={(children) => (
-            <Blocks blocks={children} currentSlug={currentSlug} tocHeadings={toc} renderMode={renderMode} />
+            <Blocks
+              blocks={children}
+              currentSlug={currentSlug}
+              tocHeadings={toc}
+              renderMode={renderMode}
+              navigationIndex={navigationIndex}
+            />
           )}
         />
       );
@@ -362,7 +442,13 @@ export async function renderBlockAsync(
           checked={todo.checked}
           childrenBlocks={children}
           renderChildren={(blocks) => (
-            <Blocks blocks={blocks} currentSlug={currentSlug} tocHeadings={toc} renderMode={renderMode} />
+            <Blocks
+              blocks={blocks}
+              currentSlug={currentSlug}
+              tocHeadings={toc}
+              renderMode={renderMode}
+              navigationIndex={navigationIndex}
+            />
           )}
         />
       );
@@ -378,7 +464,13 @@ export async function renderBlockAsync(
           richText={callout.rich_text}
         >
           {children.length ? (
-            <Blocks blocks={children} currentSlug={currentSlug} tocHeadings={toc} renderMode={renderMode} />
+            <Blocks
+              blocks={children}
+              currentSlug={currentSlug}
+              tocHeadings={toc}
+              renderMode={renderMode}
+              navigationIndex={navigationIndex}
+            />
           ) : null}
         </NotionCallout>
       );
@@ -390,7 +482,13 @@ export async function renderBlockAsync(
       return (
         <NotionToggle richText={toggle.rich_text} tone={toggle.color}>
           {children.length ? (
-            <Blocks blocks={children} currentSlug={currentSlug} tocHeadings={toc} renderMode={renderMode} />
+            <Blocks
+              blocks={children}
+              currentSlug={currentSlug}
+              tocHeadings={toc}
+              renderMode={renderMode}
+              navigationIndex={navigationIndex}
+            />
           ) : null}
         </NotionToggle>
       );
@@ -404,7 +502,13 @@ export async function renderBlockAsync(
       return (
         <NotionToggleHeading level={1} richText={toggle.rich_text} tone={toggle.color}>
           {children.length ? (
-            <Blocks blocks={children} currentSlug={currentSlug} tocHeadings={toc} renderMode={renderMode} />
+            <Blocks
+              blocks={children}
+              currentSlug={currentSlug}
+              tocHeadings={toc}
+              renderMode={renderMode}
+              navigationIndex={navigationIndex}
+            />
           ) : null}
         </NotionToggleHeading>
       );
@@ -418,7 +522,13 @@ export async function renderBlockAsync(
       return (
         <NotionToggleHeading level={2} richText={toggle.rich_text} tone={toggle.color}>
           {children.length ? (
-            <Blocks blocks={children} currentSlug={currentSlug} tocHeadings={toc} renderMode={renderMode} />
+            <Blocks
+              blocks={children}
+              currentSlug={currentSlug}
+              tocHeadings={toc}
+              renderMode={renderMode}
+              navigationIndex={navigationIndex}
+            />
           ) : null}
         </NotionToggleHeading>
       );
@@ -432,7 +542,13 @@ export async function renderBlockAsync(
       return (
         <NotionToggleHeading level={3} richText={toggle.rich_text} tone={toggle.color}>
           {children.length ? (
-            <Blocks blocks={children} currentSlug={currentSlug} tocHeadings={toc} renderMode={renderMode} />
+            <Blocks
+              blocks={children}
+              currentSlug={currentSlug}
+              tocHeadings={toc}
+              renderMode={renderMode}
+              navigationIndex={navigationIndex}
+            />
           ) : null}
         </NotionToggleHeading>
       );
@@ -574,6 +690,7 @@ export async function renderBlockAsync(
           currentSlug={currentSlug}
           tocHeadings={toc}
           renderMode={renderMode}
+          navigationIndex={navigationIndex}
         />
       ));
       return <NotionColumns columns={columns} ratios={columnRatios} />;
@@ -586,6 +703,7 @@ export async function renderBlockAsync(
           currentSlug={currentSlug}
           tocHeadings={toc}
           renderMode={renderMode}
+          navigationIndex={navigationIndex}
         />
       );
 
@@ -596,6 +714,7 @@ export async function renderBlockAsync(
           currentSlug={currentSlug}
           tocHeadings={toc}
           renderMode={renderMode}
+          navigationIndex={navigationIndex}
         />
       );
 
@@ -606,8 +725,22 @@ export async function renderBlockAsync(
       return <NotionBreadcrumb items={(toc ?? []).map((h) => ({ title: h.title }))} />;
 
     case "child_page": {
-      const title = (block as { child_page?: { title?: string } }).child_page?.title ?? block.id ?? "child_page";
-      return renderUnknown(`child_page:${title}`);
+      const childPage = block as Extract<NotionBlock, { type: "child_page" }>;
+      const title = childPage.child_page?.title ?? block.id ?? "child_page";
+      const navLink = resolveNavigationLink(navigationIndex, block.id);
+      const fallbackSlug = currentSlug ? `${currentSlug.replace(/\/+$/, "")}/${slugify(title)}` : null;
+      const slug = navLink?.slug ?? fallbackSlug;
+      if (!slug) return null;
+      return renderInternalPageLink({ slug, title: navLink?.title ?? title, icon: navLink?.icon ?? null });
+    }
+
+    case "link_to_page": {
+      const linkBlock = block as Extract<NotionBlock, { type: "link_to_page" }>;
+      const link = linkBlock.link_to_page;
+      if (link?.type !== "page_id" || !link.page_id) return null;
+      const navLink = resolveNavigationLink(navigationIndex, link.page_id);
+      if (!navLink?.slug) return null;
+      return renderInternalPageLink({ slug: navLink.slug, title: navLink.title, icon: navLink.icon ?? null });
     }
 
     default:

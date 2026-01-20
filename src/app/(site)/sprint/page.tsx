@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import type { CSSProperties } from "react";
 import "@/styles/sprint.css";
 
 import { LearningHubCard } from "@/components/learning";
@@ -14,6 +15,20 @@ async function loadSprintIndex() {
   )();
 }
 
+type PaletteVars = {
+  "--paper": string;
+  "--paper-2": string;
+  "--ink": string;
+  "--ink-soft": string;
+};
+
+const rootStyles: CSSProperties & PaletteVars = {
+  "--paper": "#fbfaf6",
+  "--paper-2": "#f4efe3",
+  "--ink": "#1c1c1c",
+  "--ink-soft": "rgba(28,28,28,0.62)",
+};
+
 export default async function SprintIndexPage() {
   const index = await loadSprintIndex();
   const items = index?.items ?? [];
@@ -21,12 +36,7 @@ export default async function SprintIndexPage() {
   return (
     <div
       className="relative min-h-dvh font-sans"
-      style={{
-        ["--paper" as any]: "#fbfaf6",
-        ["--paper-2" as any]: "#f4efe3",
-        ["--ink" as any]: "#1c1c1c",
-        ["--ink-soft" as any]: "rgba(28,28,28,0.62)",
-      }}
+      style={rootStyles}
     >
       <main className="mx-auto w-full max-w-[72rem] px-6 py-16 sm:px-10">
         {/* Intro */}

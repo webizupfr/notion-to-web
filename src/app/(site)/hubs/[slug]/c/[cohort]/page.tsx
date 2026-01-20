@@ -1,13 +1,13 @@
 import { notFound, redirect } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import { cookies } from "next/headers";
+import "@/styles/hub.css";
 
 import { getPageBundle } from "@/lib/content-store";
-import { applyCohortOverlay, getCohortBySlug } from "@/lib/cohorts";
+import { applyCohortOverlay, getCohortBySlug, nowInTimezone } from "@/lib/cohorts";
 import type { NotionBlock } from "@/lib/notion";
 import { PageSection } from "@/components/layout/PageSection";
 import { PageSidebar } from "@/components/layout/PageSidebar";
-import { LearningHeader } from "@/components/learning/LearningHeader";
 import { splitBlocksIntoSections } from "@/components/learning/sectioning";
 import { Blocks } from "@/components/notion/Blocks";
 import StartToday from "@/components/learning/StartToday";
@@ -88,14 +88,31 @@ export default async function CohortHubPage({
     return scoped ? scoped : "";
   };
 
-  const sections = splitBlocksIntoSections((bundle.blocks ?? []) as NotionBlock[]);
+  const removePinnedCallouts = (blocksList: NotionBlock[]): NotionBlock[] => {
+    return blocksList.filter((block) => {
+      if ((block as { type?: string }).type !== "callout") return true;
+      const callout = (block as Extract<NotionBlock, { type: "callout" }>).callout;
+      const text = (callout.rich_text ?? [])
+        .map((r) => r.plain_text ?? "")
+        .join("")
+        .trim();
+      const icon = callout.icon;
+      const hasPinIcon = icon?.type === "emoji" && (icon.emoji ?? "").includes("📌");
+      const hasPinText = text.startsWith("📌");
+      return !(hasPinIcon || hasPinText);
+    });
+  };
+
+  const sections = splitBlocksIntoSections(
+    removePinnedCallouts((bundle.blocks ?? []) as NotionBlock[])
+  );
   const renderSections = () => {
     if (!sections.length) return null;
     if (sections.length === 1) {
       return (
         <PageSection variant="content" size="wide">
           <div className="content-panel section-band w-full">
-            <Blocks blocks={sections[0].blocks} currentSlug={`${basePath}`} />
+            <Blocks blocks={sections[0].blocks} currentSlug={`${basePath}`} navigation={navItems} />
           </div>
         </PageSection>
       );
@@ -111,7 +128,7 @@ export default async function CohortHubPage({
           className="py-[var(--space-5)] sm:py-[var(--space-6)]"
         >
           <div className="content-panel section-band w-full">
-            <Blocks blocks={section.blocks} currentSlug={`${basePath}`} />
+            <Blocks blocks={section.blocks} currentSlug={`${basePath}`} navigation={navItems} />
           </div>
         </PageSection>
       );
@@ -135,6 +152,20 @@ export default async function CohortHubPage({
     ...day,
     slug: withPrefix(day.slug),
   }));
+  const timezone = cohort?.timezone ?? "Europe/Paris";
+  const { key: todayKey } = nowInTimezone(timezone);
+  const dateKeyFromIso = (iso: string | null | undefined) => (iso ? iso.split("T")[0] : null);
+  const releasedDaysRaw = daysWithPrefix.filter((day) => {
+    const locked = day.state ? /verrou/i.test(day.state) : false;
+    if (locked) return false;
+    const unlockKey = dateKeyFromIso(day.unlockDate ?? null);
+    if (!unlockKey) return true;
+    return unlockKey <= todayKey;
+  });
+  const releasedDaysForRender = releasedDaysRaw.map((day) => ({
+    ...day,
+    slug: withPrefix(day.slug),
+  }));
 
   return (
     <div className="mx-auto flex w-full max-w-[1800px] gap-10">
@@ -146,7 +177,7 @@ export default async function CohortHubPage({
           navigation={navItems}
           isHub
           hubDescription={bundle.meta.description ?? null}
-          releasedDays={daysWithPrefix}
+          releasedDays={releasedDaysForRender}
           learningKind={learningPath?.kind}
           unitLabelSingular={unitLabelSingular}
           unitLabelPlural={learningPath?.unitLabelPlural}
@@ -161,30 +192,19 @@ export default async function CohortHubPage({
           navigation={navItems}
           isHub
           hubDescription={bundle.meta.description ?? null}
-          releasedDays={daysWithPrefix}
+          releasedDays={releasedDaysForRender}
           learningKind={learningPath?.kind}
           unitLabelSingular={unitLabelSingular}
           unitLabelPlural={learningPath?.unitLabelPlural}
         />
       </div>
 
-      <section className="flex-1 min-w-0 space-y-8">
-        <PageSection variant="content" size="wide">
-          <LearningHeader
-            unitLabel={learningPath?.unitLabelSingular ?? "Programme"}
-            unitNumber={null}
-            title={bundle.meta.title}
-            summary={bundle.meta.description ?? null}
-          />
-        </PageSection>
-
+      <section className="flex-1 min-w-0 hub-content">
         {renderSections()}
 
         {days.length ? (
           <PageSection variant="content" size="wide">
-            <div className="content-panel w-full">
-              <StartToday days={daysWithPrefix} unitLabelSingular={unitLabelSingular} />
-            </div>
+            <StartToday days={daysWithPrefix} unitLabelSingular={unitLabelSingular} />
           </PageSection>
         ) : null}
       </section>

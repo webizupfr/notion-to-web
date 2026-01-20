@@ -67,6 +67,7 @@ export function Header({ links, size = "narrow" }: { links?: NavLink[]; size?: C
   };
 
   const hubModeByPath = useMemo(() => pathname.startsWith("/hubs") || /\/c\/[\w-]+/.test(pathname), [pathname]);
+  const isSprint = pathname.startsWith("/sprint");
   const [hubFlag, setHubFlag] = useState(false);
   useEffect(() => {
     try {
@@ -119,25 +120,39 @@ export function Header({ links, size = "narrow" }: { links?: NavLink[]; size?: C
   const ctaGlow =
     "shadow-[0_10px_30px_-18px_color-mix(in_oklab,var(--amber,#f59e0b)_55%,transparent)]";
 
+  const hubContactHref = "mailto:hello@impulsion.studio";
+  const hubCtaClass =
+    "inline-flex items-center rounded-full px-3 py-1.5 text-[0.82rem] font-medium tracking-tight " +
+    "border border-[color-mix(in_oklab,var(--border)_70%,transparent)] " +
+    "bg-[color-mix(in_oklab,var(--bg)_92%,#fff)] " +
+    "text-[color:var(--fg)] shadow-sm " +
+    "hover:bg-[color-mix(in_oklab,var(--bg)_88%,#fff)] " +
+    "focus:outline-none focus:ring-2 focus:ring-[color:var(--amber,#f59e0b)]/40";
+
   const headerVars: CSSProperties & { "--amber": string } = { "--amber": AMBER };
 
   return (
     <header className={headerClass} style={headerVars}>
       <Container size={size} className="flex h-12 items-center justify-between gap-3">
         {/* Logo */}
-        <Link
-          href="/"
-          className="font-display font-semibold tracking-tight text-[color:var(--fg)]/92 hover:opacity-90 inline-flex items-center gap-2"
-          aria-label="Impulsion – Accueil"
-        >
-          <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
-          </svg>
-          Impulsion
-        </Link>
+       <div
+  className="font-display font-semibold tracking-tight text-[color:var(--fg)]/92 inline-flex items-center gap-2"
+  aria-label="Impulsion – Accueil"
+>
+  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
+  </svg>
+  Impulsion
+</div>
 
-        {hubMode ? (
-          <span />
+        {hubMode || isSprint ? (
+          isSprint ? (
+            <a href={hubContactHref} className={hubCtaClass}>
+              Contact
+            </a>
+          ) : (
+            <span />
+          )
         ) : (
           <>
             {/* Nav desktop */}
@@ -190,7 +205,7 @@ export function Header({ links, size = "narrow" }: { links?: NavLink[]; size?: C
       </Container>
 
       {/* Drawer mobile */}
-      {!hubMode && (
+      {!hubMode && !isSprint && (
         <div
           className={clsx(
             "md:hidden overflow-hidden transition-[max-height,opacity] duration-200 ease-out",
