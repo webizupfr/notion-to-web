@@ -123,6 +123,18 @@ export default async function HubDayPage({
     }
     return item;
   });
+  const navigationForBlocks: typeof navItems = bundle.meta.notionId
+    ? [
+        {
+          type: "page" as const,
+          id: bundle.meta.notionId,
+          title: bundle.meta.title,
+          slug: basePrefix,
+          icon: bundle.meta.icon ?? null,
+        },
+        ...navItems,
+      ]
+    : navItems;
 
   const sidebarProps = {
     parentTitle: bundle.meta.title,
@@ -182,7 +194,7 @@ export default async function HubDayPage({
                       <Blocks
                         blocks={section.blocks}
                         currentSlug={fallbackSlug || basePrefix}
-                        navigation={navItems}
+                        navigation={navigationForBlocks}
                       />
                     </div>
                   </PageSection>
@@ -194,7 +206,7 @@ export default async function HubDayPage({
                   <Blocks
                     blocks={fallbackBlocks}
                     currentSlug={fallbackSlug || basePrefix}
-                    navigation={navItems}
+                    navigation={navigationForBlocks}
                   />
                 </div>
               </PageSection>

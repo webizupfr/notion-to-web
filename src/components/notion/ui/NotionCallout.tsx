@@ -1,16 +1,17 @@
 import type { ReactNode } from "react";
 import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 
-import { RichText } from "./RichText";
+import { RichText, type NavigationIndex } from "./RichText";
 
 type Props = {
   richText: RichTextItemResponse[];
   tone?: string | null;
   icon?: ReactNode | null;
   children?: ReactNode;
+  navigationIndex?: NavigationIndex | null;
 };
 
-export function NotionCallout({ richText, tone, icon, children }: Props) {
+export function NotionCallout({ richText, tone, icon, children, navigationIndex }: Props) {
   const t = (tone ?? "").toLowerCase();
   const hasIcon = Boolean(icon);
   const toneClass =
@@ -31,7 +32,7 @@ export function NotionCallout({ richText, tone, icon, children }: Props) {
         </div>
       ) : null}
       <div className="callout__body">
-        <RichText richText={richText} />
+        <RichText richText={richText} navigationIndex={navigationIndex} />
         {children ? <div className="callout__children prose prose-notion">{children}</div> : null}
       </div>
     </div>

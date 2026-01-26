@@ -3,15 +3,16 @@ import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoi
 
 import type { ListBlock } from "@/components/notion/utils";
 import type { NotionBlock } from "@/lib/notion";
-import { RichText } from "./RichText";
+import { RichText, type NavigationIndex } from "./RichText";
 
 type Props = {
   items: ListBlock[];
   type: "bulleted" | "numbered";
   renderChildren?: (blocks: NotionBlock[]) => ReactNode;
+  navigationIndex?: NavigationIndex | null;
 };
 
-export function NotionList({ items, type, renderChildren }: Props) {
+export function NotionList({ items, type, renderChildren, navigationIndex }: Props) {
   const Component = (type === "bulleted" ? "ul" : "ol") as "ul" | "ol";
 
   return (
@@ -27,7 +28,7 @@ export function NotionList({ items, type, renderChildren }: Props) {
 
           return (
             <li key={item.id}>
-              <RichText richText={richText} />
+              <RichText richText={richText} navigationIndex={navigationIndex} />
               {childrenBlocks.length > 0 && renderChildren ? (
                 <div className="prose prose-notion prose-list prose-list-nested">
                   {renderChildren(childrenBlocks)}

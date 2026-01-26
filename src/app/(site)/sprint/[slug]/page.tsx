@@ -118,7 +118,7 @@ export default async function SprintPage({
       return (
         <PageSection variant="content" size="wide" paddingY="tight">
           <div className="content-panel section-band w-full">
-            <Blocks blocks={contextSections[0].blocks} currentSlug={navSlug} navigation={contextNavigation} />
+            <Blocks blocks={contextSections[0].blocks} currentSlug={navSlug} navigation={navigationForBlocks} />
           </div>
         </PageSection>
       );
@@ -136,7 +136,7 @@ export default async function SprintPage({
               paddingY="tight"
             >
               <div className="content-panel section-band w-full">
-                <Blocks blocks={section.blocks} currentSlug={navSlug} navigation={contextNavigation} />
+                <Blocks blocks={section.blocks} currentSlug={navSlug} navigation={navigationForBlocks} />
               </div>
             </PageSection>
           );
@@ -146,6 +146,18 @@ export default async function SprintPage({
   };
 
   const contextNavigation = bundle.contextNavigation ?? [];
+  const navigationForBlocks: typeof contextNavigation = bundle.contextNotionId
+    ? [
+        {
+          type: "page" as const,
+          id: bundle.contextNotionId,
+          title: sprintTitle,
+          slug: navSlug,
+          icon: null,
+        },
+        ...contextNavigation,
+      ]
+    : contextNavigation;
   const moduleQuickGroups = (() => {
     const unlockedModules = modules.filter((mod) => !mod.isLocked);
     if (!unlockedModules.length) return [];

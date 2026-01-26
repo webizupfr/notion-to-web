@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 
 import type { NotionBlock } from "@/lib/notion";
-import { RichText } from "./RichText";
+import { RichText, type NavigationIndex } from "./RichText";
 
 type Props = {
   id?: string;
@@ -10,9 +10,17 @@ type Props = {
   checked?: boolean | null;
   renderChildren?: (blocks: NotionBlock[]) => ReactNode;
   childrenBlocks?: NotionBlock[];
+  navigationIndex?: NavigationIndex | null;
 };
 
-export function NotionTodo({ id, richText, checked, renderChildren, childrenBlocks = [] }: Props) {
+export function NotionTodo({
+  id,
+  richText,
+  checked,
+  renderChildren,
+  childrenBlocks = [],
+  navigationIndex,
+}: Props) {
   return (
     <div className="flex items-start gap-3 rounded-[var(--r-md)] border border-[var(--border)] bg-[var(--bg-elevated)] px-[var(--space-4)] py-[var(--space-3)]">
       <input
@@ -24,7 +32,7 @@ export function NotionTodo({ id, richText, checked, renderChildren, childrenBloc
       />
       <div className="space-y-2 text-[var(--fg)]">
         <label htmlFor={id} className="block cursor-pointer text-[1rem] leading-[1.6]">
-          <RichText richText={richText} />
+          <RichText richText={richText} navigationIndex={navigationIndex} />
         </label>
         {childrenBlocks.length > 0 && renderChildren ? (
           <div className="pl-[var(--space-3)] text-[0.95rem] leading-[1.6]">

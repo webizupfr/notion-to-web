@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 
-import { RichText } from "./RichText";
+import { RichText, type NavigationIndex } from "./RichText";
 
 type TableRow = RichTextItemResponse[][];
 
@@ -9,10 +9,12 @@ export function NotionTable({
   rows,
   hasColumnHeader = false,
   hasRowHeader = false,
+  navigationIndex,
 }: {
   rows: TableRow[];
   hasColumnHeader?: boolean;
   hasRowHeader?: boolean;
+  navigationIndex?: NavigationIndex | null;
 }): ReactNode {
   if (!rows.length) return null;
 
@@ -29,7 +31,7 @@ export function NotionTable({
                   key={`h-${idx}`}
                   className={hasRowHeader && idx === 0 ? "min-w-[220px]" : undefined}
                 >
-                  <RichText richText={cell} />
+                  <RichText richText={cell} navigationIndex={navigationIndex} />
                 </th>
               ))}
             </tr>
@@ -48,7 +50,7 @@ export function NotionTable({
                     key={`cell-${rIdx}-${cIdx}`}
                     className={isRowHeader ? "font-semibold text-[var(--fg)] table-row-header" : "text-[var(--muted)]"}
                   >
-                    <RichText richText={cell} />
+                    <RichText richText={cell} navigationIndex={navigationIndex} />
                   </td>
                 );
               })}

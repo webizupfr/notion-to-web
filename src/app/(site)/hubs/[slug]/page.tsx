@@ -68,7 +68,7 @@ export default async function HubPage({
       return (
         <PageSection variant="content" size="wide">
           <div className="content-panel section-band w-full">
-            <Blocks blocks={sections[0].blocks} currentSlug={`hubs/${slug}`} navigation={navItems} />
+            <Blocks blocks={sections[0].blocks} currentSlug={`hubs/${slug}`} navigation={navigationForBlocks} />
           </div>
         </PageSection>
       );
@@ -83,7 +83,7 @@ export default async function HubPage({
           size="wide"
         >
           <div className="content-panel section-band w-full">
-            <Blocks blocks={section.blocks} currentSlug={`hubs/${slug}`} navigation={navItems} />
+            <Blocks blocks={section.blocks} currentSlug={`hubs/${slug}`} navigation={navigationForBlocks} />
           </div>
         </PageSection>
       );
@@ -122,6 +122,18 @@ export default async function HubPage({
     }
     return item;
   });
+  const navigationForBlocks: typeof navItems = bundle.meta.notionId
+    ? [
+        {
+          type: "page" as const,
+          id: bundle.meta.notionId,
+          title: bundle.meta.title,
+          slug: basePath,
+          icon: bundle.meta.icon ?? null,
+        },
+        ...navItems,
+      ]
+    : navItems;
 
   const daysWithPrefix = days.map((day) => ({
     ...day,

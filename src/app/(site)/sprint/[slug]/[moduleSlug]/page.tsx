@@ -63,6 +63,18 @@ export default async function SprintModulePage({
 
   const parentSlug = `sprint/${slug}`;
   const contextNavigation = bundle.contextNavigation ?? [];
+  const navigationForBlocks: typeof contextNavigation = bundle.contextNotionId
+    ? [
+        {
+          type: "page" as const,
+          id: bundle.contextNotionId,
+          title: bundle.title,
+          slug: parentSlug,
+          icon: null,
+        },
+        ...contextNavigation,
+      ]
+    : contextNavigation;
   const moduleQuickGroups = (() => {
     const groups = new Map<string, Array<{ id: string; title: string; slug: string; order: number }>>();
     bundle.modules.forEach((module, index) => {
@@ -122,7 +134,7 @@ export default async function SprintModulePage({
         return (
           <PageSection variant="content" size="wide" paddingY="tight">
             <div className="content-panel section-band w-full">
-              <Blocks blocks={fallbackSections[0].blocks} currentSlug={childSlug} navigation={contextNavigation} />
+              <Blocks blocks={fallbackSections[0].blocks} currentSlug={childSlug} navigation={navigationForBlocks} />
             </div>
           </PageSection>
         );
@@ -138,7 +150,7 @@ export default async function SprintModulePage({
             paddingY="tight"
           >
             <div className="content-panel section-band w-full">
-              <Blocks blocks={section.blocks} currentSlug={childSlug} navigation={contextNavigation} />
+              <Blocks blocks={section.blocks} currentSlug={childSlug} navigation={navigationForBlocks} />
             </div>
           </PageSection>
         );
@@ -279,7 +291,7 @@ export default async function SprintModulePage({
               <Blocks
                 blocks={modulePage.blocks}
                 currentSlug={`sprint/${slug}/${moduleSlug}`}
-                navigation={contextNavigation}
+                navigation={navigationForBlocks}
               />
             </div>
           </PageSection>

@@ -112,7 +112,7 @@ export default async function CohortHubPage({
       return (
         <PageSection variant="content" size="wide">
           <div className="content-panel section-band w-full">
-            <Blocks blocks={sections[0].blocks} currentSlug={`${basePath}`} navigation={navItems} />
+            <Blocks blocks={sections[0].blocks} currentSlug={`${basePath}`} navigation={navigationForBlocks} />
           </div>
         </PageSection>
       );
@@ -128,7 +128,7 @@ export default async function CohortHubPage({
           className="py-[var(--space-5)] sm:py-[var(--space-6)]"
         >
           <div className="content-panel section-band w-full">
-            <Blocks blocks={section.blocks} currentSlug={`${basePath}`} navigation={navItems} />
+            <Blocks blocks={section.blocks} currentSlug={`${basePath}`} navigation={navigationForBlocks} />
           </div>
         </PageSection>
       );
@@ -147,6 +147,18 @@ export default async function CohortHubPage({
     }
     return item;
   });
+  const navigationForBlocks: typeof navItems = bundle.meta.notionId
+    ? [
+        {
+          type: "page" as const,
+          id: bundle.meta.notionId,
+          title: bundle.meta.title,
+          slug: basePath,
+          icon: bundle.meta.icon ?? null,
+        },
+        ...navItems,
+      ]
+    : navItems;
 
   const daysWithPrefix = days.map((day) => ({
     ...day,

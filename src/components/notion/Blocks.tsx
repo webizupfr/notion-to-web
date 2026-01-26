@@ -63,6 +63,9 @@ type TocEntry = { id: string; title: string; level: 1 | 2 | 3 };
 type NavLink = { id?: string; slug: string; title: string; icon?: string | null };
 type NavigationIndex = Map<string, NavLink>;
 
+const NOTION_PAGE_ID_RE = /([0-9a-f]{32})/i;
+const NOTION_PAGE_UUID_RE = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i;
+
 const MEDIA_BLOCKS = new Set<NotionBlock["type"]>([
   "image",
   "video",
@@ -111,6 +114,43 @@ function resolveNavigationLink(index: NavigationIndex | null | undefined, id?: s
 function normalizeInternalHref(slug: string) {
   const trimmed = slug.replace(/^\/+/, "");
   return trimmed ? `/${trimmed}` : "/";
+}
+
+function extractNotionPageIdFromHref(href: string): string | null {
+  const uuidMatch = href.match(NOTION_PAGE_UUID_RE);
+  if (uuidMatch?.[1]) return uuidMatch[1];
+  const idMatch = href.match(NOTION_PAGE_ID_RE);
+  if (idMatch?.[1]) return idMatch[1];
+  return null;
+}
+
+function isNotionUrl(href: string): boolean {
+  if (href.startsWith("notion://")) return true;
+  try {
+    const url = new URL(href);
+    const host = url.hostname.toLowerCase();
+    return host.endsWith("notion.so") || host.endsWith("notion.site");
+  } catch {
+    return false;
+  }
+}
+
+function isNotionPath(href: string): boolean {
+  if (!href.startsWith("/")) return false;
+  return Boolean(extractNotionPageIdFromHref(href));
+}
+
+function resolveInternalHrefFromNotionLink(
+  href: string,
+  navigationIndex?: NavigationIndex | null
+): string | null {
+  if (!navigationIndex) return null;
+  if (!(isNotionUrl(href) || isNotionPath(href))) return null;
+  const pageId = extractNotionPageIdFromHref(href);
+  if (!pageId) return null;
+  const navLink = resolveNavigationLink(navigationIndex, pageId);
+  if (!navLink?.slug) return null;
+  return normalizeInternalHref(navLink.slug);
 }
 
 function renderInternalPageLink({ slug, title, icon }: { slug: string; title: string; icon?: string | null }) {
@@ -287,6 +327,7 @@ function renderGroupedList(
     <NotionList
       type={type}
       items={block.items}
+      navigationIndex={navigationIndex}
       renderChildren={(children) => (
         <Blocks
           blocks={children}
@@ -354,7 +395,14 @@ export async function renderBlockAsync(
   if (isButtonBlock(block)) {
     const data = block.button;
     if (!data) return null;
-    return <NotionButton href={data.url} label={data.label} variant={data.style === "ghost" ? "ghost" : "primary"} />;
+    const resolvedHref = resolveInternalHrefFromNotionLink(data.url, navigationIndex) ?? data.url;
+    return (
+      <NotionButton
+        href={resolvedHref}
+        label={data.label}
+        variant={data.style === "ghost" ? "ghost" : "primary"}
+      />
+    );
   }
 
   // widget injection
@@ -380,33 +428,46 @@ export async function renderBlockAsync(
       if (!richText?.length) return null;
       const maybeBtn = parseButtonFromRichText(richText);
       if (maybeBtn) {
-        return <NotionButton href={maybeBtn.href} label={maybeBtn.label} variant={maybeBtn.variant} />;
+        const resolvedHref = resolveInternalHrefFromNotionLink(maybeBtn.href, navigationIndex) ?? maybeBtn.href;
+        return <NotionButton href={resolvedHref} label={maybeBtn.label} variant={maybeBtn.variant} />;
       }
-      return <NotionParagraph richText={richText} />;
+      return <NotionParagraph richText={richText} navigationIndex={navigationIndex} />;
     }
 
     case "heading_1":
       return (
         <NotionHeading id={`b-${block.id}`} level={1}>
-          <RichText prose={false} richText={(block as Extract<NotionBlock, { type: "heading_1" }>).heading_1.rich_text} />
+          <RichText
+            prose={false}
+            richText={(block as Extract<NotionBlock, { type: "heading_1" }>).heading_1.rich_text}
+            navigationIndex={navigationIndex}
+          />
         </NotionHeading>
       );
     case "heading_2":
       return (
         <NotionHeading id={`b-${block.id}`} level={2}>
-          <RichText prose={false} richText={(block as Extract<NotionBlock, { type: "heading_2" }>).heading_2.rich_text} />
+          <RichText
+            prose={false}
+            richText={(block as Extract<NotionBlock, { type: "heading_2" }>).heading_2.rich_text}
+            navigationIndex={navigationIndex}
+          />
         </NotionHeading>
       );
     case "heading_3":
       return (
         <NotionHeading id={`b-${block.id}`} level={3}>
-          <RichText prose={false} richText={(block as Extract<NotionBlock, { type: "heading_3" }>).heading_3.rich_text} />
+          <RichText
+            prose={false}
+            richText={(block as Extract<NotionBlock, { type: "heading_3" }>).heading_3.rich_text}
+            navigationIndex={navigationIndex}
+          />
         </NotionHeading>
       );
 
     case "quote": {
       const quote = (block as Extract<NotionBlock, { type: "quote" }>).quote;
-      return <NotionQuote richText={quote.rich_text} tone={quote.color} />;
+      return <NotionQuote richText={quote.rich_text} tone={quote.color} navigationIndex={navigationIndex} />;
     }
 
     case "divider":
@@ -419,6 +480,7 @@ export async function renderBlockAsync(
         <NotionList
           type={type === "bulleted_list_item" ? "bulleted" : "numbered"}
           items={[block as Extract<NotionBlock, { type: "bulleted_list_item" | "numbered_list_item" }>]}
+          navigationIndex={navigationIndex}
           renderChildren={(children) => (
             <Blocks
               blocks={children}
@@ -440,6 +502,7 @@ export async function renderBlockAsync(
           id={`todo-${block.id}`}
           richText={todo.rich_text}
           checked={todo.checked}
+          navigationIndex={navigationIndex}
           childrenBlocks={children}
           renderChildren={(blocks) => (
             <Blocks
@@ -462,6 +525,7 @@ export async function renderBlockAsync(
           icon={callout.icon?.type === "emoji" ? callout.icon.emoji : undefined}
           tone={callout.color}
           richText={callout.rich_text}
+          navigationIndex={navigationIndex}
         >
           {children.length ? (
             <Blocks
@@ -480,7 +544,7 @@ export async function renderBlockAsync(
       const children = getBlockChildren(block);
       const toggle = (block as Extract<NotionBlock, { type: "toggle" }>).toggle;
       return (
-        <NotionToggle richText={toggle.rich_text} tone={toggle.color}>
+        <NotionToggle richText={toggle.rich_text} tone={toggle.color} navigationIndex={navigationIndex}>
           {children.length ? (
             <Blocks
               blocks={children}
@@ -500,7 +564,7 @@ export async function renderBlockAsync(
       if (!toggle) return null;
       const children = getBlockChildren(block);
       return (
-        <NotionToggleHeading level={1} richText={toggle.rich_text} tone={toggle.color}>
+        <NotionToggleHeading level={1} richText={toggle.rich_text} tone={toggle.color} navigationIndex={navigationIndex}>
           {children.length ? (
             <Blocks
               blocks={children}
@@ -520,7 +584,7 @@ export async function renderBlockAsync(
       if (!toggle) return null;
       const children = getBlockChildren(block);
       return (
-        <NotionToggleHeading level={2} richText={toggle.rich_text} tone={toggle.color}>
+        <NotionToggleHeading level={2} richText={toggle.rich_text} tone={toggle.color} navigationIndex={navigationIndex}>
           {children.length ? (
             <Blocks
               blocks={children}
@@ -540,7 +604,7 @@ export async function renderBlockAsync(
       if (!toggle) return null;
       const children = getBlockChildren(block);
       return (
-        <NotionToggleHeading level={3} richText={toggle.rich_text} tone={toggle.color}>
+        <NotionToggleHeading level={3} richText={toggle.rich_text} tone={toggle.color} navigationIndex={navigationIndex}>
           {children.length ? (
             <Blocks
               blocks={children}
@@ -677,6 +741,7 @@ export async function renderBlockAsync(
           rows={rows}
           hasColumnHeader={table.has_column_header}
           hasRowHeader={table.has_row_header}
+          navigationIndex={navigationIndex}
         />
       );
     }
