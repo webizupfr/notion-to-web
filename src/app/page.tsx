@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import clsx from "clsx";
@@ -8,20 +9,20 @@ import clsx from "clsx";
 type ActTone = "primary" | "secondary";
 type Act = { id: string; tone: ActTone; lines: string[] };
 
-const TITLE = ["Impulsion", "Studio d’innovation."];
+const TITLE = ["Impulsion App", "Espace de travail prive."];
 
 const ACTS: Act[] = [
-  { id: "act-2", tone: "secondary", lines: ["Pas un cabinet de conseil.", "Pas une école.", "Pas une plateforme."] },
+  { id: "act-2", tone: "secondary", lines: ["Un point d'entree unique.", "Un acces reserve.", "Un espace de travail en continu."] },
   {
     id: "act-3",
     tone: "primary",
-    lines: ["Nous apprenons en construisant.", "Nous comprenons en expérimentant.", "Nous décidons en situation réelle."],
+    lines: ["Retrouver vos hubs.", "Relancer vos sprints.", "Reprendre votre progression."],
   },
-  { id: "act-4", tone: "primary", lines: ["L’innovation ce n’est pas avoir des idées.", "C’est un processus."] },
+  { id: "act-4", tone: "primary", lines: ["Ce n'est plus un site vitrine.", "C'est votre espace operationnel."] },
   {
     id: "act-5",
     tone: "secondary",
-    lines: ["Nous travaillons avec", "des équipes,", "des entrepreneurs,", "des organisations complexes.", "", "Mais jamais de la même manière."],
+    lines: ["Entrez avec votre cle.", "Retournez a votre espace.", "Ou repassez par le site mere.", "", "Sans detour inutile."],
   },
 ];
 
@@ -49,6 +50,7 @@ type HomeRootStyle = CSSProperties & {
 };
 
 export default function Home() {
+  const router = useRouter();
   const reducedMotion = usePrefersReducedMotion();
 
   // Spotlight local scope
@@ -178,6 +180,36 @@ export default function Home() {
 
       {/* 3 zones layout */}
      <main className="relative mx-auto flex min-h-screen w-full max-w-[72rem] flex-col px-6 py-10 sm:px-10">
+  <div className="flex items-center justify-between gap-4">
+    <div className="rounded-full border border-black/10 bg-white/45 px-3 py-1.5 text-[0.76rem] font-medium uppercase tracking-[0.14em] text-[color:var(--ink-soft)] backdrop-blur-md">
+      Espace prive
+    </div>
+
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => {
+          if (window.history.length > 1) {
+            router.back();
+            return;
+          }
+
+          router.push("/hubs");
+        }}
+        className="rounded-full border border-black/10 bg-white/45 px-4 py-2 text-[0.92rem] font-medium tracking-[-0.01em] text-[color:var(--ink)]/80 backdrop-blur-md transition-colors hover:bg-white/65 hover:text-[color:var(--ink)]"
+      >
+        Retour a l&apos;espace
+      </button>
+
+      <Link
+        href="https://impulsion.studio"
+        className="rounded-full border border-black/10 bg-black/[0.86] px-4 py-2 text-[0.92rem] font-medium tracking-[-0.01em] text-white transition-colors hover:bg-black"
+      >
+        Site mere
+      </Link>
+    </div>
+  </div>
+
   {/* Spacer haut : pousse le bloc plus bas */}
   <div className="flex-1" />
 
@@ -191,6 +223,10 @@ export default function Home() {
       <div className="mt-2 text-[1rem] sm:text-[1.12rem] leading-[1.45] font-medium tracking-[-0.01em] text-[color:var(--ink)]/90">
         {TITLE[1]}
       </div>
+
+      <p className="mx-auto mt-5 max-w-[30rem] text-[0.98rem] leading-[1.75] text-[color:var(--ink-soft)]">
+        Une entree sobre pour reprendre vos contenus, vos parcours et vos espaces reserves sans passer par une navigation marketing.
+      </p>
     </div>
 
     {/* Scène juste dessous (collée) */}
@@ -357,27 +393,27 @@ function Doors({ done }: { done: boolean }) {
   return (
     <div
       className={clsx(
-        "flex justify-center gap-10 sm:gap-16 text-[0.9rem] sm:text-[0.95rem] tracking-[-0.01em] transition-opacity duration-700",
+        "flex flex-wrap justify-center gap-4 text-[0.9rem] sm:text-[0.95rem] tracking-[-0.01em] transition-opacity duration-700",
         done ? "opacity-80" : "opacity-50"
       )}
     >
       <Link
-        href="/studio"
-        className="font-medium text-[color:var(--ink)]/70 hover:text-[color:var(--ink)] transition-colors"
+        href="/gate"
+        className="rounded-full border border-black/10 bg-white/40 px-4 py-2 font-medium text-[color:var(--ink)]/75 backdrop-blur-md transition-colors hover:bg-white/60 hover:text-[color:var(--ink)]"
       >
-        Entreprise
+        S&apos;identifier
       </Link>
       <Link
-        href="/lab"
-        className="font-medium text-[color:var(--ink)]/70 hover:text-[color:var(--ink)] transition-colors"
+        href="/hubs"
+        className="rounded-full border border-black/10 bg-white/40 px-4 py-2 font-medium text-[color:var(--ink)]/75 backdrop-blur-md transition-colors hover:bg-white/60 hover:text-[color:var(--ink)]"
       >
-        Entrepreneur
+        Hubs
       </Link>
       <Link
-        href="/campus"
-        className="font-medium text-[color:var(--ink)]/70 hover:text-[color:var(--ink)] transition-colors"
+        href="/sprint"
+        className="rounded-full border border-black/10 bg-white/40 px-4 py-2 font-medium text-[color:var(--ink)]/75 backdrop-blur-md transition-colors hover:bg-white/60 hover:text-[color:var(--ink)]"
       >
-        Écoles & Universités
+        Sprints
       </Link>
     </div>
   );
