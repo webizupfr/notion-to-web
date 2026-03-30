@@ -1,7 +1,9 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import "@/styles/marketing.css";
 import { Outfit } from "next/font/google";
+import { getBaseUrl } from "@/lib/base-url";
 
 const outfitText = Outfit({
   subsets: ["latin"],
@@ -16,6 +18,19 @@ const outfitDisplay = Outfit({
   weight: ["400","500","600","700"],
   display: "swap",
 });
+
+export const metadata: Metadata = {
+  metadataBase: new URL(getBaseUrl()),
+  robots: {
+    index: false,
+    follow: false,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
+};
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

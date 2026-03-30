@@ -22,6 +22,19 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 600,
     dangerouslyAllowSVG: true,
   },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow, noarchive",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
