@@ -46,10 +46,12 @@ export const brand = {
     instagram: null as string | null,
   },
 
-  /** Pages légales internes (hébergées dans Notion ou code) */
+  /** Pages légales internes (hébergées dans Notion via DB Pages) */
   legal: {
     mentionsLegales: "/mentions-legales",
-    confidentialite: "/confidentialite",
+    confidentialite: "/privacy",
+    cgv: "/cgv",
+    about: "/about",
   },
 
   /** Locale principale (FR only pour l'instant, i18n non implémenté) */

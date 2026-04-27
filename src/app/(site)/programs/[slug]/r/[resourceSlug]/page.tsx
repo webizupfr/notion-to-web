@@ -122,6 +122,22 @@ export default async function ResourcePage({
   const bodyBlocks = (resource.bodyBlocks ?? []) as NotionBlock[];
   const sections = splitBlocksIntoSections(bodyBlocks);
 
+  // En mode "modules" (sync/event), la sidebar utilise moduleQuickGroups.
+  const moduleQuickGroups =
+    labels.kind === 'modules'
+      ? [
+          {
+            label: labels.plural,
+            items: tree.units.map(({ meta: u }) => ({
+              id: u.notionId,
+              title: u.title,
+              slug: `${basePrefix}/${u.slug}`,
+              order: u.order,
+            })),
+          },
+        ]
+      : undefined;
+
   const sidebarProps = {
     parentTitle: programMeta.title,
     parentSlug: basePrefix,
@@ -133,6 +149,7 @@ export default async function ResourcePage({
     learningKind: labels.kind,
     unitLabelSingular: labels.singular,
     unitLabelPlural: labels.plural,
+    moduleQuickGroups,
     actionsSlot: <ProgramResources resources={tree.pinnedResources} programSlug={slug} />,
     fullHeight: true,
   };

@@ -135,6 +135,23 @@ export default async function UnitPage({
   const nextUnit =
     currentIndex >= 0 && currentIndex < units.length - 1 ? units[currentIndex + 1] : null;
 
+  // En mode "modules" (sync/event), la sidebar utilise moduleQuickGroups
+  // pour afficher la liste. En mode "days" (async), elle utilise releasedDays.
+  const moduleQuickGroups =
+    labels.kind === 'modules'
+      ? [
+          {
+            label: labels.plural,
+            items: units.map(({ meta: u }) => ({
+              id: u.notionId,
+              title: u.title,
+              slug: `${basePrefix}/${u.slug}`,
+              order: u.order,
+            })),
+          },
+        ]
+      : undefined;
+
   const sidebarProps = {
     parentTitle: programMeta.title,
     parentSlug: basePrefix,
@@ -146,6 +163,7 @@ export default async function UnitPage({
     learningKind: labels.kind,
     unitLabelSingular: labels.singular,
     unitLabelPlural: labels.plural,
+    moduleQuickGroups,
     actionsSlot: <ProgramResources resources={tree.pinnedResources} programSlug={slug} />,
     fullHeight: true,
   };

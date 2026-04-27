@@ -4,6 +4,7 @@ import { unstable_cache } from "next/cache";
 
 import { Blocks } from "@/components/notion/Blocks";
 import { PageSection } from "@/components/layout/PageSection";
+import { Footer } from "@/components/layout/Footer";
 import { getPageBundle } from "@/lib/content-store";
 import type { NotionBlock } from "@/lib/notion";
 
@@ -70,23 +71,26 @@ export default async function Page({
   if (!blocks?.length) return notFound();
 
   return (
-    <article className="flex w-full flex-col gap-[var(--space-lg)]">
-      <PageSection variant="content" size="balanced">
-        <header className="mb-[var(--space-lg)]">
-          <h1 className="font-[family-name:var(--font-display)] text-[clamp(1.8rem,3.5vw,2.6rem)] leading-[1.05] tracking-[-0.03em] font-bold text-[color:var(--text-primary)]">
-            {meta.title}
-          </h1>
-          {meta.description ? (
-            <p className="mt-[var(--space-sm)] max-w-[60ch] text-[1.05rem] leading-[1.55] text-[color:var(--text-secondary)]">
-              {meta.description}
-            </p>
-          ) : null}
-        </header>
+    <>
+      <article className="flex w-full flex-col gap-[var(--space-lg)]">
+        <PageSection variant="content" size="balanced">
+          <header className="mb-[var(--space-lg)]">
+            <h1 className="font-[family-name:var(--font-display)] text-[clamp(1.8rem,3.5vw,2.6rem)] leading-[1.05] tracking-[-0.03em] font-bold text-[color:var(--text-primary)]">
+              {meta.title}
+            </h1>
+            {meta.description ? (
+              <p className="mt-[var(--space-sm)] max-w-[60ch] text-[1.05rem] leading-[1.55] text-[color:var(--text-secondary)]">
+                {meta.description}
+              </p>
+            ) : null}
+          </header>
 
-        <div className="notion-render w-full">
-          <Blocks blocks={blocks as NotionBlock[]} currentSlug={slug} />
-        </div>
-      </PageSection>
-    </article>
+          <div className="notion-render w-full">
+            <Blocks blocks={blocks as NotionBlock[]} currentSlug={slug} />
+          </div>
+        </PageSection>
+      </article>
+      <Footer />
+    </>
   );
 }

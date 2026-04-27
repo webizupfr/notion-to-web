@@ -104,8 +104,9 @@ export function PageSidebar({
     setOpenWeeks((prev) => {
       const next: Record<number, boolean> = {};
       if (!weekList.length) return next;
-      const last = weekList[weekList.length - 1];
-      for (const w of weekList) next[w] = prev[w] ?? (w === last);
+      // Ouvre TOUTES les semaines par défaut → l'apprenant voit immédiatement
+      // sa progression complète sans avoir à dérouler.
+      for (const w of weekList) next[w] = prev[w] ?? true;
       return next;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -116,8 +117,8 @@ export function PageSidebar({
     setOpenModuleGroups((prev) => {
       const next: Record<string, boolean> = {};
       for (const group of moduleQuickGroups) {
-        const hasCurrent = group.items.some((item) => item.slug === currentPath);
-        next[group.label] = prev[group.label] ?? hasCurrent;
+        // Ouvert par défaut → l'apprenant voit la liste complète des modules.
+        next[group.label] = prev[group.label] ?? true;
       }
       return next;
     });

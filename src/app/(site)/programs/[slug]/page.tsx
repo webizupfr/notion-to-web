@@ -100,6 +100,22 @@ export default async function ProgramPage({
   const totalUnits = units.length;
   const progressPct = totalUnits > 0 ? Math.round((completedCount / totalUnits) * 100) : 0;
 
+  // En mode "modules" (sync/event), la sidebar utilise moduleQuickGroups.
+  const moduleQuickGroups =
+    labels.kind === 'modules'
+      ? [
+          {
+            label: labels.plural,
+            items: units.map(({ meta: u }) => ({
+              id: u.notionId,
+              title: u.title,
+              slug: `${basePath}/${u.slug}`,
+              order: u.order,
+            })),
+          },
+        ]
+      : undefined;
+
   return (
     <div className="mx-auto flex w-full max-w-[1800px] gap-10">
       <CompletionToast />
@@ -115,6 +131,7 @@ export default async function ProgramPage({
           learningKind={labels.kind}
           unitLabelSingular={labels.singular}
           unitLabelPlural={labels.plural}
+          moduleQuickGroups={moduleQuickGroups}
           actionsSlot={<ProgramResources resources={tree.pinnedResources} programSlug={slug} />}
           fullHeight
         />
@@ -132,6 +149,7 @@ export default async function ProgramPage({
           learningKind={labels.kind}
           unitLabelSingular={labels.singular}
           unitLabelPlural={labels.plural}
+          moduleQuickGroups={moduleQuickGroups}
           actionsSlot={<ProgramResources resources={tree.pinnedResources} programSlug={slug} />}
           fullHeight
         />

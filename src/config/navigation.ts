@@ -105,13 +105,15 @@ export const homeCards: HomeCard[] = [
   },
 ];
 
-/** Liens footer (pages légales + contact) */
+/** Liens footer (pages statiques rendues depuis NOTION_PAGES_DB) */
 export const footerLinks = {
   primary: [
-    { href: "/contact", label: "Contact" },
+    { href: brand.legal.about, label: "À propos" },
+    { href: "/programs", label: "Programmes" },
   ] as NavLink[],
   legal: [
     { href: brand.legal.mentionsLegales, label: "Mentions légales" },
-    { href: brand.legal.confidentialite, label: "Charte de confidentialité" },
+    { href: brand.legal.cgv, label: "CGV" },
+    { href: brand.legal.confidentialite, label: "Confidentialité" },
   ] as NavLink[],
 };
