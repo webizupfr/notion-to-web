@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { renderTemplate, type ImagePromptWidgetConfig } from "@/lib/widget-parser";
+import { useCopy, copyFeedbackLabel } from "./useCopy";
 
 type ImagePromptStorage = {
   text: Record<string, string>;
@@ -27,12 +28,8 @@ export function ImagePromptWidget({ config, storageKey }: { config: ImagePromptW
         const parsed = JSON.parse(raw) as ImagePromptStorage;
         setTextValues(parsed.text ?? {});
         setChipValues(parsed.chips ?? {});
-        setMounted(true);
-        return;
       }
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
     setMounted(true);
   }, [storageKey]);
 
@@ -41,25 +38,26 @@ export function ImagePromptWidget({ config, storageKey }: { config: ImagePromptW
     try {
       const payload: ImagePromptStorage = { text: textValues, chips: chipValues };
       localStorage.setItem(storageKey, JSON.stringify(payload));
-    } catch {
-      // ignore persistence errors
-    }
+    } catch { /* ignore */ }
   }, [mounted, storageKey, textValues, chipValues]);
 
   const templateValues = useMemo(() => {
     const values: Record<string, string> = {};
     for (const section of config.sections) {
-      if (section.type === 'chips') {
+      if (section.type === "chips") {
         const selected = chipValues[section.id] ?? [];
         values[section.id] = joinValues(selected);
       } else {
-        values[section.id] = textValues[section.id] ?? '';
+        values[section.id] = textValues[section.id] ?? "";
       }
     }
     return values;
   }, [config.sections, chipValues, textValues]);
 
-  const preview = useMemo(() => renderTemplate(config.template, templateValues), [config.template, templateValues]);
+  const preview = useMemo(
+    () => renderTemplate(config.template, templateValues),
+    [config.template, templateValues],
+  );
 
   const updateText = (id: string, value: string) => {
     setTextValues((prev) => ({ ...prev, [id]: value }));
@@ -74,13 +72,8 @@ export function ImagePromptWidget({ config, storageKey }: { config: ImagePromptW
     });
   };
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(preview);
-    } catch {
-      // ignore
-    }
-  };
+  const { copy, status: copyStatus } = useCopy();
+  const handleCopy = () => copy(preview);
 
   const handleReset = () => {
     setTextValues({});
@@ -88,84 +81,107 @@ export function ImagePromptWidget({ config, storageKey }: { config: ImagePromptW
     setShowPreview(false);
     try {
       localStorage.removeItem(storageKey);
-    } catch {
-      // ignore
-    }
+    } catch { /* ignore */ }
   };
 
-  return (
-    <section className="surface-card space-y-[var(--space-m)]">
+  if (!config.sections.length) {
+    return (
+      <section className="widget-shell">
+        <p className="m-0 text-sm text-[color:var(--text-tertiary)]">Aucune section configurée.</p>
+      </section>
+    );
+  }
 
-      <div className="grid gap-4">
+  return (
+    <section className="widget-shell">
+      <div className="grid gap-[var(--space-md)]">
         {config.sections.map((section) => {
-          if (section.type === 'chips') {
+          if (section.type === "chips") {
             const selected = new Set(chipValues[section.id] ?? []);
             return (
               <div key={section.id} className="space-y-2">
-                <div className="text-sm font-medium text-[color:var(--fg)]">{section.label}</div>
+                <span className="widget-label">{section.label}</span>
                 {section.options && section.options.length ? (
-                  <div className="flex flex-wrap gap-2">
+                  <div
+                    className="flex flex-wrap gap-2"
+                    role="group"
+                    aria-label={section.label}
+                  >
                     {section.options.map((option) => {
                       const isActive = selected.has(option);
                       return (
                         <button
                           key={option}
                           type="button"
+                          aria-pressed={isActive}
                           onClick={() => toggleChip(section.id, option)}
-                          className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition ${
+                          className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                             isActive
-                              ? 'border-[color-mix(in_oklab,var(--success)_50%,transparent)] bg-[color-mix(in_oklab,var(--success)_12%,#fff)] text-[color-mix(in_oklab,var(--success)_85%,#0f1728)]'
-                              : 'border-[color:var(--border)] text-[color:var(--muted)] hover:border-[color-mix(in_oklab,var(--accent)_40%,transparent)] hover:text-[color-mix(in_oklab,var(--accent)_80%,#0f1728)]'
+                              ? "border-[color:var(--accent-edge)] bg-[color:var(--accent-bg)] text-[color:var(--text-primary)]"
+                              : "border-[color:var(--border-subtle)] bg-[color:var(--surface-0)] text-[color:var(--text-secondary)] hover:border-[color:var(--border-strong)] hover:text-[color:var(--text-primary)]"
                           }`}
                         >
-                          <span>{option}</span>
+                          {option}
                         </button>
                       );
                     })}
                   </div>
-                ) : null}
+                ) : (
+                  <p className="m-0 text-xs text-[color:var(--text-tertiary)] italic">
+                    Aucune option
+                  </p>
+                )}
               </div>
             );
           }
 
           return (
             <div key={section.id} className="space-y-1">
-              <label className="block text-sm font-medium text-[color:var(--fg)]" htmlFor={`${storageKey}-${section.id}`}>
+              <label className="widget-label" htmlFor={`${storageKey}-${section.id}`}>
                 {section.label}
               </label>
               <textarea
                 id={`${storageKey}-${section.id}`}
-                value={textValues[section.id] ?? ''}
+                value={textValues[section.id] ?? ""}
                 onChange={(event) => updateText(section.id, event.target.value)}
                 placeholder={section.placeholder}
                 rows={section.placeholder && section.placeholder.length > 120 ? 4 : 3}
-                className="w-full rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-4)] py-[var(--space-3)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
               />
             </div>
           );
         })}
       </div>
 
-      <div className="widget-actions text-xs text-[color:var(--muted)]">
-        <button
-          onClick={() => setShowPreview(true)}
-          className="btn btn-primary text-xs"
+      <div className="widget-actions">
+        <span
+          className="mr-auto font-[family-name:var(--font-mono)] text-[11px] uppercase tracking-[0.06em] text-[color:var(--text-tertiary)]"
+          role="status"
+          aria-live="polite"
         >
+          {copyFeedbackLabel(copyStatus) || (showPreview ? "Prompt généré" : "")}
+        </span>
+        <button onClick={() => setShowPreview(true)} className="btn btn-primary text-xs">
           Générer
         </button>
-        <button onClick={handleCopy} className="inline-flex items-center gap-1 rounded-full border border-[color:var(--border)] px-3 py-1.5 text-xs font-medium text-[color:var(--muted)] transition hover:border-[color-mix(in_oklab,var(--accent)_40%,transparent)] hover:text-[color-mix(in_oklab,var(--accent)_80%,#0f1728)]">
-          <span aria-hidden>📋</span>
+        <button
+          onClick={handleCopy}
+          className="btn btn-ghost text-xs"
+          disabled={!showPreview}
+          aria-disabled={!showPreview}
+        >
           Copier
         </button>
-        <button onClick={handleReset} className="text-xs text-[color:var(--muted)] hover:text-[color:var(--fg)]">
+        <button onClick={handleReset} className="btn btn-ghost text-xs">
           Réinitialiser
         </button>
       </div>
 
       {showPreview && (
-        <div className="space-y-2 rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-4)] py-[var(--space-4)] shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Prompt visuel</div>
-          <pre className="whitespace-pre-wrap text-sm leading-6 text-[color:var(--fg)]">{preview}</pre>
+        <div className="widget-preview">
+          <span className="widget-preview__label">Prompt visuel</span>
+          <pre className="m-0 whitespace-pre-wrap text-[0.92rem] leading-[1.55] text-[color:var(--text-primary)] font-[family-name:var(--font-mono)]">
+            {preview}
+          </pre>
         </div>
       )}
     </section>

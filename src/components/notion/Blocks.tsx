@@ -157,11 +157,12 @@ function renderInternalPageLink({ slug, title, icon }: { slug: string; title: st
   const href = normalizeInternalHref(slug);
   const emojiIcon = icon && !/^https?:\/\//i.test(icon) ? icon : null;
   return (
-    <Link href={href} className="surface-card block transition hover:-translate-y-[1px]">
-      <div className="flex items-center gap-[var(--space-s)]">
-        {emojiIcon ? <span aria-hidden className="text-xl">{emojiIcon}</span> : null}
-        <span className="text-[1.02rem] font-semibold text-[var(--fg)]">{title}</span>
+    <Link href={href} className="link-card">
+      <div className="flex items-center gap-[var(--space-sm)]">
+        {emojiIcon ? <span aria-hidden className="text-lg">{emojiIcon}</span> : null}
+        <span className="link-card__title" style={{ margin: 0, fontSize: "1rem" }}>{title}</span>
       </div>
+      <span className="link-card__arrow" aria-hidden>→</span>
     </Link>
   );
 }

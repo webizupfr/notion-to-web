@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Heading } from "@/components/ui/Heading";
-import { Text } from "@/components/ui/Text";
 import type { InsightBoardWidgetConfig, InsightBoardColumn } from "@/lib/widget-parser";
+import { useCopy, copyFeedbackLabel } from "./useCopy";
 
 type Row = { id: string; values: Record<string, string> };
 
@@ -13,7 +12,13 @@ function uid() {
 
 const STORAGE_PREFIX = "insight_board::";
 
-export function InsightBoardWidget({ config, storageKey }: { config: InsightBoardWidgetConfig; storageKey: string }) {
+export function InsightBoardWidget({
+  config,
+  storageKey,
+}: {
+  config: InsightBoardWidgetConfig;
+  storageKey: string;
+}) {
   const columns: InsightBoardColumn[] = useMemo(() => config.columns ?? [], [config.columns]);
   const maxRows = Math.max(1, config.maxRows ?? 5);
 
@@ -29,10 +34,7 @@ export function InsightBoardWidget({ config, storageKey }: { config: InsightBoar
         setRows(saved);
         return;
       }
-    } catch {
-      /* ignore */
-    }
-    // default one empty row
+    } catch { /* ignore */ }
     setRows([{ id: uid(), values: {} }]);
   }, [storageKey]);
 
@@ -40,22 +42,14 @@ export function InsightBoardWidget({ config, storageKey }: { config: InsightBoar
     if (!mounted) return;
     try {
       localStorage.setItem(`${STORAGE_PREFIX}${storageKey}`, JSON.stringify(rows));
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
   }, [rows, storageKey, mounted]);
 
   const updateValue = (rowId: string, columnId: string, value: string) => {
     setRows((prev) =>
       prev.map((row) =>
         row.id === rowId
-          ? {
-              ...row,
-              values: {
-                ...row.values,
-                [columnId]: value,
-              },
-            }
+          ? { ...row, values: { ...row.values, [columnId]: value } }
           : row,
       ),
     );
@@ -88,74 +82,61 @@ export function InsightBoardWidget({ config, storageKey }: { config: InsightBoar
       const items = columnSummaries.get(col.id) ?? [];
       if (!items.length) continue;
       blocks.push(`### ${col.label}`);
-      for (const item of items) {
-        blocks.push(`- ${item}`);
-      }
+      for (const item of items) blocks.push(`- ${item}`);
       blocks.push("");
     }
     return blocks.join("\n").trim();
   }, [columns, columnSummaries]);
 
-  const copyMarkdown = async () => {
-    if (!markdown) return;
-    try {
-      await navigator.clipboard.writeText(markdown);
-    } catch {
-      /* ignore */
-    }
-  };
+  const { copy, status: copyStatus } = useCopy();
+  const handleCopy = () => copy(markdown);
+
+  if (!columns.length) {
+    return (
+      <section className="widget-shell">
+        <p className="m-0 text-sm text-[color:var(--text-tertiary)]">Aucune colonne configurée.</p>
+      </section>
+    );
+  }
 
   return (
-    <section className="surface-card space-y-[var(--space-m)]">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          {config.title ? <Heading level={3} className="text-[1.12rem] leading-[1.35] text-[color:var(--fg)]">{config.title}</Heading> : null}
-          {config.help ? <Text variant="small" className="mt-1 max-w-2xl text-[color:var(--muted)]">{config.help}</Text> : null}
-        </div>
-        <div className="flex items-center gap-2 text-xs text-[color:var(--muted)]">
-          <span>{rows.length}/{maxRows} entrées</span>
-          <button
-            type="button"
-            onClick={copyMarkdown}
-            disabled={!markdown}
-            className="btn btn-ghost text-xs disabled:opacity-50"
-            aria-disabled={!markdown}
-          >
-            Copier en Markdown
-          </button>
-        </div>
+    <section className="widget-shell">
+      <div className="widget-header">
+        {config.title ? <h3 className="widget-header__title">{config.title}</h3> : null}
+        {config.help ? <p className="widget-header__desc">{config.help}</p> : null}
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-[var(--space-md)]" aria-live="polite">
         {rows.map((row, idx) => (
           <article
             key={row.id}
-            className="rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] p-[var(--space-4)] shadow-sm"
+            className="rounded-[var(--r-m)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-0)] p-[var(--space-md)]"
           >
-            <div className="flex items-center justify-between pb-3">
-              <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">
-                Insight #{rows.length - idx}
+            <div className="flex items-center justify-between pb-[var(--space-sm)]">
+              <div className="font-[family-name:var(--font-mono)] text-[11px] uppercase tracking-[0.08em] text-[color:var(--text-tertiary)]">
+                Insight #{String(rows.length - idx).padStart(2, "0")}
               </div>
               <button
                 type="button"
                 onClick={() => removeRow(row.id)}
-                className="text-xs text-[color:var(--muted)] hover:text-[color:var(--fg)]"
+                className="rounded-[var(--r-s)] px-2 py-[2px] font-[family-name:var(--font-mono)] text-[11px] uppercase tracking-[0.06em] text-[color:var(--text-tertiary)] transition-colors hover:text-[color:var(--signal-danger)] disabled:opacity-40 disabled:cursor-not-allowed"
                 disabled={rows.length === 1}
+                aria-disabled={rows.length === 1}
               >
-                Supprimer
+                Suppr.
               </button>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3">
+            <div className="grid gap-[var(--space-sm)] md:grid-cols-3">
               {columns.map((col) => (
-                <label key={col.id} className="flex flex-col gap-2">
-                  <span className="text-xs font-medium text-[color:var(--muted)]">{col.label}</span>
+                <label key={col.id} className="flex flex-col gap-1 min-w-0">
+                  <span className="widget-label">{col.label}</span>
                   <textarea
                     rows={3}
                     placeholder={col.placeholder}
                     value={row.values[col.id] ?? ""}
                     onChange={(event) => updateValue(row.id, col.id, event.target.value)}
-                    className="min-h-[96px] resize-y rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--primary)_28%,transparent)]"
+                    className="min-h-[96px] resize-y"
                   />
                 </label>
               ))}
@@ -164,17 +145,31 @@ export function InsightBoardWidget({ config, storageKey }: { config: InsightBoar
         ))}
       </div>
 
-      <div className="flex items-center justify-between text-xs text-[color:var(--muted)]">
-        <div>
-          Synthétisez 3 à 5 apprentissages clairs. Ajoutez une ligne par insight marquant.
-        </div>
+      <div className="widget-actions">
+        <span
+          className="mr-auto font-[family-name:var(--font-mono)] text-[11px] uppercase tracking-[0.06em] text-[color:var(--text-tertiary)]"
+          role="status"
+          aria-live="polite"
+        >
+          {copyFeedbackLabel(copyStatus) || `${rows.length}/${maxRows} entrée${rows.length > 1 ? "s" : ""}`}
+        </span>
         <button
           type="button"
           onClick={addRow}
           className="btn btn-primary text-xs"
           disabled={rows.length >= maxRows}
+          aria-disabled={rows.length >= maxRows}
         >
-          ➕ Ajouter un apprentissage
+          + Ajouter
+        </button>
+        <button
+          type="button"
+          onClick={handleCopy}
+          disabled={!markdown}
+          className="btn btn-ghost text-xs"
+          aria-disabled={!markdown}
+        >
+          Copier en Markdown
         </button>
       </div>
     </section>

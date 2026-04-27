@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Heading } from "@/components/ui/Heading";
-import { Text } from "@/components/ui/Text";
 import type { DecisionFocusWidgetConfig, DecisionFocusField } from "@/lib/widget-parser";
+import { useCopy, copyFeedbackLabel } from "./useCopy";
 
 type FieldState = {
   action: string;
@@ -21,7 +20,13 @@ function defaultState(fields: DecisionFocusField[]): Record<string, FieldState> 
   return initial;
 }
 
-export function DecisionFocusWidget({ config, storageKey }: { config: DecisionFocusWidgetConfig; storageKey: string }) {
+export function DecisionFocusWidget({
+  config,
+  storageKey,
+}: {
+  config: DecisionFocusWidgetConfig;
+  storageKey: string;
+}) {
   const fields = useMemo(() => config.fields ?? [], [config.fields]);
   const [data, setData] = useState<Record<string, FieldState>>(() => defaultState(fields));
   const [mounted, setMounted] = useState(false);
@@ -34,22 +39,17 @@ export function DecisionFocusWidget({ config, storageKey }: { config: DecisionFo
         const parsed = JSON.parse(raw) as Record<string, FieldState>;
         setData((prev) => ({ ...prev, ...parsed }));
       }
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
   }, [storageKey]);
 
   useEffect(() => {
     if (!mounted) return;
     try {
       localStorage.setItem(`${STORAGE_PREFIX}${storageKey}`, JSON.stringify(data));
-    } catch {
-      /* ignore */
-    }
+    } catch { /* ignore */ }
   }, [data, storageKey, mounted]);
 
   useEffect(() => {
-    // If fields prop changes, ensure keys exist
     setData((prev) => {
       const next = { ...prev };
       for (const field of fields) {
@@ -85,81 +85,76 @@ export function DecisionFocusWidget({ config, storageKey }: { config: DecisionFo
     return lines.join("\n").trim();
   }, [fields, data, config.outputTitle]);
 
-  const copyOutput = async () => {
-    if (!output) return;
-    try {
-      await navigator.clipboard.writeText(output);
-    } catch {
-      /* ignore */
-    }
-  };
+  const { copy, status: copyStatus } = useCopy();
+  const handleCopy = () => copy(output);
+
+  if (!fields.length) {
+    return (
+      <section className="widget-shell">
+        <p className="m-0 text-sm text-[color:var(--text-tertiary)]">Aucun champ configuré.</p>
+      </section>
+    );
+  }
 
   return (
-    <section className="surface-card space-y-[var(--space-m)]">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          {config.title ? <Heading level={3} className="text-[1.12rem] leading-[1.35] text-[color:var(--fg)]">{config.title}</Heading> : null}
-          {config.subtitle ? (
-            <Text variant="small" className="mt-1 max-w-2xl text-[color:var(--muted)]">{config.subtitle}</Text>
-          ) : (
-            <Text variant="small" className="mt-1 max-w-2xl text-[color:var(--muted)]">
-              Sélectionnez 1 à 2 évolutions prioritaires. Restez focalisé sur l’impact et la faisabilité.
-            </Text>
-          )}
-        </div>
-        <button
-          type="button"
-          onClick={copyOutput}
-          className="btn btn-ghost text-xs"
-          disabled={!output}
-        >
-          Copier le plan
-        </button>
+    <section className="widget-shell">
+      <div className="widget-header">
+        {config.title ? <h3 className="widget-header__title">{config.title}</h3> : null}
+        <p className="widget-header__desc">
+          {config.subtitle ??
+            "Sélectionne 1 à 2 évolutions prioritaires. Reste focalisé sur l'impact et la faisabilité."}
+        </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-[var(--space-md)] md:grid-cols-2">
         {fields.map((field) => {
           const current = data[field.id] ?? { action: "", impact: "", effort: "" };
           const impactLabel = field.impactLabel ?? "Impact visé";
           const effortLabel = field.effortLabel ?? "Effort estimé";
           return (
-            <article key={field.id} className="rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] p-[var(--space-4)] shadow-sm">
-              <header className="mb-3 flex items-center justify-between">
-                <h4 className="text-sm font-semibold text-[color:var(--fg)]">{field.label}</h4>
-                {field.optional ? <span className="text-xs text-[color:var(--muted)]">Optionnel</span> : null}
+            <article
+              key={field.id}
+              className="rounded-[var(--r-m)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-0)] p-[var(--space-md)] min-w-0"
+            >
+              <header className="mb-[var(--space-sm)] flex items-center justify-between">
+                <h4 className="m-0 text-[0.98rem] font-semibold text-[color:var(--text-primary)]">
+                  {field.label}
+                </h4>
+                {field.optional ? (
+                  <span className="font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-[0.08em] text-[color:var(--text-tertiary)]">
+                    Optionnel
+                  </span>
+                ) : null}
               </header>
 
-              <div className="space-y-3">
-                <label className="flex flex-col gap-2">
-                  <span className="text-xs font-medium text-[color:var(--muted)]">Action</span>
+              <div className="space-y-[var(--space-sm)]">
+                <label className="flex flex-col gap-1">
+                  <span className="widget-label">Action</span>
                   <textarea
                     rows={3}
                     value={current.action}
-                    placeholder={field.placeholder ?? "Quelle évolution souhaitez-vous tester ?"}
+                    placeholder={field.placeholder ?? "Quelle évolution veux-tu tester ?"}
                     onChange={(event) => updateField(field.id, "action", event.target.value)}
-                    className="min-h-[92px] resize-y rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--primary)_28%,transparent)]"
                   />
                 </label>
 
-                <label className="flex flex-col gap-2">
-                  <span className="text-xs font-medium text-[color:var(--muted)]">{impactLabel}</span>
+                <label className="flex flex-col gap-1">
+                  <span className="widget-label">{impactLabel}</span>
                   <textarea
                     rows={2}
                     value={current.impact}
-                    placeholder={field.impactPlaceholder ?? "Pourquoi est-ce prioritaire ? Quelle valeur attendue ?"}
+                    placeholder={field.impactPlaceholder ?? "Pourquoi c'est prioritaire ?"}
                     onChange={(event) => updateField(field.id, "impact", event.target.value)}
-                    className="min-h-[72px] resize-y rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--primary)_28%,transparent)]"
                   />
                 </label>
 
-                <label className="flex flex-col gap-2">
-                  <span className="text-xs font-medium text-[color:var(--muted)]">{effortLabel}</span>
+                <label className="flex flex-col gap-1">
+                  <span className="widget-label">{effortLabel}</span>
                   <input
                     type="text"
                     value={current.effort}
                     placeholder={field.effortPlaceholder ?? "Temps / ressources / complexité"}
                     onChange={(event) => updateField(field.id, "effort", event.target.value)}
-                    className="rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-inner focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--primary)_28%,transparent)]"
                   />
                 </label>
               </div>
@@ -168,12 +163,36 @@ export function DecisionFocusWidget({ config, storageKey }: { config: DecisionFo
         })}
       </div>
 
-      <div className="rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] p-[var(--space-4)] text-sm text-[color:var(--muted)] shadow-sm">
+      <div className="widget-preview">
+        <span className="widget-preview__label">Mini-plan</span>
         {output ? (
-          <pre className="whitespace-pre-wrap text-sm text-[color:var(--fg)]">{output}</pre>
+          <pre className="m-0 whitespace-pre-wrap text-[0.92rem] leading-[1.55] text-[color:var(--text-primary)] font-[family-name:var(--font-mono)]">
+            {output}
+          </pre>
         ) : (
-          <p>Complétez au moins une action pour générer votre mini-plan d’ajustements.</p>
+          <p className="m-0 text-sm text-[color:var(--text-tertiary)] italic">
+            Complète au moins une action pour générer ton plan.
+          </p>
         )}
+      </div>
+
+      <div className="widget-actions">
+        <span
+          className="mr-auto font-[family-name:var(--font-mono)] text-[11px] uppercase tracking-[0.06em] text-[color:var(--text-tertiary)]"
+          role="status"
+          aria-live="polite"
+        >
+          {copyFeedbackLabel(copyStatus)}
+        </span>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="btn btn-primary text-xs"
+          disabled={!output}
+          aria-disabled={!output}
+        >
+          Copier le plan
+        </button>
       </div>
     </section>
   );

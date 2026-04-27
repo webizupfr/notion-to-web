@@ -46,34 +46,51 @@ function toKeyNum(key: string | null): number | null {
   return Number(key.replace(/-/g, ''));
 }
 
-function pickTodayDay(days: DayEntry[]): { day: DayEntry; locked: boolean } | null {
+type PickResult =
+  | { kind: 'available'; day: DayEntry; locked: false }
+  | { kind: 'locked'; day: DayEntry; locked: true }
+  | { kind: 'all-done' };
+
+/**
+ * Choisit quel jour afficher dans "Prochaine activité".
+ *
+ * Priorités :
+ *   1. Premier jour non-complété ET débloqué (par ordre d'order)
+ *   2. Si tout terminé → 'all-done'
+ *   3. Si rien n'est débloqué → premier jour à venir (locked)
+ */
+function pickTodayDay(days: DayEntry[]): PickResult | null {
   if (!days.length) return null;
+  const sorted = [...days].sort((a, b) => a.order - b.order);
+
+  // Cas 1 : premier non-complété + non verrouillé (par date OU par state)
   const nowKey = getNowDateKeyParis();
   const nowNum = toKeyNum(nowKey)!;
+  const isUnlocked = (d: DayEntry): boolean => {
+    // Verrou via state explicite
+    if (d.state && /verrou/i.test(d.state)) return false;
+    // Verrou via unlockDate future
+    const key = toKeyNum(dateKeyFromIso(d.unlockDate ?? ''));
+    if (key !== null && key > nowNum) return false;
+    return true;
+  };
 
-  const withKeys = days
-    .map((d) => ({ d, key: toKeyNum(dateKeyFromIso(d.unlockDate ?? '')) }))
-    .sort((a, b) => (a.key ?? 0) - (b.key ?? 0) || a.d.order - b.d.order);
-
-  // If at least one has a valid unlockDate, use date-based availability
-  const anyDated = withKeys.some((x) => x.key !== null);
-  if (anyDated) {
-    const available = withKeys.filter((x) => x.key !== null && (x.key as number) <= nowNum);
-    if (available.length > 0) {
-      const last = available[available.length - 1].d;
-      return { day: last, locked: false };
-    }
-    // No available yet → pick earliest upcoming
-    const upcoming = withKeys.find((x) => x.key !== null && (x.key as number) > nowNum);
-    if (upcoming) return { day: upcoming.d, locked: true };
+  const firstAvailableNotDone = sorted.find((d) => !d.completed && isUnlocked(d));
+  if (firstAvailableNotDone) {
+    return { kind: 'available', day: firstAvailableNotDone, locked: false };
   }
 
-  // Fallbacks: use state if present, otherwise last of list
-  const opened = days.filter((d) => !d.state || !/verrou/i.test(d.state));
-  if (opened.length) return { day: opened[opened.length - 1], locked: false };
+  // Cas 2 : tout complété
+  const allCompleted = sorted.every((d) => d.completed);
+  if (allCompleted) return { kind: 'all-done' };
 
-  // If everything is locked or no metadata, return the last day
-  return { day: days[days.length - 1], locked: /verrou/i.test(days[days.length - 1].state ?? '') };
+  // Cas 3 : rien de débloqué et non terminé → prochain jour locked
+  const firstLockedNotDone = sorted.find((d) => !d.completed && !isUnlocked(d));
+  if (firstLockedNotDone) {
+    return { kind: 'locked', day: firstLockedNotDone, locked: true };
+  }
+
+  return null;
 }
 
 type StartTodayProps = {
@@ -85,9 +102,36 @@ type StartTodayProps = {
 export default async function StartToday({ days, unitLabelSingular, basePathPrefix = null }: StartTodayProps) {
   const pick = pickTodayDay(days);
   if (!pick) return null;
+  const unitLabel = unitLabelSingular?.trim() || 'Jour';
+
+  // Cas "tout terminé" — félicitations, pas de CTA d'activité
+  if (pick.kind === 'all-done') {
+    return (
+      <div
+        className="rounded-[var(--r-l)] border border-[color:var(--signal-success)] bg-[color:var(--surface-1)] p-[clamp(20px,2.4vw,28px)]"
+        style={{
+          backgroundImage:
+            "radial-gradient(520px 220px at 90% -10%, color-mix(in oklab, var(--signal-success) 20%, transparent) 0%, transparent 60%)",
+        }}
+      >
+        <span className="eyebrow-pill">
+          <span className="eyebrow-pill__dot" aria-hidden />
+          Programme terminé
+        </span>
+        <Heading
+          level={2}
+          className="mt-[var(--space-sm)] text-[clamp(1.4rem,2.6vw,2rem)] leading-[1.15] tracking-[-0.028em]"
+        >
+          Félicitations, tu as tout complété 🎉
+        </Heading>
+        <Text className="mt-[var(--space-xs)] max-w-[52ch] text-[color:var(--text-secondary)]">
+          Tu as parcouru toutes les activités. Tu peux les relire autant que tu veux depuis la sidebar.
+        </Text>
+      </div>
+    );
+  }
 
   const { day, locked } = pick;
-  const unitLabel = unitLabelSingular?.trim() || 'Jour';
 
   // Subtitle: locked → show availability date if known
   let subtitle: string | null = null;
@@ -105,25 +149,43 @@ export default async function StartToday({ days, unitLabelSingular, basePathPref
   const href = `${prefix}/${day.slug}`.replace(/\/+/g, '/');
 
   return (
-    <div className="rounded-2xl p-6 md:p-8 bg-amber-50 border border-amber-200 shadow-sm">
-      <Text variant="small" className="text-amber-700 mb-2 uppercase tracking-wide">Aujourd’hui</Text>
-      <Heading level={2} className="text-[1.8rem] md:text-[2.1rem] leading-[1.2] mb-2">🎯 {unitLabel} {day.order} : {day.title}</Heading>
-      <Text className="text-slate-700 mb-5">{subtitle}</Text>
+    <div
+      className="rounded-[var(--r-l)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] p-[clamp(20px,2.4vw,28px)]"
+      style={{
+        backgroundImage:
+          "radial-gradient(520px 220px at 90% -10%, var(--accent-bg) 0%, transparent 60%)",
+      }}
+    >
+      <span className="eyebrow-pill">
+        <span className="eyebrow-pill__dot" aria-hidden />
+        Aujourd&apos;hui · Prochaine activité
+      </span>
+      <Heading
+        level={2}
+        className="mt-[var(--space-sm)] text-[clamp(1.4rem,2.6vw,2rem)] leading-[1.15] tracking-[-0.028em]"
+      >
+        {unitLabel} {String(day.order).padStart(2, "0")} — {day.title}
+      </Heading>
+      <Text className="mt-[var(--space-xs)] max-w-[52ch] text-[color:var(--text-secondary)]">
+        {subtitle}
+      </Text>
 
-      {locked ? (
-        <button
-          disabled
-          className="btn btn-disabled opacity-60 cursor-not-allowed"
-          aria-disabled="true"
-          title="Bientôt disponible"
-        >
-          ⏳ Bientôt disponible
-        </button>
-      ) : (
-        <Link href={href} className="btn btn-primary inline-flex items-center gap-2">
-          ⚡ Démarrer l’activité du jour
-        </Link>
-      )}
+      <div className="mt-[var(--space-lg)]">
+        {locked ? (
+          <button
+            disabled
+            className="btn btn-secondary opacity-60 cursor-not-allowed"
+            aria-disabled="true"
+            title="Bientôt disponible"
+          >
+            Bientôt disponible
+          </button>
+        ) : (
+          <Link href={href} className="btn btn-primary">
+            Démarrer l&apos;activité →
+          </Link>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Heading } from "@/components/ui/Heading";
-import { Text } from "@/components/ui/Text";
 import type { PlanPromptWidgetConfig } from "@/lib/widget-parser";
 
 export function PlanPromptWidget({ config, storageKey }: { config: PlanPromptWidgetConfig; storageKey: string }) {
@@ -10,6 +8,8 @@ export function PlanPromptWidget({ config, storageKey }: { config: PlanPromptWid
   const sourceKey = useMemo(() => `plan_table::${scope}::${config.sourceAlias}`, [scope, config.sourceAlias]);
   const [answers, setAnswers] = useState<string[]>([]);
   const [appName, setAppName] = useState<string>("");
+  const [mounted, setMounted] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     try {
@@ -21,11 +21,13 @@ export function PlanPromptWidget({ config, storageKey }: { config: PlanPromptWid
       const savedName = localStorage.getItem(`plan_prompt::${storageKey}::appname`);
       if (savedName) setAppName(savedName);
     } catch {}
+    setMounted(true);
   }, [sourceKey, storageKey]);
 
   useEffect(() => {
+    if (!mounted) return;
     try { localStorage.setItem(`plan_prompt::${storageKey}::appname`, appName); } catch {}
-  }, [appName, storageKey]);
+  }, [mounted, appName, storageKey]);
 
   const a1 = answers[0] || "(fonctionnalité principale)";
   const a2 = answers[1] || "(résultat utilisateur)";
@@ -35,51 +37,87 @@ export function PlanPromptWidget({ config, storageKey }: { config: PlanPromptWid
 Idée centrale :
 ${a1}
 
-L’utilisateur doit pouvoir :
+L'utilisateur doit pouvoir :
 ${a2}
 
 Merci de créer :
-- Une définition claire du MVP (ce qu’il faut construire en premier)
+- Une définition claire du MVP (ce qu'il faut construire en premier)
 - Une décomposition des fonctionnalités (MVP vs évolutions futures)
 - Des user stories simples pour le MVP
 - Les exigences techniques de base`;
 
   const copy = async () => {
-    try { await navigator.clipboard.writeText(prompt); } catch {}
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* ignore */
+    }
   };
 
-  const found = answers.length > 0;
+  const found = answers.filter((a) => a && a.trim()).length > 0;
 
   return (
-    <section className="surface-card space-y-[var(--space-m)]">
-      <div className="flex items-center justify-between">
-        <Heading level={3} className="text-[1.12rem] leading-[1.3]">
-          {config.title ?? 'Prompt — PM à partir de la checklist'}
-        </Heading>
-        <button onClick={copy} className="btn btn-primary text-xs">Copier</button>
+    <section className="widget-shell">
+      <div className="widget-header">
+        <p className="widget-header__eyebrow">Prompt · Plan PM</p>
+        <h3 className="widget-header__title">
+          {config.title ?? "Prompt — PM à partir de la checklist"}
+        </h3>
+        <p className="widget-header__desc">
+          Génère un prompt prêt à coller dans ton IA préférée à partir des
+          réponses saisies dans la checklist liée.
+        </p>
       </div>
-      {!found ? (
-        <Text
-          variant="small"
-          className="rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--warning)_14%,var(--bg))] p-[var(--space-3)] text-[color:var(--fg)] shadow-sm"
+
+      {mounted && !found ? (
+        <div
+          role="alert"
+          className="flex items-start gap-3 rounded-[var(--r-m)] border border-[color:var(--signal-warning)] bg-[color:var(--signal-warning-bg)] px-[var(--space-md)] py-[var(--space-sm)] text-[0.92rem] leading-[1.55] text-[color:var(--text-primary)]"
         >
-          Aucune réponse trouvée pour l’alias « {config.sourceAlias} ». Remplis d’abord la checklist associée (widget plan_table avec alias identique).
-        </Text>
+          <span aria-hidden className="mt-[2px] text-lg leading-none">⚠</span>
+          <div>
+            <strong className="font-semibold">Checklist liée vide.</strong>{" "}
+            Remplis d&apos;abord le widget plan_table avec l&apos;alias{" "}
+            <code className="rounded-[var(--r-s)] bg-[color:var(--surface-2)] px-1 py-[1px] font-[family-name:var(--font-mono)] text-[0.85em]">
+              {config.sourceAlias}
+            </code>{" "}
+            — le prompt affiche des placeholders tant qu&apos;il n&apos;a pas de données.
+          </div>
+        </div>
       ) : null}
 
-      <label className="block space-y-1">
-        <span className="text-xs font-semibold uppercase tracking-wider text-[color:var(--muted)]">Nom de l’app</span>
+      <label className="block">
+        <span className="widget-label">Nom de l&apos;app</span>
         <input
           value={appName}
           onChange={(e) => setAppName(e.target.value)}
-          placeholder="Ex: Ice‑Breaker Generator"
-          className="w-full rounded-[var(--r-md)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
+          placeholder="Ex: Ice-Breaker Generator"
         />
       </label>
 
-      <pre className="code-block rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] p-[var(--space-4)] text-[0.95rem] leading-[1.5] whitespace-pre-wrap text-[color:var(--fg)] shadow-sm">
-        <code>{prompt}</code>
-      </pre>
+      <div className="widget-preview">
+        <div className="flex items-center justify-between">
+          <span className="widget-preview__label">Prompt généré</span>
+          <span
+            className="font-[family-name:var(--font-mono)] text-[11px] uppercase tracking-[0.06em] text-[color:var(--text-tertiary)]"
+            role="status"
+            aria-live="polite"
+          >
+            {copied ? "Copié ✓" : ""}
+          </span>
+        </div>
+        <pre className="m-0 whitespace-pre-wrap text-[0.92rem] leading-[1.55] text-[color:var(--text-primary)] font-[family-name:var(--font-mono)]">
+          <code>{prompt}</code>
+        </pre>
+      </div>
+
+      <div className="widget-actions">
+        <button onClick={copy} className="btn btn-primary text-xs">
+          Copier le prompt
+        </button>
+      </div>
     </section>
   );
 }

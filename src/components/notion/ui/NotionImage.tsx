@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 
 import { NotionMediaFrame } from "./NotionMediaFrame";
+import { ImageLightbox } from "./ImageLightbox";
 
 type Props = {
   src: string;
@@ -13,6 +14,13 @@ type Props = {
   withBackground?: boolean;
 };
 
+/**
+ * Image Notion premium :
+ *   - Cliquable → lightbox plein écran (zoom out via croix ou ESC)
+ *   - Border subtle + radius + shadow douce
+ *   - Lazy loading natif
+ *   - Aspect ratio préservé (width/height de Notion)
+ */
 export function NotionImage({
   src,
   alt,
@@ -36,17 +44,19 @@ export function NotionImage({
       data-with-background={withBackground ? "on" : "off"}
     >
       <NotionMediaFrame caption={caption} padding="xs">
-        <div className="bg-transparent">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={src}
-            alt={alt ?? ""}
-            width={width ?? undefined}
-            height={height ?? undefined}
-            className="block h-auto w-full"
-            loading="lazy"
-          />
-        </div>
+        <ImageLightbox src={src} alt={alt ?? ""} caption={caption}>
+          <div className="overflow-hidden rounded-[var(--r-m)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] shadow-[var(--shadow-s)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={src}
+              alt={alt ?? ""}
+              width={width ?? undefined}
+              height={height ?? undefined}
+              className="block h-auto w-full"
+              loading="lazy"
+            />
+          </div>
+        </ImageLightbox>
       </NotionMediaFrame>
     </div>
   );

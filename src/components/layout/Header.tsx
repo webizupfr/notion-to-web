@@ -6,57 +6,18 @@ import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import clsx from "clsx";
 import { Container } from "@/components/layout/Container";
+import { brand } from "@/config/brand";
+import { universeFromPathname, type NavLink } from "@/config/navigation";
 
-export type NavLink = { href: string; label: string; accent?: boolean };
+export type { NavLink };
 type ContainerSize = "narrow" | "wide" | "fluid";
-
-function computeLinks(pathname: string): { links: NavLink[]; univers: "studio" | "lab" | "campus" | "neutral" } {
-  const isLab = pathname.startsWith("/lab");
-  const isCampus = pathname.startsWith("/campus");
-  const isStudio = pathname.startsWith("/studio");
-  const univers: "studio" | "lab" | "campus" | "neutral" = isLab ? "lab" : isCampus ? "campus" : isStudio ? "studio" : "neutral";
-
-  if (univers === "lab") {
-    return {
-      univers,
-      links: [
-        { href: "/lab", label: "Le Lab" },
-        { href: "/lab/programme", label: "Programme" },
-        { href: "/lab/ateliers", label: "Ateliers" },
-        { href: "/lab/challenge", label: "Rejoindre le Challenge", accent: true },
-      ],
-    };
-  }
-
-  if (univers === "campus") {
-    return {
-      univers,
-      links: [
-        { href: "/campus", label: "A propos" },
-        { href: "/campus/sprint", label: "Sprint" },
-        { href: "/contact", label: "Contact", accent: true },
-      ],
-    };
-  }
-
-  return {
-    univers: "studio",
-    links: [
-      { href: "/studio", label: "Le studio" },
-      { href: "/studio/accompagnement", label: "Nos accompagnements" },
-      { href: "/studio/adn", label: "ADN et méthodes" },
-      { href: "/studio/cas-client", label: "Cas Clients" },
-      { href: "https://impulsion.fillout.com/appel-45-minutes", label: "Planifier un échange", accent: true },
-    ],
-  };
-}
 
 export function Header({ links, size = "narrow" }: { links?: NavLink[]; size?: ContainerSize }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  const computed = useMemo(() => computeLinks(pathname), [pathname]);
-  const navLinks = links ?? computed.links;
+  const computedUniverse = useMemo(() => universeFromPathname(pathname), [pathname]);
+  const navLinks = links ?? computedUniverse.links;
 
   useEffect(() => setOpen(false), [pathname]);
 
@@ -120,7 +81,7 @@ export function Header({ links, size = "narrow" }: { links?: NavLink[]; size?: C
   const ctaGlow =
     "shadow-[0_10px_30px_-18px_color-mix(in_oklab,var(--amber,#f59e0b)_55%,transparent)]";
 
-  const hubContactHref = "mailto:hello@impulsion.studio";
+  const hubContactHref = `mailto:${brand.supportEmail}`;
   const hubCtaClass =
     "inline-flex items-center rounded-full px-3 py-1.5 text-[0.82rem] font-medium tracking-tight " +
     "border border-[color-mix(in_oklab,var(--border)_70%,transparent)] " +
@@ -135,15 +96,16 @@ export function Header({ links, size = "narrow" }: { links?: NavLink[]; size?: C
     <header className={headerClass} style={headerVars}>
       <Container size={size} className="flex h-12 items-center justify-between gap-3">
         {/* Logo */}
-       <div
+       <Link
+  href="/"
   className="font-display font-semibold tracking-tight text-[color:var(--fg)]/92 inline-flex items-center gap-2"
-  aria-label="Impulsion – Accueil"
+  aria-label={`${brand.name} – Accueil`}
 >
   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
     <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
   </svg>
-  Impulsion
-</div>
+  {brand.name}
+</Link>
 
         {hubMode || isSprint ? (
           isSprint ? (

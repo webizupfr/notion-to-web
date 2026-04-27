@@ -3,6 +3,14 @@
     {
       "path": "/api/sync",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/sync/programs",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/emails/daily-unlocks",
+      "schedule": "0 8 * * *"
     }
   ]
 }

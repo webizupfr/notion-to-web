@@ -43,7 +43,7 @@ function FlipCard({ title, suggestions }: { title: string; suggestions: string[]
     <button
       type="button"
       onClick={onClick}
-      className="relative h-48 w-full cursor-pointer rounded-[var(--r-xl)] border border-[color:var(--border)] p-0 text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg hover:border-[color-mix(in_oklab,var(--accent)_35%,transparent)]"
+      className="relative h-48 w-full cursor-pointer rounded-[var(--r-l)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-0)] p-0 text-left transition-colors duration-[var(--dur-base)] hover:border-[color:var(--border-strong)]"
       style={{ perspective: 1000 }}
       aria-label={`Voir une suggestion pour ${title}`}
     >
@@ -92,7 +92,7 @@ export function FlipCardsWidget({ config, storageKey }: { config: FlipCardsWidge
   return (
     <section className="surface-card space-y-[var(--space-m)]">
       {config.title ? <Heading level={3} className="text-[1.12rem] leading-[1.35] text-[color:var(--fg)]">{config.title}</Heading> : null}
-      <div className="grid gap-[var(--space-4)] md:grid-cols-3">
+      <div className="grid gap-[var(--space-md)] grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c, i) => (
           <FlipCard key={`${storageKey}-${i}`} title={c.title} suggestions={c.suggestions} />
         ))}

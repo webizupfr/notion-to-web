@@ -48,11 +48,19 @@ export function QuizWidget({ config, storageKey }: { config: QuizWidgetConfig; s
     }
   };
 
-  return (
-    <section className="surface-card space-y-[var(--space-m)]">
-      <p className="text-sm font-medium text-[color:var(--fg)]">{config.question}</p>
+  if (!config.options.length) {
+    return (
+      <section className="widget-shell">
+        <p className="m-0 text-sm text-[color:var(--text-tertiary)]">Quiz sans option configurée.</p>
+      </section>
+    );
+  }
 
-      <div className="space-y-3">
+  return (
+    <section className="widget-shell">
+      <p className="m-0 text-[0.98rem] font-medium text-[color:var(--text-primary)]">{config.question}</p>
+
+      <div className="space-y-[var(--space-xs)]" role="radiogroup" aria-label={config.question}>
         {config.options.map((option, index) => {
           const isActive = selected === index;
           const isCorrect = option.correct ?? false;
@@ -60,34 +68,47 @@ export function QuizWidget({ config, storageKey }: { config: QuizWidgetConfig; s
             <div key={`${storageKey}-option-${index}`} className="space-y-2">
               <button
                 type="button"
+                role="radio"
+                aria-checked={isActive}
                 onClick={() => handleSelect(index)}
-                className={`w-full rounded-[var(--r-xl)] border px-[var(--space-4)] py-[var(--space-4)] text-left transition hover:-translate-y-0.5 hover:shadow ${
+                className={`w-full rounded-[var(--r-m)] border px-[var(--space-md)] py-[var(--space-sm)] text-left transition-colors ${
                   isActive
                     ? isCorrect
-                      ? 'border-[color-mix(in_oklab,var(--success)_55%,transparent)] bg-[color-mix(in_oklab,var(--success)_14%,#fff)]'
-                      : 'border-[color-mix(in_oklab,var(--accent)_55%,transparent)] bg-[color-mix(in_oklab,var(--accent)_14%,#fff)]'
-                    : 'border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)]'
+                      ? 'border-[color:var(--signal-success)] bg-[color:var(--signal-success-bg)]'
+                      : 'border-[color:var(--accent-edge)] bg-[color:var(--accent-bg)]'
+                    : 'border-[color:var(--border-subtle)] bg-[color:var(--surface-0)] hover:border-[color:var(--border-strong)]'
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <span className="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full border text-xs font-semibold text-[color:var(--fg)] border-[color:var(--border)]">
+                  <span
+                    className={`mt-[2px] inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-[var(--r-s)] border text-xs font-semibold font-[family-name:var(--font-mono)] ${
+                      isActive
+                        ? isCorrect
+                          ? 'border-[color:var(--signal-success)] bg-[color:var(--signal-success)] text-white'
+                          : 'border-[color:var(--accent-edge)] bg-[color:var(--accent)] text-[color:var(--accent-ink)]'
+                        : 'border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] text-[color:var(--text-secondary)]'
+                    }`}
+                    aria-hidden
+                  >
                     {option.label ?? String.fromCharCode(65 + index)}
                   </span>
-                  <div className="space-y-2 text-sm leading-6 text-[color:var(--fg)]">
-                    <div className="whitespace-pre-wrap">{option.text}</div>
+                  <div className="min-w-0 text-sm leading-6 text-[color:var(--text-primary)] whitespace-pre-wrap">
+                    {option.text}
                   </div>
                 </div>
               </button>
               {isActive && option.feedback && (
                 <div
-                  className={`rounded-[var(--r-xl)] border px-[var(--space-4)] py-[var(--space-3)] text-sm leading-6 ${
+                  role="status"
+                  aria-live="polite"
+                  className={`rounded-[var(--r-m)] border px-[var(--space-md)] py-[var(--space-sm)] text-sm leading-6 ${
                     isCorrect
-                      ? 'border-[color-mix(in_oklab,var(--success)_45%,transparent)] bg-[color-mix(in_oklab,var(--success)_16%,#fff)] text-[color-mix(in_oklab,var(--success)_85%,#0f1728)]'
-                      : 'border-[color-mix(in_oklab,var(--accent)_45%,transparent)] bg-[color-mix(in_oklab,var(--accent)_16%,#fff)] text-[color-mix(in_oklab,var(--accent)_85%,#0f1728)]'
+                      ? 'border-[color:var(--signal-success)] bg-[color:var(--signal-success-bg)] text-[color:var(--text-primary)]'
+                      : 'border-[color:var(--accent-edge)] bg-[color:var(--accent-bg)] text-[color:var(--text-primary)]'
                   }`}
                 >
                   <div className="flex items-start gap-2">
-                    <span aria-hidden>{isCorrect ? '✅' : '💡'}</span>
+                    <span aria-hidden>{isCorrect ? '✓' : '💡'}</span>
                     <div className="whitespace-pre-wrap">{option.feedback}</div>
                   </div>
                 </div>
@@ -97,7 +118,14 @@ export function QuizWidget({ config, storageKey }: { config: QuizWidgetConfig; s
         })}
       </div>
 
-      <div className="flex justify-end">
+      <div className="widget-actions">
+        <span
+          className="mr-auto font-[family-name:var(--font-mono)] text-[11px] uppercase tracking-[0.06em] text-[color:var(--text-tertiary)]"
+          role="status"
+          aria-live="polite"
+        >
+          {selected === null ? "En attente" : "Réponse enregistrée"}
+        </span>
         <button onClick={handleReset} className="btn btn-ghost text-xs">
           Réinitialiser
         </button>

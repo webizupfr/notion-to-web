@@ -1,14 +1,18 @@
 import { getPageBundle } from '@/lib/content-store';
 import { NextResponse } from 'next/server';
+import { requireAdminApi } from '@/lib/admin/api-guard';
 
 /**
- * Endpoint de debug temporaire pour vérifier les métadonnées d'une page
+ * Endpoint de debug temporaire pour vérifier les métadonnées d'une page.
+ * Réservé aux admins.
  * Usage: /api/debug/votre-slug
  */
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  const denied = await requireAdminApi();
+  if (denied) return denied;
   const { slug } = await params;
   
   const bundle = await getPageBundle(slug);

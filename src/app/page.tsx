@@ -1,440 +1,445 @@
-"use client";
-
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
-import clsx from "clsx";
+import { redirect } from "next/navigation";
+import { auth } from "@/auth";
+import { brand } from "@/config/brand";
+import { listPrograms } from "@/lib/programs";
+import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
+import { ProgramCardThumb } from "@/components/lms/ProgramCardThumb";
+import {
+  IconArrowRight,
+  IconBriefcase,
+  IconCheck,
+  IconLightbulb,
+  IconLock,
+  IconStar,
+  IconUsers,
+} from "@/components/ui/icons";
 
-type ActTone = "primary" | "secondary";
-type Act = { id: string; tone: ActTone; lines: string[] };
+/**
+ * Landing publique — hero + 4 sections + CTA final.
+ *
+ * Comportement :
+ *   - User connecté → auto-redirect vers /my-learning.
+ *   - User non connecté → voit la landing complète.
+ *
+ * Sections (de haut en bas) :
+ *   1. Header minimal sticky
+ *   2. Hero : eyebrow + h1 + sous-titre + 2 CTA + preuve sociale
+ *   3. Comment ça marche : 3 étapes
+ *   4. Programmes phares : top 3 publiés
+ *   5. Pour qui c'est fait : 3 cibles + 3 prérequis
+ *   6. Témoignages Google
+ *   7. CTA final
+ *   8. Footer minimal
+ */
 
-const TITLE = ["Impulsion App", "Espace de travail prive."];
+export default async function Home() {
+  const session = await auth();
+  if (session?.user) {
+    redirect('/my-learning');
+  }
 
-const ACTS: Act[] = [
-  { id: "act-2", tone: "secondary", lines: ["Un point d'entree unique.", "Un acces reserve.", "Un espace de travail en continu."] },
-  {
-    id: "act-3",
-    tone: "primary",
-    lines: ["Retrouver vos hubs.", "Relancer vos sprints.", "Reprendre votre progression."],
-  },
-  { id: "act-4", tone: "primary", lines: ["Ce n'est plus un site vitrine.", "C'est votre espace operationnel."] },
-  {
-    id: "act-5",
-    tone: "secondary",
-    lines: ["Entrez avec votre cle.", "Retournez a votre espace.", "Ou repassez par le site mere.", "", "Sans detour inutile."],
-  },
-];
-
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    if (!mq) return;
-    const onChange = () => setReduced(!!mq.matches);
-    onChange();
-    mq.addEventListener?.("change", onChange);
-    return () => mq.removeEventListener?.("change", onChange);
-  }, []);
-  return reduced;
-}
-
-type HomeRootStyle = CSSProperties & {
-  "--paper": string;
-  "--paper-2": string;
-  "--ink": string;
-  "--ink-soft": string;
-  "--mx": string;
-  "--my": string;
-  "--mat": number | string;
-};
-
-export default function Home() {
-  const router = useRouter();
-  const reducedMotion = usePrefersReducedMotion();
-
-  // Spotlight local scope
-  useEffect(() => {
-    if (reducedMotion) return;
-    const el = document.getElementById("home-root");
-    if (!el) return;
-
-    let raf = 0;
-    const onMove = (e: MouseEvent) => {
-      cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const x = (e.clientX / window.innerWidth) * 100;
-        const y = (e.clientY / window.innerHeight) * 100;
-        el.style.setProperty("--mx", `${x.toFixed(2)}%`);
-        el.style.setProperty("--my", `${y.toFixed(2)}%`);
-      });
-    };
-
-    window.addEventListener("mousemove", onMove, { passive: true });
-    return () => {
-      cancelAnimationFrame(raf);
-      window.removeEventListener("mousemove", onMove);
-    };
-  }, [reducedMotion]);
-
-  // Sequence (NON loop) — robust scheduling
-  const [idx, setIdx] = useState(0);
-  const [phase, setPhase] = useState<"enter" | "hold" | "exit">("enter");
-  const [done, setDone] = useState(false);
-
-  const timeoutsRef = useRef<number[]>([]);
-  const clearAllTimeouts = () => {
-    timeoutsRef.current.forEach((t) => window.clearTimeout(t));
-    timeoutsRef.current = [];
-  };
-
-  const timings = useMemo(
-    () => ({
-      enter: 700,
-      hold: 2600,
-      exit: 650,
-      gap: 140,
-      endPause: 350,
-    }),
-    []
-  );
-
-  useEffect(() => {
-    if (reducedMotion) {
-      setDone(true);
-      return;
-    }
-
-    clearAllTimeouts();
-    setDone(false);
-    setPhase("enter");
-    setIdx(0);
-
-    const lastIndex = ACTS.length - 1;
-
-    const schedule = (ms: number, fn: () => void) => {
-      const t = window.setTimeout(fn, ms);
-      timeoutsRef.current.push(t);
-    };
-
-    const playAct = (i: number) => {
-      // clamp + stop
-      const safeI = Math.max(0, Math.min(i, lastIndex));
-      setIdx(safeI);
-      setPhase("enter");
-
-      schedule(timings.enter, () => {
-        setPhase("hold");
-
-        schedule(timings.hold, () => {
-          if (safeI >= lastIndex) {
-            // final: stay on hold + mark done (no exit)
-            schedule(timings.endPause, () => setDone(true));
-            return;
-          }
-
-          setPhase("exit");
-
-          schedule(timings.exit, () => {
-            schedule(timings.gap, () => playAct(safeI + 1));
-          });
-        });
-      });
-    };
-
-    playAct(0);
-
-    return () => clearAllTimeouts();
-    // timings is stable (useMemo)
-  }, [reducedMotion, timings]);
-
-  // ✅ Guard: always have a valid act
-  const current: Act = ACTS[Math.min(idx, ACTS.length - 1)];
-
-  const rootStyle: HomeRootStyle = {
-    "--paper": "#fbfaf6",
-    "--paper-2": "#f4efe3",
-    "--ink": "#1c1c1c",
-    "--ink-soft": "rgba(28,28,28,0.62)",
-    "--mx": "35%",
-    "--my": "30%",
-    "--mat": 1.25,
-  };
+  // Top 3 programmes pour la section "phares"
+  const featuredPrograms = (await listPrograms({}).catch(() => [])).slice(0, 3);
 
   return (
-    <div
-      id="home-root"
-      className="relative min-h-screen overflow-hidden font-sans"
-      style={rootStyle}
-    >
-      {/* Background */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="home-socle" />
-        <div className="home-fibers" />
-        <div className="home-grid" />
-        <div className="home-spot" />
-        <div className="home-sweep" />
-        <div className="home-grain" />
-        <div className="home-vignette" />
-      </div>
-
-      {/* 3 zones layout */}
-     <main className="relative mx-auto flex min-h-screen w-full max-w-[72rem] flex-col px-6 py-10 sm:px-10">
-  <div className="flex items-center justify-between gap-4">
-    <div className="rounded-full border border-black/10 bg-white/45 px-3 py-1.5 text-[0.76rem] font-medium uppercase tracking-[0.14em] text-[color:var(--ink-soft)] backdrop-blur-md">
-      Espace prive
-    </div>
-
-    <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={() => {
-          if (window.history.length > 1) {
-            router.back();
-            return;
-          }
-
-          router.push("/hubs");
-        }}
-        className="rounded-full border border-black/10 bg-white/45 px-4 py-2 text-[0.92rem] font-medium tracking-[-0.01em] text-[color:var(--ink)]/80 backdrop-blur-md transition-colors hover:bg-white/65 hover:text-[color:var(--ink)]"
-      >
-        Retour a l&apos;espace
-      </button>
-
-      <Link
-        href="https://impulsion.studio"
-        className="rounded-full border border-black/10 bg-black/[0.86] px-4 py-2 text-[0.92rem] font-medium tracking-[-0.01em] text-white transition-colors hover:bg-black"
-      >
-        Site mere
-      </Link>
-    </div>
-  </div>
-
-  {/* Spacer haut : pousse le bloc plus bas */}
-  <div className="flex-1" />
-
-  {/* Bloc central : TITRE + SCÈNE (collés) */}
-  <section className="mx-auto w-full max-w-[52rem] text-center">
-    {/* Titre (stable) */}
-    <div className="min-h-[5.2rem] sm:min-h-[5.8rem]">
-      <div className="text-[2.05rem] leading-[1.02] sm:text-[2.8rem] font-semibold tracking-[-0.04em] text-[color:var(--ink)]">
-        {TITLE[0]}
-      </div>
-      <div className="mt-2 text-[1rem] sm:text-[1.12rem] leading-[1.45] font-medium tracking-[-0.01em] text-[color:var(--ink)]/90">
-        {TITLE[1]}
-      </div>
-
-      <p className="mx-auto mt-5 max-w-[30rem] text-[0.98rem] leading-[1.75] text-[color:var(--ink-soft)]">
-        Une entree sobre pour reprendre vos contenus, vos parcours et vos espaces reserves sans passer par une navigation marketing.
-      </p>
-    </div>
-
-    {/* Scène juste dessous (collée) */}
-    <div className="mt-5 sm:mt-6 min-h-[11rem] sm:min-h-[13rem]">
-      {!reducedMotion ? (
-        <SceneBlock act={current} phase={phase} done={done} />
-      ) : (
-        <StaticAllActs />
-      )}
-    </div>
-  </section>
-
-  {/* Spacer bas : garde de l’air avant les portes */}
-  <div className="h-10 sm:h-12" />
-
-  {/* Portes (bas de page) */}
-  <footer className="mx-auto w-full max-w-[52rem] pb-2">
-    <Doors done={done} />
-  </footer>
-</main>
-
-
-      {/* CSS embarqué (identique à ta v4, inchangé) */}
-      <style jsx global>{`
-        @media (prefers-reduced-motion: reduce) {
-          .home-fibers, .home-grid, .home-sweep, .home-grain { animation: none !important; }
-        }
-
-        #home-root .home-socle{
-          position:absolute; inset:0;
-          background:
-            radial-gradient(120% 90% at 40% 20%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 45%),
-            radial-gradient(110% 100% at 70% 65%, rgba(0,0,0,calc(0.06 * var(--mat))) 0%, rgba(0,0,0,0) 55%),
-            linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
-        }
-
-        #home-root .home-fibers{
-          position:absolute; inset:-15%;
-          background:
-            repeating-linear-gradient(110deg, rgba(0,0,0,calc(0.015 * var(--mat))) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0) 8px),
-            repeating-linear-gradient(20deg,  rgba(0,0,0,calc(0.012 * var(--mat))) 0px, rgba(0,0,0,0) 3px, rgba(0,0,0,0) 10px);
-          opacity: calc(0.55 * var(--mat));
-          filter: blur(0.6px);
-          mix-blend-mode: multiply;
-          animation: fibersDrift 18s ease-in-out infinite;
-          pointer-events:none;
-        }
-        @keyframes fibersDrift{
-          0%,100%{ transform: translate3d(-1.5%,-0.5%,0) rotate(-0.2deg); }
-          50%{ transform: translate3d(1.5%,0.8%,0) rotate(0.2deg); }
-        }
-
-        #home-root .home-grid{
-          position:absolute; inset:-10%;
-          background:
-            linear-gradient(to right, rgba(0,0,0,calc(0.04 * var(--mat))) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(0,0,0,calc(0.03 * var(--mat))) 1px, transparent 1px);
-          background-size: 120px 120px;
-          opacity: calc(0.35 * var(--mat));
-          mask-image: radial-gradient(70% 60% at 40% 35%, #000 45%, transparent 80%);
-          animation: gridFloat 22s ease-in-out infinite;
-          pointer-events:none;
-        }
-        @keyframes gridFloat{
-          0%,100%{ transform: translate3d(0%,0%,0); }
-          50%{ transform: translate3d(1.2%,-0.8%,0); }
-        }
-
-        #home-root .home-spot{
-          position:absolute; inset:-30%;
-          background:
-            radial-gradient(520px 520px at var(--mx) var(--my), rgba(0,0,0,calc(0.09 * var(--mat))) 0%, rgba(0,0,0,0) 62%),
-            radial-gradient(900px 700px at calc(var(--mx) + 10%) calc(var(--my) + 10%), rgba(0,0,0,calc(0.04 * var(--mat))) 0%, rgba(0,0,0,0) 70%);
-          opacity: 0.95;
-          filter: blur(0.8px);
-          pointer-events:none;
-        }
-
-        #home-root .home-sweep{
-          position:absolute; inset:-40%;
-          background:
-            radial-gradient(55% 38% at 0% 50%, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0) 72%),
-            radial-gradient(35% 35% at 20% 55%, rgba(0,0,0,calc(0.03 * var(--mat))) 0%, rgba(0,0,0,0) 70%);
-          opacity: calc(0.55 * var(--mat));
-          transform: translateX(-28%) rotate(-2deg);
-          animation: homeSweep 12s ease-in-out infinite;
-          mix-blend-mode: soft-light;
-          pointer-events:none;
-        }
-        @keyframes homeSweep{
-          0%,100%{ transform: translateX(-28%) translateY(0%) rotate(-2deg); }
-          50%{ transform: translateX(28%) translateY(2%) rotate(2deg); }
-        }
-
-        #home-root .home-grain{
-          position:absolute; inset:0;
-          background:
-            repeating-radial-gradient(circle at 20% 30%, rgba(0,0,0,calc(0.04 * var(--mat))) 0 0.6px, transparent 0.6px 2.2px),
-            repeating-radial-gradient(circle at 80% 70%, rgba(0,0,0,calc(0.03 * var(--mat))) 0 0.7px, transparent 0.7px 2.6px);
-          opacity: calc(0.22 * var(--mat));
-          mix-blend-mode: multiply;
-          filter: blur(0.25px);
-          animation: grainJitter 1.6s steps(2, end) infinite;
-          pointer-events:none;
-        }
-        @keyframes grainJitter{
-          0%{ transform: translate3d(0,0,0); }
-          25%{ transform: translate3d(-0.4%, 0.3%,0); }
-          50%{ transform: translate3d(0.3%, -0.4%,0); }
-          75%{ transform: translate3d(0.2%, 0.2%,0); }
-          100%{ transform: translate3d(0,0,0); }
-        }
-
-        #home-root .home-vignette{
-          position:absolute; inset:0;
-          background: radial-gradient(90% 85% at 50% 40%, rgba(0,0,0,0) 52%, rgba(0,0,0,calc(0.12 * var(--mat))) 100%);
-          pointer-events:none;
-        }
-      `}</style>
+    <div className="min-h-dvh bg-[color:var(--surface-0)]">
+      <SiteHeader />
+      <Hero />
+      <HowItWorks />
+      {featuredPrograms.length > 0 ? <FeaturedPrograms programs={featuredPrograms} /> : null}
+      <ForWho />
+      <TestimonialsSection />
+      <FinalCta />
+      <SiteFooter />
     </div>
   );
 }
 
-function SceneBlock({ act, phase, done }: { act: Act; phase: "enter" | "hold" | "exit"; done: boolean }) {
-  const isPrimary = act.tone === "primary";
+// ─── Header ───
 
-  const phaseClass =
-    phase === "enter"
-      ? "opacity-0 translate-y-3 blur-[2px]"
-      : phase === "exit"
-        ? "opacity-0 -translate-y-2 blur-[2px]"
-        : "opacity-100 translate-y-0 blur-0";
-
-  const textClass = isPrimary
-    ? "text-[1.25rem] sm:text-[1.6rem] leading-[1.55] font-semibold tracking-[-0.02em] text-[color:var(--ink)]"
-    : "text-[1.02rem] sm:text-[1.15rem] leading-[1.95] font-light tracking-[-0.01em] text-[color:var(--ink-soft)]";
-
+function SiteHeader() {
   return (
-    <div className={clsx("mx-auto max-w-[46rem] transition-[opacity,transform,filter] duration-[650ms] ease-out", phaseClass)} aria-live="polite">
-      <div className={clsx("text-center", textClass, done && "opacity-95")}>
-        {act.lines.map((line, i) => {
-          if (line === "") return <div key={i} className="h-4" />;
-
-          const act4Punch = act.id === "act-4" && i === 1 ? "mt-2 inline-block font-semibold tracking-[-0.03em]" : "";
-          const act5Form =
-            act.id === "act-5" && i > 0 && line !== "Mais jamais de la même manière."
-              ? "opacity-90"
-              : act.id === "act-5" && line === "Mais jamais de la même manière."
-                ? "mt-3 opacity-100"
-                : "";
-
-          return (
-            <p key={i} className={clsx(act4Punch, act5Form)}>
-              {line}
-            </p>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function Doors({ done }: { done: boolean }) {
-  return (
-    <div
-      className={clsx(
-        "flex flex-wrap justify-center gap-4 text-[0.9rem] sm:text-[0.95rem] tracking-[-0.01em] transition-opacity duration-700",
-        done ? "opacity-80" : "opacity-50"
-      )}
-    >
-      <Link
-        href="/gate"
-        className="rounded-full border border-black/10 bg-white/40 px-4 py-2 font-medium text-[color:var(--ink)]/75 backdrop-blur-md transition-colors hover:bg-white/60 hover:text-[color:var(--ink)]"
-      >
-        S&apos;identifier
-      </Link>
-      <Link
-        href="/hubs"
-        className="rounded-full border border-black/10 bg-white/40 px-4 py-2 font-medium text-[color:var(--ink)]/75 backdrop-blur-md transition-colors hover:bg-white/60 hover:text-[color:var(--ink)]"
-      >
-        Hubs
-      </Link>
-      <Link
-        href="/sprint"
-        className="rounded-full border border-black/10 bg-white/40 px-4 py-2 font-medium text-[color:var(--ink)]/75 backdrop-blur-md transition-colors hover:bg-white/60 hover:text-[color:var(--ink)]"
-      >
-        Sprints
-      </Link>
-    </div>
-  );
-}
-
-
-function StaticAllActs() {
-  return (
-    <div className="mx-auto max-w-[46rem] text-center">
-      <div className="space-y-8">
-        {ACTS.map((a) => (
-          <div
-            key={a.id}
-            className={a.tone === "primary"
-              ? "text-[1.25rem] sm:text-[1.55rem] font-semibold text-[color:var(--ink)]"
-              : "text-[1.05rem] font-light text-[color:var(--ink-soft)]"}
+    <header className="sticky top-0 z-[var(--z-sticky)] border-b border-[color:var(--border-subtle)] bg-[color-mix(in_oklab,var(--surface-0)_88%,transparent)] backdrop-blur-sm">
+      <div className="mx-auto flex max-w-[1200px] items-center justify-between px-[clamp(16px,2vw,28px)] py-3">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-[color:var(--text-primary)]"
+          aria-label={brand.name}
+        >
+          <span aria-hidden className="inline-block h-2 w-2 rounded-full bg-[color:var(--accent)]" />
+          <span className="font-[family-name:var(--font-display)] text-[0.95rem] font-semibold tracking-tight">
+            {brand.name}
+          </span>
+        </Link>
+        <nav className="flex items-center gap-1">
+          <Link
+            href="/programs"
+            className="rounded-[var(--r-xs)] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-1)] hover:text-[color:var(--text-primary)]"
           >
-            {a.lines.map((l, i) => (l === "" ? <div key={i} className="h-3" /> : <p key={i}>{l}</p>))}
-          </div>
-        ))}
+            Programmes
+          </Link>
+          <Link
+            href="/login"
+            className="ml-[var(--space-xs)] btn btn-primary"
+            style={{ height: 32, padding: '0 14px', fontSize: 12 }}
+          >
+            Se connecter
+          </Link>
+        </nav>
       </div>
-    </div>
+    </header>
+  );
+}
+
+// ─── Hero ───
+
+function Hero() {
+  return (
+    <section className="relative overflow-hidden">
+      {/* Halo subtil en fond */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          backgroundImage:
+            'radial-gradient(800px 400px at 80% -20%, var(--accent-bg) 0%, transparent 60%)',
+        }}
+      />
+      <div className="mx-auto flex max-w-[1200px] flex-col gap-[var(--space-lg)] px-[clamp(20px,3vw,48px)] py-[clamp(64px,10vw,120px)]">
+        <span className="eyebrow-pill">
+          <span className="eyebrow-pill__dot" aria-hidden />
+          {brand.name} · Apprendre l&apos;IA par la pratique
+        </span>
+
+        <h1 className="max-w-[18ch] font-[family-name:var(--font-display)] text-[clamp(2.6rem,6vw,4.2rem)] leading-[1.0] tracking-[-0.04em] font-bold text-[color:var(--text-primary)]">
+          Apprends ce qui marche.
+          <br />
+          <span className="text-[color:var(--text-secondary)]">À ton rythme.</span>
+        </h1>
+
+        <p className="max-w-[58ch] text-[clamp(1.05rem,1.4vw,1.25rem)] leading-[1.55] text-[color:var(--text-secondary)]">
+          Des parcours concrets pour intégrer l&apos;IA dans ton quotidien pro.
+          Pas de théorie superflue, juste des actions et des résultats visibles dès cette semaine.
+        </p>
+
+        <div className="mt-[var(--space-sm)] flex flex-wrap items-center gap-[var(--space-sm)]">
+          <Link
+            href="/programs"
+            className="btn btn-primary inline-flex items-center gap-2"
+            style={{ height: 52, padding: '0 26px', fontSize: 16 }}
+          >
+            Découvrir les programmes
+            <IconArrowRight size={18} aria-hidden />
+          </Link>
+          <Link
+            href="/login"
+            className="btn btn-secondary"
+            style={{ height: 52, padding: '0 22px', fontSize: 15 }}
+          >
+            J&apos;ai déjà un compte
+          </Link>
+        </div>
+
+        {/* Preuve sociale courte (rappel témoignages plus bas) */}
+        <div className="mt-[var(--space-md)] flex flex-wrap items-center gap-2 text-[0.9rem] text-[color:var(--text-secondary)]">
+          <span className="inline-flex items-center gap-1" aria-hidden>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <IconStar
+                key={i}
+                size={14}
+                className="fill-[color:var(--accent)] text-[color:var(--accent)]"
+              />
+            ))}
+          </span>
+          <span className="font-mono text-[12px] uppercase tracking-[0.08em] text-[color:var(--text-tertiary)]">
+            5/5 · Avis Google
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── How it works ───
+
+function HowItWorks() {
+  const steps = [
+    {
+      n: '01',
+      title: 'Choisis ton programme',
+      body: 'Picore parmi nos parcours par thème : challenges courts, accompagnements longs, ateliers ciblés.',
+    },
+    {
+      n: '02',
+      title: 'Avance jour après jour',
+      body: 'Chaque unité se débloque à ton rythme, dans ton inbox. Pas de pression, juste de la régularité.',
+    },
+    {
+      n: '03',
+      title: 'Reçois ton certificat',
+      body: 'À la fin du programme, télécharge ton certificat de complétion. Partage-le, ajoute-le à ton profil.',
+    },
+  ];
+  return (
+    <section className="border-t border-[color:var(--border-subtle)] py-[clamp(56px,7vw,96px)]">
+      <div className="mx-auto max-w-[1200px] px-[clamp(20px,3vw,48px)]">
+        <div className="mb-[var(--space-xl)]">
+          <span className="eyebrow-pill">
+            <span className="eyebrow-pill__dot" aria-hidden />
+            Comment ça marche
+          </span>
+          <h2 className="mt-3 max-w-[22ch] font-[family-name:var(--font-display)] text-[clamp(1.8rem,3vw,2.4rem)] leading-[1.1] tracking-[-0.025em] font-bold text-[color:var(--text-primary)]">
+            Trois étapes pour passer à l&apos;action.
+          </h2>
+        </div>
+        <div className="grid gap-[var(--space-lg)] md:grid-cols-3">
+          {steps.map((s) => (
+            <div key={s.n} className="space-y-[var(--space-xs)]">
+              <span className="font-mono text-[12px] uppercase tracking-[0.14em] text-[color:var(--accent-edge)]">
+                Étape {s.n}
+              </span>
+              <h3 className="font-[family-name:var(--font-display)] text-[1.2rem] font-semibold tracking-tight text-[color:var(--text-primary)]">
+                {s.title}
+              </h3>
+              <p className="text-[0.95rem] leading-[1.55] text-[color:var(--text-secondary)]">
+                {s.body}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Programmes phares ───
+
+import type { ProgramMeta } from "@/lib/types";
+
+function FeaturedPrograms({ programs }: { programs: ProgramMeta[] }) {
+  return (
+    <section className="border-t border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] py-[clamp(56px,7vw,96px)]">
+      <div className="mx-auto max-w-[1200px] px-[clamp(20px,3vw,48px)]">
+        <div className="mb-[var(--space-xl)] flex flex-col gap-[var(--space-sm)] sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <span className="eyebrow-pill">
+              <span className="eyebrow-pill__dot" aria-hidden />
+              Programmes en cours
+            </span>
+            <h2 className="mt-3 max-w-[22ch] font-[family-name:var(--font-display)] text-[clamp(1.8rem,3vw,2.4rem)] leading-[1.1] tracking-[-0.025em] font-bold text-[color:var(--text-primary)]">
+              Choisis ton point de départ.
+            </h2>
+          </div>
+          <Link
+            href="/programs"
+            className="font-mono text-[12px] uppercase tracking-[0.1em] text-[color:var(--accent-edge)] hover:underline"
+          >
+            Voir tous les programmes →
+          </Link>
+        </div>
+
+        <div className="grid gap-[var(--space-md)] sm:grid-cols-2 lg:grid-cols-3">
+          {programs.map((p) => {
+            const isPaid = typeof p.price === 'number' && p.price > 0;
+            const thumb = p.thumbnailUrl ?? p.coverImageUrl;
+            return (
+              <Link
+                key={p.slug}
+                href={`/programs/${p.slug}`}
+                className={`group relative flex flex-col overflow-hidden rounded-[var(--r-l)] border bg-[color:var(--surface-0)] transition-all hover:border-[color:var(--border-strong)] hover:shadow-[var(--shadow-m)] ${
+                  isPaid
+                    ? 'border-[color:var(--accent-edge)]'
+                    : 'border-[color:var(--border-subtle)]'
+                }`}
+              >
+                {/* Badges paywall */}
+                {isPaid ? (
+                  <>
+                    <span
+                      className="absolute left-3 top-3 z-[1] inline-flex h-7 w-7 items-center justify-center rounded-full border border-[color:var(--accent-edge)]"
+                      style={{ background: 'var(--accent)' }}
+                      aria-hidden
+                    >
+                      <IconLock size={13} className="text-[color:var(--accent-ink)]" />
+                    </span>
+                    <span
+                      className="absolute right-3 top-3 z-[1] inline-flex items-center gap-1 rounded-full border border-[color:var(--accent-edge)] px-2.5 py-1 font-mono text-[11px] font-semibold tracking-tight text-[color:var(--accent-ink)]"
+                      style={{ background: 'var(--accent)' }}
+                    >
+                      {new Intl.NumberFormat('fr-FR', {
+                        style: 'currency',
+                        currency: p.currency ?? 'EUR',
+                        maximumFractionDigits: (p.price ?? 0) % 1 === 0 ? 0 : 2,
+                      }).format(p.price ?? 0)}
+                    </span>
+                  </>
+                ) : null}
+
+                <ProgramCardThumb src={thumb} title={p.title} />
+                <div className="flex flex-1 flex-col gap-[var(--space-xs)] p-[var(--space-md)]">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
+                    {isPaid ? 'Premium' : p.type === 'event' ? 'Événement' : p.type === 'sync' ? 'Sprint' : 'Programme'}
+                  </span>
+                  <h3 className="font-[family-name:var(--font-display)] text-[1.1rem] font-semibold tracking-tight text-[color:var(--text-primary)]">
+                    {p.title}
+                  </h3>
+                  {p.description ? (
+                    <p className="line-clamp-2 text-[0.9rem] text-[color:var(--text-secondary)]">
+                      {p.description}
+                    </p>
+                  ) : null}
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Pour qui c'est fait ───
+
+function ForWho() {
+  const targets = [
+    {
+      icon: IconBriefcase,
+      title: 'Entrepreneurs, indépendants, freelances',
+      body: 'Tu veux gagner du temps sur tes tâches répétitives sans devenir geek.',
+    },
+    {
+      icon: IconUsers,
+      title: 'Équipes métiers, PME',
+      body: 'Tu veux faire monter ton équipe en compétence sans complexité.',
+    },
+    {
+      icon: IconLightbulb,
+      title: "Curieux qui veulent comprendre l'IA par la pratique",
+      body: 'Tu as envie de tester, pas juste de lire des articles.',
+    },
+  ];
+
+  const bullets = [
+    'Aucun prérequis technique',
+    'Aucun outil complexe à installer',
+    "Juste l'envie de tester sur ton quotidien",
+  ];
+
+  return (
+    <section className="border-t border-[color:var(--border-subtle)] py-[clamp(56px,7vw,96px)]">
+      <div className="mx-auto max-w-[1200px] px-[clamp(20px,3vw,48px)]">
+        <div className="mb-[var(--space-xl)]">
+          <span className="eyebrow-pill">
+            <span className="eyebrow-pill__dot" aria-hidden />
+            Pour qui c&apos;est fait
+          </span>
+          <h2 className="mt-3 max-w-[22ch] font-[family-name:var(--font-display)] text-[clamp(1.8rem,3vw,2.4rem)] leading-[1.1] tracking-[-0.025em] font-bold text-[color:var(--text-primary)]">
+            Si tu te reconnais ici, tu es au bon endroit.
+          </h2>
+        </div>
+
+        <div className="grid gap-[var(--space-md)] md:grid-cols-3">
+          {targets.map((t) => {
+            const Icon = t.icon;
+            return (
+              <div
+                key={t.title}
+                className="rounded-[var(--r-l)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] p-[var(--space-lg)]"
+              >
+                <span
+                  className="mb-[var(--space-sm)] inline-flex h-10 w-10 items-center justify-center rounded-full border border-[color:var(--accent-edge)] bg-[color:var(--accent-bg)]"
+                  aria-hidden
+                >
+                  <Icon size={18} className="text-[color:var(--accent-edge)]" />
+                </span>
+                <h3 className="font-[family-name:var(--font-display)] text-[1.05rem] font-semibold leading-[1.25] tracking-tight text-[color:var(--text-primary)]">
+                  {t.title}
+                </h3>
+                <p className="mt-2 text-[0.92rem] leading-[1.55] text-[color:var(--text-secondary)]">
+                  {t.body}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-[var(--space-xl)] rounded-[var(--r-l)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] p-[var(--space-lg)]">
+          <h3 className="mb-[var(--space-sm)] font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
+            Aucune barrière à l&apos;entrée
+          </h3>
+          <ul className="grid gap-[var(--space-sm)] sm:grid-cols-3">
+            {bullets.map((b) => (
+              <li key={b} className="flex items-start gap-2 text-[0.95rem] text-[color:var(--text-primary)]">
+                <IconCheck size={16} className="mt-0.5 shrink-0 text-[color:var(--signal-success)]" aria-hidden />
+                <span>{b}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── CTA final ───
+
+function FinalCta() {
+  return (
+    <section className="border-t border-[color:var(--border-subtle)] py-[clamp(64px,8vw,112px)]">
+      <div className="mx-auto max-w-[800px] px-[clamp(20px,3vw,48px)] text-center">
+        <h2 className="mx-auto max-w-[18ch] font-[family-name:var(--font-display)] text-[clamp(2rem,3.5vw,2.8rem)] leading-[1.05] tracking-[-0.03em] font-bold text-[color:var(--text-primary)]">
+          Prêt·e à passer à l&apos;action ?
+        </h2>
+        <p className="mx-auto mt-[var(--space-md)] max-w-[52ch] text-[1.05rem] leading-[1.55] text-[color:var(--text-secondary)]">
+          Démarre avec un programme gratuit aujourd&apos;hui. Si ça te parle, tu pourras
+          aller plus loin avec les programmes premium.
+        </p>
+        <div className="mt-[var(--space-lg)] flex flex-wrap items-center justify-center gap-[var(--space-sm)]">
+          <Link
+            href="/programs"
+            className="btn btn-primary inline-flex items-center gap-2"
+            style={{ height: 52, padding: '0 26px', fontSize: 16 }}
+          >
+            Découvrir les programmes
+            <IconArrowRight size={18} aria-hidden />
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ─── Footer ───
+
+function SiteFooter() {
+  return (
+    <footer className="border-t border-[color:var(--border-subtle)] py-[var(--space-xl)]">
+      <div className="mx-auto flex max-w-[1200px] flex-col items-start justify-between gap-[var(--space-sm)] px-[clamp(20px,3vw,48px)] sm:flex-row sm:items-center">
+        <div className="flex items-center gap-2">
+          <span aria-hidden className="inline-block h-2 w-2 rounded-full bg-[color:var(--accent)]" />
+          <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
+            © {new Date().getFullYear()} {brand.name}
+          </span>
+        </div>
+        <nav className="flex flex-wrap items-center gap-x-[var(--space-md)] gap-y-1">
+          <Link href="/programs" className="font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)]">
+            Programmes
+          </Link>
+          <Link href="/about" className="font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)]">
+            À propos
+          </Link>
+          <Link href="/mentions-legales" className="font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)]">
+            Mentions légales
+          </Link>
+          <Link href="/cgv" className="font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)]">
+            CGV
+          </Link>
+          <Link href="/login" className="font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)]">
+            Se connecter
+          </Link>
+        </nav>
+      </div>
+    </footer>
   );
 }

@@ -44,18 +44,19 @@ export function SimpleChecklistWidget({ config, storageKey }: { config: SimpleCh
         <ul className="space-y-2">
           {items.map((it, i) => (
             it.heading ? (
-              <li key={`${storageKey}-${i}`} className="pt-3 font-semibold text-[color:var(--fg)]">
-                <span dangerouslySetInnerHTML={{ __html: it.text }} />
+              <li key={`${storageKey}-${i}`} className="pt-3 font-semibold text-[color:var(--text-primary)]">
+                {it.text}
               </li>
             ) : (
               <li key={`${storageKey}-${i}`} className="flex items-start gap-3">
                 <input
                   type="checkbox"
-                  checked={checked[i]}
+                  checked={checked[i] ?? false}
                   onChange={() => setChecked((prev) => prev.map((v, idx) => (idx === i ? !v : v)))}
-                  className="mt-1 h-5 w-5 rounded border-[color:var(--border)] text-[color:var(--success)] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--success)_24%,transparent)]"
+                  className="mt-1 h-5 w-5 rounded border-[color:var(--border-subtle)] text-[color:var(--signal-success)] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--signal-success)_24%,transparent)]"
+                  aria-label={it.text}
                 />
-                <div className="leading-[1.6] text-[color:var(--fg)]" dangerouslySetInnerHTML={{ __html: it.text }} />
+                <div className="leading-[1.6] text-[color:var(--text-primary)]">{it.text}</div>
               </li>
             )
           ))}
@@ -64,9 +65,9 @@ export function SimpleChecklistWidget({ config, storageKey }: { config: SimpleCh
         <ul className="list-disc space-y-2 pl-6">
           {items.map((it, i) => (
             it.heading ? (
-              <li key={`${storageKey}-${i}`} className="font-semibold leading-[1.6]" dangerouslySetInnerHTML={{ __html: it.text }} />
+              <li key={`${storageKey}-${i}`} className="font-semibold leading-[1.6]">{it.text}</li>
             ) : (
-              <li key={`${storageKey}-${i}`} className="leading-[1.6]" dangerouslySetInnerHTML={{ __html: it.text }} />
+              <li key={`${storageKey}-${i}`} className="leading-[1.6]">{it.text}</li>
             )
           ))}
         </ul>
@@ -75,7 +76,14 @@ export function SimpleChecklistWidget({ config, storageKey }: { config: SimpleCh
       {!capture ? (
         <div className="flex items-center justify-end gap-2">
           {hasBoxes ? (
-            <Text variant="small" className="text-[color:var(--muted)]">{done} / {config.items.length} complétés</Text>
+            <Text
+              variant="small"
+              className="text-[color:var(--text-tertiary)] font-[family-name:var(--font-mono)] text-[11px] uppercase tracking-[0.06em]"
+              role="status"
+              aria-live="polite"
+            >
+              {done} / {config.items.length} complété{done > 1 ? "s" : ""}
+            </Text>
           ) : null}
           <button onClick={() => setCapture((v) => !v)} className="btn btn-ghost text-xs">Mode capture</button>
         </div>

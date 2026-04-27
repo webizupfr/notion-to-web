@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { renderTemplate, type FormFieldConfig, type FormWidgetConfig } from "@/lib/widget-parser";
+import { useCopy, copyFeedbackLabel } from "./useCopy";
 
 type FormValues = Record<string, string>;
 
@@ -63,13 +64,8 @@ export function FormWidget({ config, storageKey }: { config: FormWidgetConfig; s
     [config.fields, values]
   );
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(preview);
-    } catch {
-      // ignore for now
-    }
-  };
+  const { copy, status: copyStatus } = useCopy();
+  const handleCopy = () => copy(preview);
 
   const handleDownload = () => {
     const blob = new Blob([preview], { type: "text/markdown" });
@@ -98,12 +94,14 @@ export function FormWidget({ config, storageKey }: { config: FormWidgetConfig; s
   };
 
   return (
-    <section className="surface-card space-y-[var(--space-m)]">
-
-      <div className="space-y-4">
+    <section className="widget-shell">
+      <div className="space-y-[var(--space-md)]">
         {config.fields.map((field) => (
           <div key={field.name} className="space-y-1">
-            <label className="block text-sm font-medium text-[color:var(--fg)]" htmlFor={`${storageKey}-${field.name}`}>
+            <label
+              className="widget-label"
+              htmlFor={`${storageKey}-${field.name}`}
+            >
               {field.label}
             </label>
             <textarea
@@ -112,20 +110,26 @@ export function FormWidget({ config, storageKey }: { config: FormWidgetConfig; s
               onChange={(event) => updateField(field, event.target.value)}
               placeholder={field.placeholder}
               rows={field.placeholder && field.placeholder.length > 80 ? 4 : 3}
-              className="w-full rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-4)] py-[var(--space-3)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
             />
           </div>
         ))}
       </div>
 
-      <div className="widget-actions text-xs text-[color:var(--muted)] pt-2">
-        <button onClick={handleGenerate} className="btn btn-primary text-xs" disabled={!allFilled}>
+      <div className="widget-actions pt-2">
+        <span
+          className="mr-auto font-[family-name:var(--font-mono)] text-[11px] uppercase tracking-[0.06em] text-[color:var(--text-tertiary)]"
+          role="status"
+          aria-live="polite"
+        >
+          {!allFilled ? "Remplis tous les champs" : copyFeedbackLabel(copyStatus) || (showPreview ? "Prêt" : "")}
+        </span>
+        <button onClick={handleGenerate} className="btn btn-primary text-xs" disabled={!allFilled} aria-disabled={!allFilled}>
           Générer
         </button>
-        <button onClick={handleCopy} className="btn btn-ghost text-xs" disabled={!showPreview}>
+        <button onClick={handleCopy} className="btn btn-ghost text-xs" disabled={!showPreview} aria-disabled={!showPreview}>
           Copier
         </button>
-        <button onClick={handleDownload} className="btn btn-ghost text-xs" disabled={!showPreview}>
+        <button onClick={handleDownload} className="btn btn-ghost text-xs" disabled={!showPreview} aria-disabled={!showPreview}>
           Télécharger
         </button>
         <button onClick={handleReset} className="btn btn-ghost text-xs">
@@ -134,9 +138,9 @@ export function FormWidget({ config, storageKey }: { config: FormWidgetConfig; s
       </div>
 
       {showPreview && (
-        <div className="space-y-2 rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-4)] py-[var(--space-4)] shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-wide text-[color:var(--muted)]">Prévisualisation</div>
-          <pre className="whitespace-pre-wrap text-sm leading-6 text-[color:var(--fg)]">{preview}</pre>
+        <div className="widget-preview">
+          <span className="widget-preview__label">Prévisualisation</span>
+          <pre className="m-0 whitespace-pre-wrap text-[0.92rem] leading-[1.55] text-[color:var(--text-primary)] font-[family-name:var(--font-mono)]">{preview}</pre>
         </div>
       )}
     </section>

@@ -307,7 +307,8 @@ export function BrainstormDeckWidget({ config, storageKey }: { config: Brainstor
   const showToast = useCallback((message: string) => {
     setToast(message);
     if (toastTimer.current) window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 2200);
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 3500);
   }, []);
 
   const drawType = useCallback((type: CardType) => {
@@ -370,9 +371,8 @@ export function BrainstormDeckWidget({ config, storageKey }: { config: Brainstor
   const currentMeta = current ? TYPE_META[current.type] : null;
 
   return (
-    <section className="surface-card relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-br from-[color-mix(in_oklab,var(--accent)_22%,transparent)] via-transparent to-transparent" aria-hidden />
-      <div className="relative space-y-[var(--space-l)] p-[var(--space-l)] md:p-[var(--space-xl)]">
+    <section className="widget-shell relative overflow-hidden">
+      <div className="relative space-y-[var(--space-lg)]">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <Heading level={3} className="flex items-center gap-2">
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--accent)_70%,#fff)] text-lg text-[color:var(--fg)] shadow-sm" aria-hidden>🧠</span>
@@ -385,22 +385,23 @@ export function BrainstormDeckWidget({ config, storageKey }: { config: Brainstor
             <button
               type="button"
               onClick={shuffleAll}
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[color-mix(in_oklab,var(--accent)_78%,#fff)] to-[color-mix(in_oklab,var(--accent)_92%,#fff)] px-[var(--space-5)] py-[var(--space-2)] text-sm font-semibold text-[color:var(--fg)] shadow-[0_12px_30px_color-mix(in_oklab,var(--accent)_45%,transparent)] transition hover:shadow-[0_16px_34px_color-mix(in_oklab,var(--accent)_55%,transparent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_oklab,var(--accent)_40%,transparent)] focus-visible:ring-offset-2"
+              className="btn btn-primary"
+              style={{ height: 36, padding: "0 16px", fontSize: 13 }}
             >
               🌀 Mélanger
             </button>
           </div>
         </header>
 
-        {toast ? (
-          <div className="flex justify-end">
-            <span className="inline-flex items-center gap-2 rounded-full bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-3 py-1 text-sm font-medium text-[color:var(--fg)] shadow animate-slide-in">
+        <div className="flex justify-end min-h-[28px]" aria-live="polite" role="status">
+          {toast ? (
+            <span className="inline-flex items-center gap-2 rounded-full border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] px-3 py-1 text-sm font-medium text-[color:var(--text-primary)] animate-slide-in">
               ✨ {toast}
             </span>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
 
-        <div className="rounded-[var(--r-xl)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-4)] py-[var(--space-6)] md:px-[var(--space-6)] md:py-[var(--space-8)] shadow-[var(--shadow-soft)]">
+        <div className="rounded-[var(--r-l)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-0)] px-[var(--space-md)] py-[var(--space-xl)] md:px-[var(--space-xl)] md:py-[var(--space-2xl)]">
           {loading ? (
             <div className="flex h-64 items-center justify-center text-sm text-[color:var(--muted)]">Chargement du jeu…</div>
           ) : loadError ? (
@@ -435,7 +436,7 @@ export function BrainstormDeckWidget({ config, storageKey }: { config: Brainstor
                   exit={{ opacity: 0, rotateX: 5 }}
                   transition={{ type: "spring", stiffness: 140, damping: 18 }}
                   whileHover={{ rotateX: -1.5, rotateY: 1.5, translateY: -4 }}
-                  className="relative overflow-hidden rounded-[var(--r-xl)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-4)] py-[var(--space-6)] shadow-[0_8px_30px_rgba(0,0,0,0.08)] backdrop-blur supports-[backdrop-filter]:bg-[color-mix(in_oklab,var(--bg)_92%,#fff)]"
+                  className="relative overflow-hidden rounded-[var(--r-l)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-0)] px-[var(--space-md)] py-[var(--space-lg)]"
                 >
                   {currentMeta ? (
                     <div className="absolute left-5 top-5">
@@ -456,10 +457,20 @@ export function BrainstormDeckWidget({ config, storageKey }: { config: Brainstor
                         alt="Inspiration"
                         className="w-full rounded-xl object-cover"
                         style={{ minHeight: "18rem", maxHeight: "30rem" }}
-                        onError={() => {
-                          const pool = deck.filter((card) => card.type === "image" && card.id !== current.id);
+                        onError={(e) => {
+                          const img = e.currentTarget as HTMLImageElement & { dataset: DOMStringMap };
+                          const attempts = Number(img.dataset.retry ?? "0");
+                          if (attempts >= 2) {
+                            img.style.display = "none";
+                            return;
+                          }
+                          img.dataset.retry = String(attempts + 1);
+                          const pool = deck.filter((card) => card.type === "image" && card.id !== current.id && card.imageUrl);
                           const fallback = rand(pool);
-                          if (fallback) setCurrent(fallback);
+                          if (fallback) {
+                            setToast("Image indisponible, changement auto…");
+                            setCurrent(fallback);
+                          }
                         }}
                       />
                       {current.credit ? (

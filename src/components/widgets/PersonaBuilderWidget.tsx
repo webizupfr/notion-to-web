@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Heading } from "@/components/ui/Heading";
-import { Text } from "@/components/ui/Text";
 import type { PersonaBuilderWidgetConfig, PersonaField } from "@/lib/widget-parser";
+import { useCopy, copyFeedbackLabel } from "./useCopy";
 
 type Store = { profile: Record<string, string>; hypotheses: Record<string, string> };
 
@@ -86,72 +86,92 @@ export function PersonaBuilderWidget({ config, storageKey }: { config: PersonaBu
     return out;
   }, [tmpl, name, profile, hypo, profileFields, hypoFields]);
 
-  const copy = async () => { try { await navigator.clipboard.writeText(output); } catch {} };
+  const { copy, status: copyStatus } = useCopy();
+  const handleCopy = () => copy(output);
   const download = () => {
     const blob = new Blob([output], { type: 'text/markdown' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const base = (config.outputTitle ?? (name || 'fiche-persona'));
-    a.download = `${base.replace(/\s+/g,'-').toLowerCase()}.md`;
+    const rawBase = config.outputTitle ?? name ?? 'fiche-persona';
+    const slug = rawBase
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .replace(/[^a-zA-Z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .toLowerCase() || "fiche-persona";
+    a.download = `${slug}.md`;
     a.click();
     URL.revokeObjectURL(url);
   };
   const reset = () => { setProfile({}); setHypo({}); setName(''); try { localStorage.removeItem(storeKey); } catch {} };
 
   return (
-    <section className="surface-card space-y-[var(--space-m)]">
-      <header className="space-y-[var(--space-xs)]">
-        <Heading level={3}>📓 Fiche persona (builder)</Heading>
-        <Text variant="muted">Renseigne le profil et les hypothèses pour générer une fiche prête à partager.</Text>
-      </header>
+    <section className="widget-shell">
+      <div className="widget-header">
+        <p className="widget-header__eyebrow">Fiche persona · Builder</p>
+        <h3 className="widget-header__title">Construire sa fiche persona</h3>
+        <p className="widget-header__desc">
+          Renseigne le profil et les hypothèses pour générer une fiche prête à
+          partager.
+        </p>
+      </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-3">
-          <Heading level={3}>1) Qui vit le problème</Heading>
-          <label className="block space-y-1">
-            <Text variant="small" className="font-medium text-[color:var(--muted)]">Nom du persona</Text>
-            <input value={name} onChange={(e)=>setName(e.target.value)} placeholder="Ex: Clara (alternante)" className="w-full rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]" />
+      <div className="grid gap-[var(--space-lg)] md:grid-cols-2">
+        <div className="space-y-[var(--space-sm)] min-w-0">
+          <Heading level={3} className="text-[1rem]">1) Qui vit le problème</Heading>
+          <label className="block">
+            <span className="widget-label">Nom du persona</span>
+            <input
+              value={name}
+              onChange={(e)=>setName(e.target.value)}
+              placeholder="Ex: Clara (alternante)"
+            />
           </label>
           {profileFields.map((f) => (
-            <label key={f.id} className="block space-y-1">
-              <Text variant="small" className="font-medium text-[color:var(--muted)]">{f.label}</Text>
+            <label key={f.id} className="block">
+              <span className="widget-label">{f.label}</span>
               <textarea
                 value={profile[f.id] ?? ''}
                 onChange={(e)=>setProfile((p)=>({ ...p, [f.id]: e.target.value }))}
                 placeholder={f.placeholder}
                 rows={4}
-                className="w-full rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
               />
             </label>
           ))}
         </div>
-        <div className="space-y-3">
-          <Heading level={3}>2) Nos hypothèses à vérifier</Heading>
+        <div className="space-y-[var(--space-sm)] min-w-0">
+          <Heading level={3} className="text-[1rem]">2) Nos hypothèses à vérifier</Heading>
           {hypoFields.map((f) => (
-            <label key={f.id} className="block space-y-1">
-              <Text variant="small" className="font-medium text-[color:var(--muted)]">{f.label}</Text>
+            <label key={f.id} className="block">
+              <span className="widget-label">{f.label}</span>
               <textarea
                 value={hypo[f.id] ?? ''}
                 onChange={(e)=>setHypo((h)=>({ ...h, [f.id]: e.target.value }))}
                 placeholder={f.placeholder}
                 rows={4}
-                className="w-full rounded-[var(--r-lg)] border border-[color:var(--border)] bg-[color-mix(in_oklab,var(--bg)_94%,#fff)] px-[var(--space-3)] py-[var(--space-2)] text-sm text-[color:var(--fg)] shadow-sm focus:border-[color-mix(in_oklab,var(--primary)_50%,transparent)] focus:outline-none focus:ring-2 focus:ring-[color-mix(in_oklab,var(--primary)_22%,transparent)]"
               />
             </label>
           ))}
         </div>
       </div>
 
-      <div className="widget-actions text-xs text-[color:var(--muted)]">
-        <button onClick={copy} className="btn btn-ghost text-xs">Copier la fiche</button>
+      <div className="widget-actions">
+        <span
+          className="mr-auto font-[family-name:var(--font-mono)] text-[11px] uppercase tracking-[0.06em] text-[color:var(--text-tertiary)]"
+          role="status"
+          aria-live="polite"
+        >
+          {copyFeedbackLabel(copyStatus)}
+        </span>
+        <button onClick={handleCopy} className="btn btn-ghost text-xs">Copier la fiche</button>
         <button onClick={download} className="btn btn-ghost text-xs">Télécharger</button>
         <button onClick={reset} className="btn btn-ghost text-xs">Réinitialiser</button>
       </div>
 
-      <div className="surface-panel space-y-[var(--space-xs)]">
-        <Text variant="small" className="uppercase tracking-[0.12em] text-[color:var(--muted)]">Aperçu de la fiche</Text>
-        <pre className="notion-codeblock whitespace-pre-wrap"><code>{output}</code></pre>
+      <div className="widget-preview">
+        <span className="widget-preview__label">Aperçu de la fiche</span>
+        <pre className="m-0 whitespace-pre-wrap text-[0.92rem] leading-[1.55] text-[color:var(--text-primary)] font-[family-name:var(--font-mono)]"><code>{output}</code></pre>
       </div>
     </section>
   );

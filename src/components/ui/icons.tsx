@@ -1,4 +1,4 @@
-export { 
+export {
   Info as IconInfo,
   CheckCircle as IconCheckCircle,
   AlertTriangle as IconAlertTriangle,
@@ -12,7 +12,19 @@ export {
   Compass as IconCompass,
   FileText as IconFileText,
   ChevronRight as IconChevronRight,
+  ChevronDown as IconChevronDown,
   ListChecks as IconListChecks,
   Menu as IconMenu,
   X as IconX,
+  Lock as IconLock,
+  LockOpen as IconLockOpen,
+  Check as IconCheck,
+  Award as IconAward,
+  Quote as IconQuote,
+  ArrowRight as IconArrowRight,
+  Filter as IconFilter,
+  Zap as IconZap,
+  Users as IconUsers,
+  Briefcase as IconBriefcase,
+  Lightbulb as IconLightbulb,
 } from 'lucide-react';

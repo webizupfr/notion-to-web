@@ -6,6 +6,19 @@ import { pageBlocksDeepCached, type NotionBlock } from "@/lib/notion";
 import { parseWidget } from "@/lib/widget-parser";
 import { PageSection } from "@/components/layout/PageSection";
 import { splitBlocksIntoSections } from "@/components/learning/sectioning";
+import { isConfigCallout, isPinnedCallout } from "@/lib/program-config";
+import type { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+
+/**
+ * Filtre les callouts de méta-données (⚙️ Config, 📌 Ressources) du rendu.
+ * Ces callouts sont consommés par le parseur côté data layer — ne pas les afficher.
+ */
+function stripMetaCallouts(blocks: NotionBlock[]): NotionBlock[] {
+  return blocks.filter((b) => {
+    const block = b as BlockObjectResponse;
+    return !isConfigCallout(block) && !isPinnedCallout(block);
+  });
+}
 
 type ActivityContentProps = {
   activityId: string;
@@ -13,6 +26,12 @@ type ActivityContentProps = {
   className?: string;
   fallbackWidgetYaml?: string | null;
   renderMode?: "default" | "day";
+  /**
+   * Blocs Notion pré-fetchés par le caller (ex: depuis ProgramTree). Si fourni,
+   * skip le fetch + cache — rend instantanément. Utilisé pour éviter 1 roundtrip
+   * Notion par step quand on a déjà l'arbre en KV.
+   */
+  blocks?: NotionBlock[];
   /**
    * When renderMode="day", allow the caller to opt-out of the wrapper PageSection.
    * Useful when embedding inside an existing section/panel.
@@ -31,13 +50,20 @@ export async function ActivityContent({
   className,
   fallbackWidgetYaml,
   renderMode = "default",
+  blocks: preFetchedBlocks,
 }: ActivityContentProps) {
   let blocks: NotionBlock[] = [] as unknown as NotionBlock[];
-  try {
-    // Use cached deep fetch to keep it fast and stable
-    blocks = (await pageBlocksDeepCached(activityId)) as unknown as NotionBlock[];
-  } catch {
-    blocks = [] as unknown as NotionBlock[];
+  if (preFetchedBlocks && preFetchedBlocks.length > 0) {
+    // Fast path : le caller a déjà les blocs (depuis KV), skip le fetch Notion
+    blocks = stripMetaCallouts(preFetchedBlocks);
+  } else {
+    try {
+      // Fallback : pas de blocs pré-fetchés → fetch via cache Notion
+      const raw = (await pageBlocksDeepCached(activityId)) as unknown as NotionBlock[];
+      blocks = stripMetaCallouts(raw);
+    } catch {
+      blocks = [] as unknown as NotionBlock[];
+    }
   }
 
   const hasBlocks = blocks.length > 0;

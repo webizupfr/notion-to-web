@@ -1,18 +1,22 @@
-/* Styles spécifiques aux pages Sprint.
-   On ajoute ici padding/layout dédiés sans impacter les vues marketing. */
+/* Sprint layout rhythm — aligné avec variant-d studio */
 
 @layer components {
   .sprint-content {
     display: flex;
     flex-direction: column;
-    gap: clamp(var(--space-3), 2vw, var(--space-5));
+    gap: clamp(var(--space-lg), 2.5vw, var(--space-xl));
+    padding-block: clamp(var(--space-lg), 3vw, var(--space-2xl));
+    padding-bottom: calc(clamp(var(--space-lg), 3vw, var(--space-2xl)) + 80px);
   }
 
-  .sprint-content > * {
-    margin: 0;
-  }
+  .sprint-content > * { margin: 0; }
 
   .sprint-content > section {
-    padding-block: clamp(var(--space-4), 2vw, var(--space-5)) !important;
+    padding-block: 0 !important;
+  }
+
+  .sprint-content :where(h2) {
+    margin-top: var(--space-xl);
+    margin-bottom: var(--space-sm);
   }
 }

@@ -30,35 +30,51 @@ export function SuggestionCardsWidget({ config, storageKey }: { config: Suggesti
     }));
   };
 
-  return (
-    <section className="surface-card space-y-[var(--space-m)]">
-      {config.title ? <Heading level={3}>{config.title}</Heading> : null}
+  if (!config.cards.length) {
+    return (
+      <section className="widget-shell">
+        <p className="m-0 text-sm text-[color:var(--text-tertiary)]">Aucune carte configurée.</p>
+      </section>
+    );
+  }
 
-      <div className="grid gap-[var(--space-m)] md:grid-cols-3">
+  return (
+    <section className="widget-shell">
+      {config.title ? (
+        <div className="widget-header">
+          <h3 className="widget-header__title">{config.title}</h3>
+        </div>
+      ) : null}
+
+      <div
+        className="grid gap-[var(--space-md)] grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+        aria-live="polite"
+      >
         {config.cards.map((card, i) => {
           const choice = card.suggestions[indices[i]];
           return (
-            <article key={`${storageKey}-${i}`} className="surface-panel relative space-y-[var(--space-xs)]">
-              <div className="flex items-start justify-between gap-[var(--space-s)]">
-                <Heading level={3}>{card.title}</Heading>
+            <article
+              key={`${storageKey}-${i}`}
+              className="relative rounded-[var(--r-m)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-0)] p-[var(--space-md)] space-y-[var(--space-xs)] min-w-0"
+            >
+              <div className="flex items-start justify-between gap-[var(--space-sm)]">
+                <Heading level={3} className="text-[1rem]">{card.title}</Heading>
                 <button
                   type="button"
-                  aria-label="Rafraîchir la suggestion"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--border)] text-sm text-[color:var(--fg)] hover:bg-[color-mix(in_srgb,var(--bg-soft)_94%,white_6%)]"
+                  aria-label={`Changer la suggestion pour ${card.title}`}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--r-s)] border border-[color:var(--border-subtle)] text-sm text-[color:var(--text-secondary)] transition-colors hover:border-[color:var(--border-strong)] hover:text-[color:var(--text-primary)]"
                   onClick={() => reroll(i)}
                 >
                   ↻
                 </button>
               </div>
-              <ul className="mt-[var(--space-xs)] list-disc space-y-[var(--space-xs)] pl-[var(--space-m)] leading-[1.6] text-[color:var(--fg)]">
-                <li>{choice}</li>
-              </ul>
+              <p className="m-0 leading-[1.55] text-[color:var(--text-primary)]">{choice}</p>
             </article>
           );
         })}
       </div>
 
-      <div className="flex justify-end">
+      <div className="widget-actions">
         <button type="button" onClick={rerollAll} className="btn btn-ghost text-xs">
           Changer tout
         </button>

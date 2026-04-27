@@ -1,12 +1,16 @@
 import { kv } from '@vercel/kv';
 import { NextResponse } from 'next/server';
 import type { PageBundle } from '@/lib/content-store';
+import { requireAdminApi } from '@/lib/admin/api-guard';
 
 /**
- * Endpoint de debug pour lister toutes les pages en cache
+ * Endpoint de debug pour lister toutes les pages en cache.
+ * Réservé aux admins.
  * Usage: /api/debug/list
  */
 export async function GET() {
+  const denied = await requireAdminApi();
+  if (denied) return denied;
   try {
     // Lister toutes les clés qui commencent par "page:"
     const keys = await kv.keys('page:*');

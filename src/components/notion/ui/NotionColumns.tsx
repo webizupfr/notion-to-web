@@ -25,7 +25,7 @@ export function NotionColumns({ columns, ratios }: NotionColumnsProps) {
     } as CSSProperties & Record<"--notion-columns-template", string>;
     return (
       <div
-        className="notion-columns grid gap-[var(--space-m)]"
+        className="notion-columns notion-columns--weighted grid grid-cols-1 gap-[var(--space-m)] md:[grid-template-columns:var(--notion-columns-template)]"
         data-layout="weighted"
         style={style}
       >
@@ -63,5 +63,5 @@ export function NotionColumns({ columns, ratios }: NotionColumnsProps) {
 }
 
 export function NotionColumn({ children }: { children: ReactNode }) {
-  return <div className="notion-column">{children}</div>;
+  return <div className="notion-column min-w-0">{children}</div>;
 }

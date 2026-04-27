@@ -30,17 +30,40 @@ export function ChecklistWidget({ config, storageKey }: { config: ChecklistWidge
 
   const gridCols = useMemo(() => (config.columns === 1 ? "md:grid-cols-1" : "md:grid-cols-2"), [config.columns]);
 
+  if (!count) {
+    return (
+      <section className="widget-shell">
+        <p className="m-0 text-sm text-[color:var(--text-tertiary)]">Checklist vide.</p>
+      </section>
+    );
+  }
+
   return (
-    <section className="surface-card space-y-[var(--space-m)]">
-      <div className="flex items-center justify-between">
-        <div>
-          <Heading level={3}>{config.title ?? "Checklist"}</Heading>
-          <div className="mt-[var(--space-xs)] h-2 w-full max-w-sm overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--bg-soft)_88%,white_12%)]">
-            <div className="h-full bg-[color:var(--success)] transition-all" style={{ width: `${progress}%` }} />
+    <section className="widget-shell">
+      <div className="flex flex-wrap items-start justify-between gap-[var(--space-md)]">
+        <div className="min-w-0 flex-1">
+          <Heading level={3} className="text-[1.05rem]">{config.title ?? "Checklist"}</Heading>
+          <div
+            className="mt-[var(--space-xs)] h-1.5 w-full max-w-sm overflow-hidden rounded-full bg-[color:var(--surface-2)]"
+            role="progressbar"
+            aria-valuenow={progress}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label={`${done} sur ${count} complétés`}
+          >
+            <div
+              className="h-full bg-[color:var(--signal-success)] transition-all duration-[var(--dur-slow)]"
+              style={{ width: `${progress}%` }}
+            />
           </div>
-          <Text variant="small" className="mt-[var(--space-xs)] text-[color:var(--fg-muted)]">
-            {done} / {count} complétés
-          </Text>
+          <p
+            className="mt-[var(--space-xs)] font-[family-name:var(--font-mono)] text-[11px] uppercase tracking-[0.06em] text-[color:var(--text-tertiary)]"
+            role="status"
+            aria-live="polite"
+          >
+            {String(done).padStart(2, "0")} / {String(count).padStart(2, "0")} complété{done > 1 ? "s" : ""}
+            {allDone ? " · ✓ Tout est fait" : ""}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={reset} className="btn btn-ghost text-xs">
@@ -49,7 +72,7 @@ export function ChecklistWidget({ config, storageKey }: { config: ChecklistWidge
           {config.cta ? (
             <a
               href={config.cta.href ?? '#'}
-              className={`btn btn-primary text-xs ${allDone ? '' : 'opacity-60 pointer-events-none'}`}
+              className={`btn btn-primary text-xs ${allDone ? '' : 'pointer-events-none opacity-60'}`}
               aria-disabled={!allDone}
             >
               {config.cta.label}
@@ -58,23 +81,27 @@ export function ChecklistWidget({ config, storageKey }: { config: ChecklistWidge
         </div>
       </div>
 
-      <div className={`grid gap-[var(--space-3)] ${gridCols}`}>
+      <div className={`grid gap-[var(--space-sm)] ${gridCols}`}>
         {config.items.map((item, i) => (
-          <div key={`${storageKey}-${i}`} className="surface-panel">
+          <div
+            key={`${storageKey}-${i}`}
+            className="rounded-[var(--r-m)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-0)] px-[var(--space-md)] py-[var(--space-sm)]"
+          >
             <details>
               <summary className="flex cursor-pointer list-none items-center gap-3">
                 <input
                   type="checkbox"
-                  checked={checked[i]}
+                  checked={checked[i] ?? false}
                   onChange={() => toggle(i)}
-                  className="h-5 w-5 rounded border-[color:var(--border)] text-[color:var(--success)] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--success)_30%,transparent)] focus:ring-offset-0"
+                  className="h-5 w-5 rounded border-[color:var(--border-subtle)] text-[color:var(--signal-success)] focus:ring-2 focus:ring-[color-mix(in_oklab,var(--signal-success)_30%,transparent)]"
+                  aria-label={item.label}
                 />
                 <Text as="span" variant="body" className="font-medium">
                   {item.label}
                 </Text>
               </summary>
               {item.help ? (
-                <Text variant="small" className="mt-[var(--space-xs)] pl-8 text-[color:var(--fg-muted)] block">
+                <Text variant="small" className="mt-[var(--space-xs)] pl-8 text-[color:var(--text-tertiary)] block">
                   {item.help}
                 </Text>
               ) : null}

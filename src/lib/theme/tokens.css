@@ -1,76 +1,190 @@
-/* Design tokens Impulsion V1 : palette, spacing, radius, shadows, typo */
+/* Design tokens — Variant D (cool slate + yellow signature)
+   Light par défaut, dark supporté via prefers-color-scheme.
+   Legacy aliases (--bg, --fg, --primary, etc.) mappés sur les nouveaux
+   tokens pour que les classes CSS existantes continuent à fonctionner. */
 
 :root {
-  /* palette */
-  --primary: #ffb300;
-  --primary-hover: color-mix(in srgb, var(--primary) 92%, white 8%);
-  --primary-contrast: #1a1a1a;
-  --primary-soft: color-mix(in srgb, var(--primary) 25%, white 75%);
+  color-scheme: light;
 
-  --bg: #f4f4f4;
-  --bg-card: #ffffff;
-  --bg-soft: #fafafa;
-  --bg-elevated: color-mix(in srgb, var(--bg-card) 92%, white 8%);
+  /* ── NEW: surfaces (cool slate, hue 240, chroma très faible) ── */
+  --surface-0: oklch(99% 0.003 240);
+  --surface-1: oklch(96.5% 0.004 240);
+  --surface-2: oklch(93% 0.005 240);
+  --surface-3: oklch(89% 0.006 240);
 
-  --fg: #1a1a1a;
-  --muted: #6a6a6a;
-  --fg-soft: #9b9b9b;
+  /* ── NEW: text ── */
+  --text-primary:   oklch(16% 0.008 240);
+  --text-secondary: oklch(40% 0.007 240);
+  --text-tertiary:  oklch(58% 0.006 240);
 
-  --success: #2ca56b;
-  --warning: #f59e0b;
-  --danger: #d45050;
+  /* ── NEW: borders ── */
+  --border-subtle: oklch(90% 0.006 240);
+  --border-strong: oklch(74% 0.008 240);
 
-  --border: rgba(26, 26, 26, 0.12);
-  --ring: color-mix(in srgb, var(--primary) 40%, #1a1a1a);
+  /* ── NEW: accent yellow signature ── */
+  --accent:       oklch(86% 0.17 92);
+  --accent-bg:    oklch(86% 0.17 92 / 0.14);
+  --accent-ink:   oklch(18% 0.02 88);
+  --accent-edge:  oklch(62% 0.18 88);
 
-  /* spacing */
-  --space-xs: 4px;
-  --space-s: 8px;
-  --space-m: 16px;
-  --space-l: 24px;
-  --space-xl: 40px;
-  --space-2xl: 64px;
-  /* legacy aliases */
-  --space-1: var(--space-xs);
-  --space-2: var(--space-s);
-  --space-3: 12px;
-  --space-4: var(--space-m);
-  --space-5: var(--space-l);
-  --space-6: 32px;
-  --space-7: var(--space-xl);
-  --space-8: 48px;
-  --space-9: var(--space-2xl);
+  /* ── NEW: signals ── */
+  --signal-success:    oklch(68% 0.14 145);
+  --signal-success-bg: oklch(68% 0.14 145 / 0.14);
+  --signal-warning:    oklch(86% 0.17 92);
+  --signal-warning-bg: oklch(86% 0.17 92 / 0.14);
+  --signal-danger:     oklch(62% 0.18 22);
+  --signal-danger-bg:  oklch(62% 0.18 22 / 0.14);
+
+  /* ── Legacy aliases — mapped to new cool-slate tokens ── */
+  --primary:          var(--accent);
+  --primary-hover:    oklch(82% 0.17 92);
+  --primary-contrast: var(--accent-ink);
+  --primary-soft:     color-mix(in oklab, var(--accent) 18%, var(--surface-1) 82%);
+
+  --bg:          var(--surface-0);
+  --bg-card:     var(--surface-1);
+  --bg-soft:     var(--surface-1);
+  --bg-elevated: var(--surface-2);
+
+  --fg:      var(--text-primary);
+  --muted:   var(--text-secondary);
+  --fg-soft: var(--text-tertiary);
+
+  --success: var(--signal-success);
+  --warning: var(--signal-warning);
+  --danger:  var(--signal-danger);
+
+  --border: var(--border-subtle);
+  --ring:   var(--accent-edge);
+
+  /* ── Spacing (preserved) ── */
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-s: 8px;   /* legacy */
+  --space-sm: 12px;
+  --space-m: 16px;  /* legacy */
+  --space-md: 16px;
+  --space-l: 24px;  /* legacy */
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+  --space-4xl: 96px;
+  /* legacy numbered aliases */
+  --space-1: var(--space-2xs);
+  --space-2: var(--space-xs);
+  --space-3: var(--space-sm);
+  --space-4: var(--space-md);
+  --space-5: var(--space-lg);
+  --space-6: var(--space-xl);
+  --space-7: 40px;
+  --space-8: var(--space-2xl);
+  --space-9: var(--space-3xl);
   --space-10: 80px;
-  --space-11: 96px;
+  --space-11: var(--space-4xl);
   --space-12: 120px;
 
-  /* radius */
-  --r-s: 6px;
-  --r-m: 12px;
-  --r-l: 18px;
-  --r-xl: 24px;
+  /* ── Radius — crisper, editorial ── */
+  --r-s:  4px;
+  --r-m:  8px;
+  --r-l:  12px;
+  --r-xl: 18px;
   /* legacy aliases */
   --r-sm: var(--r-s);
   --r-md: var(--r-m);
   --r-lg: var(--r-l);
-  --r-xl: var(--r-xl);
 
-  /* shadows */
-  --shadow-s: 0 2px 4px rgba(0, 0, 0, 0.06);
-  --shadow-m: 0 4px 10px rgba(0, 0, 0, 0.08);
-  --shadow-l: 0 8px 20px rgba(0, 0, 0, 0.09);
+  /* ── Shadows — 3 niveaux, teinte cool ── */
+  --shadow-s: 0 1px 2px 0 rgb(15 23 42 / 0.05);
+  --shadow-m: 0 4px 12px -2px rgb(15 23 42 / 0.08);
+  --shadow-l: 0 16px 32px -8px rgb(15 23 42 / 0.14);
   /* legacy aliases */
-  --shadow-soft: var(--shadow-m);
+  --shadow-soft:   var(--shadow-m);
   --shadow-subtle: var(--shadow-s);
-  --shadow-elev: var(--shadow-l);
+  --shadow-elev:   var(--shadow-l);
 
-  /* typo scale (Outfit) */
+  /* ── Type scale (preserved) ── */
   --font-base: 1rem;
   --step--1: 0.88rem;
-  --step-0: 0.94rem;
-  --step-1: 1.05rem;
-  --step-2: 1.17rem;
-  --step-3: 1.32rem;
-  --step-4: 1.5rem;
-  --step-5: 1.85rem;
+  --step-0:  0.94rem;
+  --step-1:  1.05rem;
+  --step-2:  1.17rem;
+  --step-3:  1.32rem;
+  --step-4:  1.5rem;
+  --step-5:  1.85rem;
+
+  /* ── Motion ── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur-base: 200ms;
+  --dur-slow: 400ms;
+
+  /* ── Z-index scale ── */
+  --z-sticky:  10;
+  --z-popover: 40;
+  --z-drawer:  60;
+  --z-modal:   70;
+  --z-toast:   80;
+  --z-skip:    100;
+}
+
+/**
+ * Dark mode — 3 modes d'activation :
+ *   1. [data-theme="dark"] sur <html> → dark forcé (user choice)
+ *   2. [data-theme="light"]           → light forcé
+ *   3. Ni l'un ni l'autre + prefers-color-scheme: dark → dark (auto)
+ *
+ * L'user choix est persisté en localStorage, appliqué au boot par un script
+ * inline dans <head> (anti-flash), cf. src/components/ThemeScript.tsx.
+ */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --surface-0: oklch(13% 0.010 240);
+  --surface-1: oklch(17% 0.011 240);
+  --surface-2: oklch(21% 0.012 240);
+  --surface-3: oklch(25% 0.013 240);
+
+  --text-primary:   oklch(97% 0.004 240);
+  --text-secondary: oklch(70% 0.008 240);
+  --text-tertiary:  oklch(52% 0.008 240);
+
+  --border-subtle: oklch(26% 0.010 240);
+  --border-strong: oklch(40% 0.012 240);
+
+  --accent:       oklch(88% 0.18 92);
+  --accent-bg:    oklch(88% 0.18 92 / 0.14);
+  --accent-ink:   oklch(16% 0.010 88);
+  --accent-edge:  oklch(72% 0.18 88);
+
+  --shadow-s: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+  --shadow-m: 0 4px 12px -2px rgb(0 0 0 / 0.45);
+  --shadow-l: 0 16px 32px -8px rgb(0 0 0 / 0.55);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]):not([data-theme="dark"]) {
+    color-scheme: dark;
+
+    --surface-0: oklch(13% 0.010 240);
+    --surface-1: oklch(17% 0.011 240);
+    --surface-2: oklch(21% 0.012 240);
+    --surface-3: oklch(25% 0.013 240);
+
+    --text-primary:   oklch(97% 0.004 240);
+    --text-secondary: oklch(70% 0.008 240);
+    --text-tertiary:  oklch(52% 0.008 240);
+
+    --border-subtle: oklch(26% 0.010 240);
+    --border-strong: oklch(40% 0.012 240);
+
+    --accent:       oklch(88% 0.18 92);
+    --accent-bg:    oklch(88% 0.18 92 / 0.14);
+    --accent-ink:   oklch(16% 0.010 88);
+    --accent-edge:  oklch(72% 0.18 88);
+
+    --shadow-s: 0 1px 2px 0 rgb(0 0 0 / 0.35);
+    --shadow-m: 0 4px 12px -2px rgb(0 0 0 / 0.45);
+    --shadow-l: 0 16px 32px -8px rgb(0 0 0 / 0.55);
+  }
 }

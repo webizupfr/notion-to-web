@@ -1,0 +1,329 @@
+/**
+ * Editorial Premium — Phase B/C/D du polish UI Notion.
+ *
+ * S'applique au-dessus de `prose.css` pour transformer le rendu en lecture
+ * éditoriale premium (style Stripe Press / Apple) :
+ *  - Plus d'air vertical entre les blocs
+ *  - Headings avec hiérarchie typographique nette
+ *  - Quotes citation premium (italic + bord doré + ❝ ornement)
+ *  - Listes avec markers stylés
+ *  - Code inline raffiné
+ *  - Images et figures premium
+ *  - Code blocks avec bouton copier intégré (geste Phase D)
+ *
+ * Convention : on cible `.notion-render` ou `.content-panel` pour ne pas
+ * altérer les autres usages de `.prose` ailleurs dans l'app.
+ */
+
+/* ──────────────────────────────────────────────────────────────────────
+   1. Respiration globale — l'éditorial = de l'air
+   ────────────────────────────────────────────────────────────────────── */
+
+.notion-render,
+.content-panel .prose {
+  font-size: clamp(1rem, 1.1vw, 1.05rem);
+  line-height: 1.7;
+  color: var(--text-primary);
+}
+
+/* Paragraphes : max-width pour confort de lecture (~65 chars) */
+.notion-render .prose p,
+.content-panel .prose p {
+  margin: 0 0 var(--space-md);
+  max-width: 68ch;
+}
+
+/* Plus d'air avant un H2/H3 qui suit du contenu */
+.notion-render p + h2,
+.notion-render ul + h2,
+.notion-render ol + h2,
+.notion-render blockquote + h2,
+.notion-render figure + h2,
+.notion-render .notion-codeblock + h2,
+.content-panel .prose p + h2,
+.content-panel .prose ul + h2,
+.content-panel .prose ol + h2 {
+  margin-top: var(--space-2xl);
+}
+.notion-render p + h3,
+.notion-render ul + h3,
+.notion-render ol + h3,
+.notion-render blockquote + h3,
+.content-panel .prose p + h3,
+.content-panel .prose ul + h3,
+.content-panel .prose ol + h3 {
+  margin-top: var(--space-xl);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   2. Headings — hiérarchie typographique nette
+   ────────────────────────────────────────────────────────────────────── */
+
+.notion-render .prose h1,
+.content-panel .prose h1 {
+  font-size: clamp(1.95rem, 3vw, 2.4rem);
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  margin: 0 0 var(--space-md);
+}
+
+.notion-render .prose h2,
+.content-panel .prose h2 {
+  font-size: clamp(1.45rem, 2.2vw, 1.75rem);
+  line-height: 1.18;
+  letter-spacing: -0.022em;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: var(--space-xl) 0 var(--space-sm);
+  /* Petit accent en dessous pour structurer la lecture */
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid color-mix(in oklab, var(--border-subtle) 60%, transparent);
+}
+
+.notion-render .prose h3,
+.content-panel .prose h3 {
+  font-size: clamp(1.15rem, 1.6vw, 1.3rem);
+  line-height: 1.25;
+  letter-spacing: -0.012em;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: var(--space-lg) 0 var(--space-xs);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   3. Quotes — citation premium (remplace le style "pill" actuel)
+   ────────────────────────────────────────────────────────────────────── */
+
+.notion-render blockquote,
+.content-panel .prose blockquote {
+  position: relative;
+  margin: var(--space-xl) 0;
+  padding: var(--space-md) var(--space-lg) var(--space-md) calc(var(--space-lg) + 4px);
+  background: transparent;
+  border: none;
+  border-left: 4px solid var(--accent);
+  border-radius: 0;
+  color: var(--text-primary);
+  font-family: var(--font-display), -apple-system, sans-serif;
+  font-size: clamp(1.1rem, 1.5vw, 1.25rem);
+  font-style: italic;
+  line-height: 1.5;
+  letter-spacing: -0.012em;
+}
+
+.notion-render blockquote::before,
+.content-panel .prose blockquote::before {
+  content: "“";
+  position: absolute;
+  top: -8px;
+  left: var(--space-md);
+  font-size: 3.5rem;
+  line-height: 1;
+  color: color-mix(in oklab, var(--accent) 40%, transparent);
+  font-family: Georgia, serif;
+  font-style: normal;
+  pointer-events: none;
+}
+
+.notion-render blockquote p,
+.content-panel .prose blockquote p {
+  margin: 0;
+  max-width: none;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   4. Listes — markers stylés
+   ────────────────────────────────────────────────────────────────────── */
+
+.notion-render .prose ul.prose-list-bulleted,
+.content-panel .prose ul.prose-list-bulleted {
+  list-style: none;
+  padding-left: 0;
+  margin: 0 0 var(--space-md);
+}
+
+.notion-render .prose ul.prose-list-bulleted > li,
+.content-panel .prose ul.prose-list-bulleted > li {
+  position: relative;
+  padding-left: var(--space-md);
+  margin-bottom: var(--space-xs);
+}
+
+.notion-render .prose ul.prose-list-bulleted > li::before,
+.content-panel .prose ul.prose-list-bulleted > li::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: calc(0.7em - 3px);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* Listes numérotées : pastille discrète au lieu du `1.` standard */
+.notion-render .prose ol.prose-list-numbered,
+.content-panel .prose ol.prose-list-numbered {
+  list-style: none;
+  counter-reset: editorial-counter;
+  padding-left: 0;
+  margin: 0 0 var(--space-md);
+}
+
+.notion-render .prose ol.prose-list-numbered > li,
+.content-panel .prose ol.prose-list-numbered > li {
+  position: relative;
+  padding-left: calc(var(--space-lg) + 4px);
+  margin-bottom: var(--space-sm);
+  counter-increment: editorial-counter;
+}
+
+.notion-render .prose ol.prose-list-numbered > li::before,
+.content-panel .prose ol.prose-list-numbered > li::before {
+  content: counter(editorial-counter);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent-bg);
+  color: var(--accent-edge);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0;
+  border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent);
+}
+
+/* Sub-lists : indent visuel marqué */
+.notion-render .prose .prose-list-nested,
+.content-panel .prose .prose-list-nested {
+  margin-top: var(--space-xs);
+  margin-left: var(--space-md);
+  padding-left: var(--space-sm);
+  border-left: 1px solid color-mix(in oklab, var(--border-subtle) 80%, transparent);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   5. Inline code — raffinement
+   ────────────────────────────────────────────────────────────────────── */
+
+.notion-render .prose :not(pre) > code,
+.content-panel .prose :not(pre) > code,
+.notion-render .rt-code,
+.content-panel .prose .rt-code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+  background: color-mix(in oklab, var(--accent-bg) 70%, var(--surface-1));
+  color: var(--text-primary);
+  padding: 0.15em 0.5em;
+  border-radius: 4px;
+  border: 1px solid color-mix(in oklab, var(--accent) 18%, transparent);
+  font-weight: 500;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   6. Dividers — plus subtle, plus présent
+   ────────────────────────────────────────────────────────────────────── */
+
+.notion-render hr,
+.content-panel .prose hr {
+  margin: var(--space-2xl) auto;
+  border: none;
+  width: 64px;
+  height: 1px;
+  background: var(--border-strong);
+  position: relative;
+}
+
+.notion-render hr::after,
+.content-panel .prose hr::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   7. Liens — soulignement plus discret + transition douce
+   ────────────────────────────────────────────────────────────────────── */
+
+.notion-render .prose a,
+.content-panel .prose a,
+.notion-render .rt-link,
+.content-panel .prose .rt-link {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--accent) 60%, transparent);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.18em;
+  transition: text-decoration-color 0.2s ease, color 0.2s ease;
+}
+
+.notion-render .prose a:hover,
+.content-panel .prose a:hover,
+.notion-render .rt-link:hover,
+.content-panel .prose .rt-link:hover {
+  color: var(--accent-edge);
+  text-decoration-color: var(--accent);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   8. Images — figure premium (geste Phase C)
+   ────────────────────────────────────────────────────────────────────── */
+
+.notion-render figure,
+.content-panel .prose figure {
+  margin: var(--space-lg) 0;
+}
+
+.notion-render figcaption,
+.content-panel .prose figcaption {
+  margin-top: var(--space-xs);
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   9. Tables (geste Phase E préview) — léger polish
+   ────────────────────────────────────────────────────────────────────── */
+
+.notion-render table,
+.content-panel .prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--space-lg) 0;
+  font-size: 0.95rem;
+}
+
+.notion-render th,
+.notion-render td,
+.content-panel .prose th,
+.content-panel .prose td {
+  border-bottom: 1px solid var(--border-subtle);
+  padding: var(--space-sm) var(--space-md);
+  text-align: left;
+}
+
+.notion-render th,
+.content-panel .prose th {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  background: var(--surface-1);
+}
