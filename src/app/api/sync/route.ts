@@ -10,6 +10,7 @@ import type {
   BlockObjectResponse,
 } from '@notionhq/client/build/src/api-endpoints';
 
+import { auth } from '@/auth';
 import { getPageMeta, pageBlocksDeep, queryDb } from '@/lib/notion';
 import type { NotionBlock } from '@/lib/notion';
 import { mirrorRemoteImage } from '@/lib/media';
@@ -428,8 +429,8 @@ async function syncPage(page: PageObjectResponse, opts: SyncOptions) {
 // ─── Run modes ──────────────────────────────────────────────────────────────
 
 export async function runFullSync(force: boolean = false) {
-  if (!PAGES_DB || !POSTS_DB) {
-    throw new Error('Missing Notion database env vars (NOTION_PAGES_DB / NOTION_POSTS_DB)');
+  if (!PAGES_DB) {
+    throw new Error('Missing NOTION_PAGES_DB env var');
   }
 
   const syncedPages: string[] = [];
@@ -443,9 +444,10 @@ export async function runFullSync(force: boolean = false) {
   };
   const startedAt = Date.now();
 
+  // POSTS_DB optionnel : si absent → on skip juste le blog
   const [pages, posts] = await Promise.all([
     collectDatabasePages(PAGES_DB),
-    collectDatabasePages(POSTS_DB),
+    POSTS_DB ? collectDatabasePages(POSTS_DB) : Promise.resolve([]),
   ]);
 
   for (const page of pages) {
@@ -468,9 +470,11 @@ export async function runFullSync(force: boolean = false) {
     }
   }
 
-  await setPostsIndex({ items: postsIndex, syncedAt: new Date().toISOString() });
-  await revalidateTag('posts:index');
-  await revalidatePath('/blog', 'page');
+  if (POSTS_DB) {
+    await setPostsIndex({ items: postsIndex, syncedAt: new Date().toISOString() });
+    await revalidateTag('posts:index');
+    await revalidatePath('/blog', 'page');
+  }
 
   const summary = {
     durationMs: Date.now() - startedAt,
@@ -501,8 +505,8 @@ export async function runFullSync(force: boolean = false) {
  * Tente d'abord PAGES_DB, puis POSTS_DB.
  */
 export async function runSyncOne(slug: string, force: boolean = false) {
-  if (!PAGES_DB || !POSTS_DB) {
-    throw new Error('Missing Notion database env vars (NOTION_PAGES_DB / NOTION_POSTS_DB)');
+  if (!PAGES_DB) {
+    throw new Error('Missing NOTION_PAGES_DB env var');
   }
 
   const stats: SyncStats = {
@@ -528,7 +532,7 @@ export async function runSyncOne(slug: string, force: boolean = false) {
   if (page) {
     await syncPage(page, { type: 'page', stats, force });
     processedType = 'page';
-  } else {
+  } else if (POSTS_DB) {
     const post = await findBySlug(POSTS_DB);
     if (post) {
       await syncPage(post, { type: 'post', stats, force });
@@ -557,8 +561,8 @@ export async function GET(request: Request) {
   if (!CRON_SECRET) {
     return NextResponse.json({ message: 'Missing CRON_SECRET' }, { status: 500 });
   }
-  if (!PAGES_DB || !POSTS_DB) {
-    return NextResponse.json({ message: 'Missing Notion database env vars' }, { status: 500 });
+  if (!PAGES_DB) {
+    return NextResponse.json({ message: 'Missing NOTION_PAGES_DB env var' }, { status: 500 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -595,6 +599,31 @@ export async function GET(request: Request) {
   }
 }
 
+/**
+ * POST → trigger manuel depuis le panneau admin (auth via session NextAuth).
+ * Utilisé par le bouton "Synchroniser Notion" dans /admin/programs.
+ */
 export async function POST(request: Request) {
+  // Session admin (cookie NextAuth) → accès direct sans CRON_SECRET
+  const session = await auth();
+  if (session?.user?.role === 'admin') {
+    if (!PAGES_DB) {
+      return NextResponse.json({ message: 'Missing NOTION_PAGES_DB env var' }, { status: 500 });
+    }
+    const { searchParams } = new URL(request.url);
+    const force = searchParams.get('force') === '1' || searchParams.get('force') === 'true';
+    try {
+      const result = await runFullSync(force);
+      return NextResponse.json(result);
+    } catch (error) {
+      console.error('[sync] fatal error (admin manual):', error);
+      return NextResponse.json(
+        { message: 'Sync failed', error: error instanceof Error ? error.message : String(error) },
+        { status: 500 },
+      );
+    }
+  }
+
+  // Sinon fallback CRON_SECRET (Bearer ou ?secret=)
   return GET(request);
 }

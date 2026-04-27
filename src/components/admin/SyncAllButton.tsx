@@ -28,28 +28,54 @@ export function SyncAllButton({ lastSyncAt }: Props) {
     setStatus('loading');
     setFeedback(null);
     try {
-      const r = await fetch('/api/sync/programs', { method: 'POST' });
-      const data = (await r.json()) as {
+      // Sync les 3 sources en parallèle :
+      //   - /api/sync/programs   → DB Programs v3 (programmes + units + steps)
+      //   - /api/sync            → DB Pages (statiques) + DB Posts (blog)
+      const [programsRes, pagesRes] = await Promise.all([
+        fetch('/api/sync/programs', { method: 'POST' }),
+        fetch('/api/sync', { method: 'POST' }),
+      ]);
+
+      const programsData = (await programsRes.json()) as {
         ok: boolean;
         programsSynced?: number;
         programsTotal?: number;
         durationMs?: number;
         errors?: Array<{ slug: string; error: string }>;
       };
-      if (r.ok && data.ok) {
+
+      const pagesData = (await pagesRes.json()) as {
+        ok?: boolean;
+        synced?: number;
+        posts?: number;
+        metrics?: { durationMs?: number };
+        message?: string;
+      };
+
+      const programsOk = programsRes.ok && programsData.ok;
+      const pagesOk = pagesRes.ok && pagesData.ok;
+
+      if (programsOk && pagesOk) {
         setStatus('success');
+        const durationMs = Math.max(
+          programsData.durationMs ?? 0,
+          pagesData.metrics?.durationMs ?? 0,
+        );
         setFeedback(
-          `${data.programsSynced}/${data.programsTotal} programmes · ${Math.round(
-            (data.durationMs ?? 0) / 1000,
-          )}s`,
+          `${programsData.programsSynced}/${programsData.programsTotal} programmes · ${pagesData.synced} pages · ${pagesData.posts} posts · ${Math.round(durationMs / 1000)}s`,
         );
         startTransition(() => router.refresh());
       } else {
         setStatus('error');
-        const firstErr = data.errors?.[0];
-        setFeedback(
-          firstErr ? `${firstErr.slug} : ${firstErr.error}` : 'Erreur inconnue',
-        );
+        const programsErr = programsData.errors?.[0];
+        const parts: string[] = [];
+        if (!programsOk) {
+          parts.push(programsErr ? `programmes: ${programsErr.slug} (${programsErr.error})` : 'programmes: erreur');
+        }
+        if (!pagesOk) {
+          parts.push(`pages/posts: ${pagesData.message ?? 'erreur'}`);
+        }
+        setFeedback(parts.join(' · ') || 'Erreur inconnue');
       }
     } catch (e) {
       setStatus('error');
