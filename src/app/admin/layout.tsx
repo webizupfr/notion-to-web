@@ -25,8 +25,10 @@ export default async function AdminLayout({ children }: { children: ReactNode })
             </Link>
             <nav className="flex gap-1">
               <AdminNavLink href="/admin" label="Overview" />
+              <AdminNavLink href="/admin/analytics" label="Analytics" />
               <AdminNavLink href="/admin/users" label="Users" />
               <AdminNavLink href="/admin/programs" label="Programs" />
+              <AdminNavLink href="/admin/promos" label="Promos" />
             </nav>
           </div>
           <div className="flex items-center gap-2">

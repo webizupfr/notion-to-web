@@ -98,6 +98,9 @@ export const enrollments = pgTable(
     enrolledAt: timestamp('enrolled_at', { mode: 'date' }).defaultNow().notNull(),
     startedAt: timestamp('started_at', { mode: 'date' }),
     completedAt: timestamp('completed_at', { mode: 'date' }),
+    /** Dernière activité significative — visite d'unit, complétion, etc.
+     * Utilisé par les crons d'inactivité pour détecter les apprenants en stand-by. */
+    lastActivityAt: timestamp('last_activity_at', { mode: 'date' }),
   },
   (t) => [
     uniqueIndex('enrollment_user_program_unique').on(t.userId, t.programType, t.programSlug, t.cohortSlug),
@@ -165,6 +168,10 @@ export const purchases = pgTable(
     /** PaymentIntent (set après confirmation) */
     stripePaymentIntentId: text('stripe_payment_intent_id'),
     paidAt: timestamp('paid_at', { mode: 'date' }),
+    /** Stripe `invoice.hosted_invoice_url` — page hosted Stripe (PDF + détails) */
+    invoiceUrl: text('invoice_url'),
+    /** Stripe `invoice.invoice_pdf` — URL du PDF directement téléchargeable */
+    invoicePdfUrl: text('invoice_pdf_url'),
     /** Si remboursé : timestamp + raison optionnelle. L'enrollment associé est révoqué. */
     refundedAt: timestamp('refunded_at', { mode: 'date' }),
     refundReason: text('refund_reason'),
@@ -173,6 +180,78 @@ export const purchases = pgTable(
   (t) => [
     uniqueIndex('purchase_session_unique').on(t.stripeSessionId),
     index('purchase_user_program_idx').on(t.userId, t.programSlug),
+  ],
+);
+
+// ─────────── email_sent (idempotence triggers) ───────────
+
+/**
+ * Trace de chaque email transactionnel envoyé pour éviter les doublons.
+ *
+ * Idempotence : 1 row par (userId, emailType, programSlug nullable).
+ * Avant d'envoyer un email, on check si la row existe déjà → si oui, skip.
+ *
+ * Ex de emailType :
+ *   - "session-reminder-j-1"   (rappel J-1 d'un programme sync)
+ *   - "session-reminder-j0"    (rappel matin J0)
+ *   - "inactivity-relaunch-1"  (1ère relance ~7 jours)
+ *   - "inactivity-relaunch-2"  (2ème relance ~14 jours)
+ *   - "certificate-ready"      (programme terminé)
+ *   - "program-completed"      (alternative à certificate-ready)
+ */
+export const emailSent = pgTable(
+  'email_sent',
+  {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** Identifiant logique du template (ex: "inactivity-relaunch-1") */
+    emailType: text('email_type').notNull(),
+    /** Slug du programme concerné (nullable pour emails non liés à un programme) */
+    programSlug: text('program_slug'),
+    sentAt: timestamp('sent_at', { mode: 'date' }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex('email_sent_unique').on(t.userId, t.emailType, t.programSlug),
+    index('email_sent_user_idx').on(t.userId),
+  ],
+);
+
+// ─────────── certificates ───────────
+
+/**
+ * Certificats de complétion délivrés.
+ *
+ * Source de vérité pour la page publique /cert/verify/[code] : si le code
+ * matche une row ici, le certificat est valide.
+ *
+ * Idempotence : un user a au max 1 certificat par programme. Si la row existe,
+ * on reuse le code (pas de re-génération à chaque téléchargement du PDF).
+ */
+export const certificates = pgTable(
+  'certificate',
+  {
+    id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    programSlug: text('program_slug').notNull(),
+    /** Code public stable utilisé dans l'URL /cert/verify/[code]. UNIQUE. */
+    code: text('code').notNull(),
+    /** Snapshot du nom de l'apprenant au moment de l'émission (en cas de modif user.name plus tard). */
+    recipientName: text('recipient_name').notNull(),
+    /** Snapshot du titre du programme. */
+    programTitle: text('program_title').notNull(),
+    /** Date de complétion = date du dernier `progress.completedAt` */
+    completedAt: timestamp('completed_at', { mode: 'date' }).notNull(),
+    issuedAt: timestamp('issued_at', { mode: 'date' }).defaultNow().notNull(),
+    /** Si le certificat est révoqué (ex: refund) → page /verify renvoie 410. */
+    revokedAt: timestamp('revoked_at', { mode: 'date' }),
+  },
+  (t) => [
+    uniqueIndex('certificate_code_unique').on(t.code),
+    uniqueIndex('certificate_user_program_unique').on(t.userId, t.programSlug),
   ],
 );
 
@@ -186,5 +265,9 @@ export type Progress = typeof progress.$inferSelect;
 export type NewProgress = typeof progress.$inferInsert;
 export type Purchase = typeof purchases.$inferSelect;
 export type NewPurchase = typeof purchases.$inferInsert;
+export type Certificate = typeof certificates.$inferSelect;
+export type NewCertificate = typeof certificates.$inferInsert;
+export type EmailSent = typeof emailSent.$inferSelect;
+export type NewEmailSent = typeof emailSent.$inferInsert;
 export type ProgressStatus = 'unlocked' | 'started' | 'completed';
 export type ProgramType = 'async' | 'sync' | 'event';

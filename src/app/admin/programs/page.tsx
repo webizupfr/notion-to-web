@@ -140,14 +140,23 @@ function ProgramsTable({ title, items }: { title: string; items: Item[] }) {
                     />
                   </Td>
                   <Td align="right">
-                    <Link
-                      href={href}
-                      target="_blank"
-                      rel="noopener"
-                      className="font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--accent-edge)] hover:underline"
-                    >
-                      Voir ↗
-                    </Link>
+                    <div className="inline-flex items-center gap-2">
+                      <a
+                        href={`/api/admin/programs/${i.slug}/enrollments.csv`}
+                        title={`Exporter les enrollments de ${i.title} en CSV`}
+                        className="font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--text-tertiary)] hover:text-[color:var(--text-primary)]"
+                      >
+                        CSV ↓
+                      </a>
+                      <Link
+                        href={href}
+                        target="_blank"
+                        rel="noopener"
+                        className="font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--accent-edge)] hover:underline"
+                      >
+                        Voir ↗
+                      </Link>
+                    </div>
                   </Td>
                 </tr>
               );

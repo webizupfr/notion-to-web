@@ -16,8 +16,12 @@ import type { NextRequest } from 'next/server';
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Zone user-auth : /my-learning + /admin (la vérif role=admin est faite en page, pas ici)
-  if (pathname.startsWith('/my-learning') || pathname.startsWith('/admin')) {
+  // Zone user-auth : /my-learning + /admin + /account (la vérif role=admin est faite en page, pas ici)
+  if (
+    pathname.startsWith('/my-learning') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/account')
+  ) {
     const hasSession =
       req.cookies.has('authjs.session-token') ||
       req.cookies.has('__Secure-authjs.session-token');
@@ -33,5 +37,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/my-learning/:path*', '/admin/:path*'],
+  matcher: ['/my-learning/:path*', '/admin/:path*', '/account/:path*'],
 };

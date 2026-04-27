@@ -116,6 +116,8 @@ Le code crée la session Checkout dynamiquement en lisant le `price` depuis Noti
 
 1. Stripe Dashboard → **Developers → Webhooks → + Add endpoint**
 2. **Endpoint URL** : `https://ton-domaine.com/api/webhooks/stripe`
+   ⚠️ **PAS juste `https://ton-domaine.com/`** — il faut le path `/api/webhooks/stripe`
+   Stripe ne valide pas l'URL ; si tu mets la home par erreur, Next.js répondra 200 sans rien faire et **les achats ne créeront PAS d'enrollment**. Pas d'email d'erreur — silence total.
 3. **Events to send** — sélectionne exactement ces 2 :
    - `checkout.session.completed`
    - `charge.refunded`
@@ -357,7 +359,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | "Failed to query DB" sur `/admin` | `DATABASE_URL` manquant ou invalide | Vérifier `?sslmode=require` à la fin |
 | Magic link reçu mais click → erreur | `AUTH_URL` ≠ `NEXT_PUBLIC_SITE_URL` | Aligner les deux dans Vercel |
 | Magic link jamais reçu | `AUTH_RESEND_FROM` non vérifié chez Resend | Vérifier le domaine ou utiliser `onboarding@resend.dev` |
-| Achat Stripe OK mais pas d'enrollment | Webhook Stripe pas configuré ou `whsec_` faux | Vérifier dans Stripe Dashboard → Webhooks → Events |
+| Achat Stripe OK mais pas d'enrollment | Webhook URL pointe sur `/` au lieu de `/api/webhooks/stripe` (Next.js répond 200 silencieusement) OU `whsec_` faux | Vérifier l'URL exacte dans Stripe Dashboard → Webhooks. Replay l'event depuis le dashboard Stripe pour rattraper la commande perdue. |
 | Programmes Notion pas visibles | Sync pas fait OU intégration pas partagée avec la DB | `npm run sync:prod`, vérifier les "+ connections" Notion |
 | Images Notion cassées au bout d'un moment | Cloudinary non configuré | Ajouter les 3 vars `CLOUDINARY_*` + re-sync |
 | `/api/cron/*` retourne 401 | `CRON_SECRET` différent entre Vercel et le code | Vérifier la valeur, redéployer après changement |

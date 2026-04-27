@@ -7,8 +7,8 @@ import { getStripe, isStripeConfigured } from '@/lib/stripe';
 import { createPurchaseFromSession, markPurchaseRefunded } from '@/lib/db/purchases';
 import { enrollUser } from '@/lib/db/progress';
 import { getProgramBySlug } from '@/lib/programs';
-import { sendEmail, isEmailConfigured } from '@/lib/email/resend';
-import { welcomeEmail } from '@/lib/email/templates';
+import { sendReactEmail, isEmailConfigured } from '@/lib/email/resend';
+import { PurchaseConfirmationEmail } from '@/components/emails/PurchaseConfirmation';
 import { getBaseUrl } from '@/lib/base-url';
 import { db, users } from '@/lib/db';
 import { eq } from 'drizzle-orm';
@@ -107,7 +107,25 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return;
   }
 
-  // 1. Crée la purchase (idempotent via stripe_session_id unique)
+  // 1. Récupère l'invoice URL (créée automatiquement via invoice_creation: enabled)
+  let invoiceUrl: string | null = null;
+  let invoicePdfUrl: string | null = null;
+  if (session.invoice) {
+    try {
+      const stripe = getStripe()!;
+      const invoiceId =
+        typeof session.invoice === 'string' ? session.invoice : session.invoice.id;
+      if (invoiceId) {
+        const invoice = await stripe.invoices.retrieve(invoiceId);
+        invoiceUrl = invoice.hosted_invoice_url ?? null;
+        invoicePdfUrl = invoice.invoice_pdf ?? null;
+      }
+    } catch (e) {
+      console.warn('[stripe-webhook] invoice retrieve failed (non-blocking)', e);
+    }
+  }
+
+  // 2. Crée la purchase (idempotent via stripe_session_id unique)
   const { created, purchase } = await createPurchaseFromSession({
     userId,
     programSlug,
@@ -120,6 +138,8 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
         ? session.payment_intent
         : session.payment_intent?.id ?? null,
     paidAt: new Date(),
+    invoiceUrl,
+    invoicePdfUrl,
   });
 
   if (!created) {
@@ -127,7 +147,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     return;
   }
 
-  // 2. Crée l'enrollment automatiquement
+  // 3. Crée l'enrollment automatiquement
   await enrollUser({
     userId,
     programType,
@@ -135,7 +155,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     cohortSlug: null,
   });
 
-  // 3. Email de confirmation (welcome + mention paiement)
+  // 4. Email de confirmation (template react-email)
   if (isEmailConfigured()) {
     try {
       const [program, userRow] = await Promise.all([
@@ -145,17 +165,27 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       const userInfo = userRow[0];
       if (program && userInfo?.email) {
         const programUrl = `${getBaseUrl()}/programs/${programSlug}`;
-        const tmpl = welcomeEmail({
-          recipientName: userInfo.name ?? null,
-          programTitle: program.title,
-          programUrl,
-        });
-        await sendEmail({
+        const userName = userInfo.name?.trim() || userInfo.email.split('@')[0];
+        const amountFormatted = new Intl.NumberFormat('fr-FR', {
+          style: 'currency',
+          currency: currency.toUpperCase(),
+        }).format(amount / 100);
+        const purchaseDate = new Intl.DateTimeFormat('fr-FR', {
+          dateStyle: 'long',
+        }).format(new Date());
+
+        await sendReactEmail({
           to: userInfo.email,
-          subject: `✅ ${tmpl.subject} — paiement reçu`,
-          html: tmpl.html,
-          text: tmpl.text,
-          tag: 'purchase-welcome',
+          subject: `✅ Bienvenue dans ${program.title}`,
+          react: PurchaseConfirmationEmail({
+            userName,
+            programTitle: program.title,
+            programUrl,
+            amountFormatted,
+            purchaseDate,
+            invoiceUrl,
+          }),
+          tag: 'purchase-confirmation',
         });
       }
     } catch (e) {

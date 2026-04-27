@@ -211,3 +211,37 @@ export async function countCompleted(opts: {
     );
   return Number(result[0]?.count ?? 0);
 }
+
+/**
+ * Met à jour le `lastActivityAt` d'un enrollment (et optionnellement `completedAt`).
+ * Idempotent : si déjà complété et qu'on rappelle avec completedAt, on ne touche pas.
+ */
+export async function touchEnrollmentActivity(opts: {
+  userId: string;
+  programType: ProgramType;
+  programSlug: string;
+  cohortSlug?: string | null;
+  /** Si true, marque aussi `completedAt = now()` (et `startedAt` si null). */
+  markCompleted?: boolean;
+}): Promise<void> {
+  const { userId, programType, programSlug, cohortSlug = null, markCompleted = false } = opts;
+  const now = new Date();
+  const setObj: Partial<typeof enrollments.$inferInsert> = { lastActivityAt: now };
+  if (markCompleted) {
+    setObj.completedAt = now;
+    setObj.startedAt = setObj.startedAt ?? now;
+  }
+  await db
+    .update(enrollments)
+    .set(setObj)
+    .where(
+      and(
+        eq(enrollments.userId, userId),
+        eq(enrollments.programType, programType),
+        eq(enrollments.programSlug, programSlug),
+        cohortSlug === null
+          ? sql`${enrollments.cohortSlug} IS NULL`
+          : eq(enrollments.cohortSlug, cohortSlug),
+      ),
+    );
+}

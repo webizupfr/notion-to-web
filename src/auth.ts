@@ -1,7 +1,9 @@
 import NextAuth, { type NextAuthConfig } from 'next-auth';
 import Resend from 'next-auth/providers/resend';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
+import { render } from '@react-email/components';
 import { db, users, accounts, sessions, verificationTokens } from '@/lib/db';
+import { MagicLinkEmail } from '@/components/emails/MagicLink';
 
 /**
  * NextAuth v5 — magic link via Resend.
@@ -18,6 +20,42 @@ const baseConfig: NextAuthConfig = {
     Resend({
       from: process.env.AUTH_RESEND_FROM,
       apiKey: process.env.AUTH_RESEND_KEY,
+      // Override : on rendere notre propre template react-email plutôt que
+      // le template par défaut de NextAuth (texte plain basique).
+      sendVerificationRequest: async ({ identifier: email, url, provider }) => {
+        const from = provider.from ?? process.env.AUTH_RESEND_FROM ?? 'noreply@impulsion.studio';
+        const apiKey = provider.apiKey ?? process.env.AUTH_RESEND_KEY;
+        if (!apiKey) {
+          console.warn('[auth] sendVerificationRequest no-op (no AUTH_RESEND_KEY)');
+          return;
+        }
+        const host = new URL(url).host;
+        const html = await render(MagicLinkEmail({ magicLink: url, host }));
+        const text = await render(MagicLinkEmail({ magicLink: url, host }), {
+          plainText: true,
+        });
+
+        const res = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            from,
+            to: email,
+            subject: 'Ton lien de connexion à Impulsion',
+            html,
+            text,
+            tags: [{ name: 'type', value: 'magic-link' }],
+          }),
+        });
+
+        if (!res.ok) {
+          const errorText = await res.text().catch(() => 'unknown');
+          throw new Error(`Resend API error (${res.status}): ${errorText}`);
+        }
+      },
     }),
   ],
   pages: {

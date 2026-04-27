@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { enrollUser } from '@/lib/db/progress';
+import { enrollUser, touchEnrollmentActivity } from '@/lib/db/progress';
 import { getProgramBySlug } from '@/lib/programs';
-import { sendEmail, isEmailConfigured } from '@/lib/email/resend';
-import { welcomeEmail } from '@/lib/email/templates';
+import { sendReactEmail, isEmailConfigured } from '@/lib/email/resend';
+import { EnrollmentWelcomeEmail } from '@/components/emails/EnrollmentWelcome';
 import { getBaseUrl } from '@/lib/base-url';
 
 const BodySchema = z.object({
@@ -41,7 +41,18 @@ export async function POST(req: Request) {
       cohortSlug: parsed.data.cohortSlug ?? null,
     });
 
+    // Tracking : chaque visite/start update lastActivityAt (utilisé par les
+    // crons d'inactivité pour ignorer les apprenants encore actifs).
+    void touchEnrollmentActivity({
+      userId: session.user.id,
+      programType: parsed.data.programType,
+      programSlug: parsed.data.programSlug,
+      cohortSlug: parsed.data.cohortSlug ?? null,
+    }).catch((e) => console.error('[progress/start] touch enrollment failed', e));
+
     // Fire-and-forget welcome email (nouvelle inscription uniquement)
+    // Note : pour les programmes PAYANTS, le webhook Stripe a déjà créé l'enrollment
+    // → ici `created = false` → pas de doublon avec le PurchaseConfirmationEmail.
     if (created && isEmailConfigured()) {
       // On ne `await` pas pour ne pas bloquer la réponse ; on catch pour éviter unhandled rejection.
       void (async () => {
@@ -49,17 +60,22 @@ export async function POST(req: Request) {
           const program = await getProgramBySlug(parsed.data.programSlug);
           if (!program) return;
           const programUrl = `${getBaseUrl()}/programs/${parsed.data.programSlug}`;
-          const tmpl = welcomeEmail({
-            recipientName: session.user.name ?? null,
-            programTitle: program.title,
-            programUrl,
-          });
-          await sendEmail({
+          const userName =
+            session.user.name?.trim() || session.user.email!.split('@')[0];
+          // Mode "days" pour async, "modules" pour sync/event
+          const programKind: 'days' | 'modules' =
+            program.type === 'async' ? 'days' : 'modules';
+
+          await sendReactEmail({
             to: session.user.email!,
-            subject: tmpl.subject,
-            html: tmpl.html,
-            text: tmpl.text,
-            tag: 'welcome',
+            subject: `Bienvenue dans ${program.title}`,
+            react: EnrollmentWelcomeEmail({
+              userName,
+              programTitle: program.title,
+              programUrl,
+              programKind,
+            }),
+            tag: 'enrollment-welcome',
           });
         } catch (e) {
           console.error('[progress/start] welcome email failed', e);

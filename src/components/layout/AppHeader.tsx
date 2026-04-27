@@ -63,13 +63,14 @@ export async function AppHeader() {
                   Admin
                 </Link>
               ) : null}
-              <div className="ml-[var(--space-xs)] flex items-center gap-2 border-l border-[color:var(--border-subtle)] pl-[var(--space-sm)]">
-                <span
-                  className="hidden max-w-[180px] truncate font-mono text-[11px] text-[color:var(--text-tertiary)] sm:inline"
+              <div className="ml-[var(--space-xs)] flex items-center gap-1 border-l border-[color:var(--border-subtle)] pl-[var(--space-sm)]">
+                <Link
+                  href="/account"
+                  className="hidden rounded-[var(--r-xs)] px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--text-secondary)] hover:bg-[color:var(--surface-1)] hover:text-[color:var(--text-primary)] sm:inline-flex"
                   title={userEmail ?? undefined}
                 >
-                  {userEmail}
-                </span>
+                  Mon compte
+                </Link>
                 <form action={logoutAction}>
                   <button
                     type="submit"

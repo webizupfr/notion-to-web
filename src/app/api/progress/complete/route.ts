@@ -1,12 +1,18 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { auth } from '@/auth';
-import { completeActivity, getProgramProgress } from '@/lib/db/progress';
+import {
+  completeActivity,
+  getProgramProgress,
+  touchEnrollmentActivity,
+} from '@/lib/db/progress';
 import { getProgramTree } from '@/lib/programs';
-import { sendEmail, isEmailConfigured } from '@/lib/email/resend';
-import { programCompletedEmail } from '@/lib/email/templates';
+import { sendReactEmail, isEmailConfigured } from '@/lib/email/resend';
+import { CertificateReadyEmail } from '@/components/emails/CertificateReady';
+import { ProgramCompletedEmail } from '@/components/emails/ProgramCompleted';
+import { wasEmailSent, markEmailSent } from '@/lib/db/email-sent';
+import { getOrIssueCertificate } from '@/lib/db/certificates';
 import { getBaseUrl } from '@/lib/base-url';
-import { kv } from '@vercel/kv';
 
 const BodySchema = z.object({
   programType: z.enum(['async', 'sync', 'event']),
@@ -16,30 +22,36 @@ const BodySchema = z.object({
   activitySlug: z.string().min(1).max(120).nullish(),
 });
 
-function hasKv(): boolean {
-  return Boolean(process.env.KV_REST_API_URL || process.env.KV_URL);
-}
-
 /**
  * POST /api/progress/complete
- * Marque l'activité comme complétée + envoie l'email de complétion
- * si le user vient d'atteindre 100% (idempotent, un seul email par programme/user).
+ *
+ * Marque l'activité comme complétée + :
+ *   - update enrollment.lastActivityAt (pour les crons d'inactivité)
+ *   - si toutes les units sont complétées → enrollment.completedAt + email auto
+ *     (CertificateReadyEmail si certificateEnabled, sinon ProgramCompletedEmail)
+ *
+ * Idempotence des emails via la table `email_sent` (1 envoi par user+programme).
  */
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user?.id || !session.user.email) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
   }
+  const userId = session.user.id;
+  const userEmail = session.user.email;
 
   const json = await req.json().catch(() => null);
   const parsed = BodySchema.safeParse(json);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'bad_request', issues: parsed.error.issues }, { status: 400 });
+    return NextResponse.json(
+      { error: 'bad_request', issues: parsed.error.issues },
+      { status: 400 },
+    );
   }
 
   try {
     const row = await completeActivity({
-      userId: session.user.id,
+      userId,
       programType: parsed.data.programType,
       programSlug: parsed.data.programSlug,
       cohortSlug: parsed.data.cohortSlug ?? null,
@@ -47,60 +59,133 @@ export async function POST(req: Request) {
       activitySlug: parsed.data.activitySlug ?? null,
     });
 
-    // Vérifie si l'user vient de compléter 100% → email completion (fire-and-forget)
-    if (isEmailConfigured()) {
-      void (async () => {
-        try {
-          const [tree, progress] = await Promise.all([
-            getProgramTree(parsed.data.programSlug),
-            getProgramProgress({
-              userId: session.user.id!,
-              programType: parsed.data.programType,
-              programSlug: parsed.data.programSlug,
-              cohortSlug: parsed.data.cohortSlug ?? null,
-            }),
-          ]);
-          if (!tree || tree.units.length === 0) return;
-          const completedSet = new Set(
-            progress.filter((p) => p.status === 'completed').map((p) => p.activityNotionId),
-          );
-          const allDone = tree.units.every((u) => completedSet.has(u.meta.notionId));
-          if (!allDone) return;
+    // Tracking activity (sans bloquer la réponse)
+    void touchEnrollmentActivity({
+      userId,
+      programType: parsed.data.programType,
+      programSlug: parsed.data.programSlug,
+      cohortSlug: parsed.data.cohortSlug ?? null,
+    }).catch((e) => console.error('[progress/complete] touch enrollment failed', e));
 
-          // Dédup : un seul email de complétion par user+programme
-          const flagKey = `email:sent:completed:${session.user.id}:${parsed.data.programSlug}`;
-          if (hasKv()) {
-            const already = await kv.get(flagKey);
-            if (already) return;
-          }
+    // Detection 100% complété → email + marquage completedAt enrollment
+    void (async () => {
+      try {
+        const [tree, progress] = await Promise.all([
+          getProgramTree(parsed.data.programSlug),
+          getProgramProgress({
+            userId,
+            programType: parsed.data.programType,
+            programSlug: parsed.data.programSlug,
+            cohortSlug: parsed.data.cohortSlug ?? null,
+          }),
+        ]);
+        if (!tree || tree.units.length === 0) return;
+        const completedSet = new Set(
+          progress.filter((p) => p.status === 'completed').map((p) => p.activityNotionId),
+        );
+        const allDone = tree.units.every((u) => completedSet.has(u.meta.notionId));
+        if (!allDone) return;
 
-          const baseUrl = getBaseUrl();
-          const programUrl = `${baseUrl}/programs/${parsed.data.programSlug}`;
-          const certificateUrl = tree.meta.certificateEnabled
-            ? `${baseUrl}/api/certificates/${parsed.data.programSlug}`
-            : null;
+        // Mark enrollment completed
+        await touchEnrollmentActivity({
+          userId,
+          programType: parsed.data.programType,
+          programSlug: parsed.data.programSlug,
+          cohortSlug: parsed.data.cohortSlug ?? null,
+          markCompleted: true,
+        });
 
-          const tmpl = programCompletedEmail({
-            recipientName: session.user.name ?? null,
+        if (!isEmailConfigured()) return;
+
+        const userName = session.user.name?.trim() || userEmail.split('@')[0];
+        const baseUrl = getBaseUrl();
+        const certEnabled = Boolean(tree.meta.certificateEnabled);
+
+        // Émet le certificat (idempotent) et récupère le code → URL de vérif
+        if (certEnabled) {
+          const completionDates = progress
+            .map((p) => p.completedAt)
+            .filter((d): d is Date => d instanceof Date);
+          const completedAt = completionDates.length
+            ? new Date(Math.max(...completionDates.map((d) => d.getTime())))
+            : new Date();
+
+          const cert = await getOrIssueCertificate({
+            userId,
+            programSlug: parsed.data.programSlug,
+            recipientName: userName,
             programTitle: tree.meta.title,
-            certificateUrl,
-            programUrl,
+            completedAt,
           });
-          const sent = await sendEmail({
-            to: session.user.email!,
-            subject: tmpl.subject,
-            html: tmpl.html,
-            text: tmpl.text,
-            tag: 'completed',
-          });
-          if (sent.ok && hasKv()) {
-            await kv.set(flagKey, new Date().toISOString(), { ex: 60 * 60 * 24 * 365 });
+          const verifyUrl = `${baseUrl}/cert/verify/${cert.code}`;
+          const certificateUrl = `${baseUrl}/api/certificates/${parsed.data.programSlug}`;
+
+          // Idempotent : 1 seul email par user+programme
+          if (
+            await wasEmailSent({
+              userId,
+              emailType: 'certificate-ready',
+              programSlug: parsed.data.programSlug,
+            })
+          ) {
+            return;
           }
-        } catch (e) {
-          console.error('[progress/complete] completion email failed', e);
+
+          const result = await sendReactEmail({
+            to: userEmail,
+            subject: `🎉 Bravo ${userName} — ton certificat ${tree.meta.title} est prêt`,
+            react: CertificateReadyEmail({
+              userName,
+              programTitle: tree.meta.title,
+              certificateUrl,
+              verifyUrl,
+            }),
+            tag: 'certificate-ready',
+          });
+          if (result.ok) {
+            await markEmailSent({
+              userId,
+              emailType: 'certificate-ready',
+              programSlug: parsed.data.programSlug,
+            });
+          }
+          return;
         }
-      })();
-    }
+
+        // Pas de certificat → email "programme terminé" générique
+        if (
+          await wasEmailSent({
+            userId,
+            emailType: 'program-completed',
+            programSlug: parsed.data.programSlug,
+          })
+        ) {
+          return;
+        }
+
+        const result = await sendReactEmail({
+          to: userEmail,
+          subject: `Bravo — tu as terminé ${tree.meta.title}`,
+          react: ProgramCompletedEmail({
+            userName,
+            programTitle: tree.meta.title,
+            unitsCompleted: tree.units.length,
+            totalUnits: tree.units.length,
+            programsUrl: `${baseUrl}/programs`,
+          }),
+          tag: 'program-completed',
+        });
+        if (result.ok) {
+          await markEmailSent({
+            userId,
+            emailType: 'program-completed',
+            programSlug: parsed.data.programSlug,
+          });
+        }
+      } catch (e) {
+        console.error('[progress/complete] completion email/cert failed', e);
+      }
+    })();
 
     return NextResponse.json({ ok: true, progress: row });
   } catch (error) {

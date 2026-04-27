@@ -98,6 +98,9 @@ export async function POST(req: Request) {
       ],
       customer_email: session.user.email,
       client_reference_id: session.user.id,
+      // Permet à l'apprenant de saisir un code promo (créé dans Stripe Dashboard).
+      // Stripe gère la réduction côté Checkout — pas de logique custom à coder.
+      allow_promotion_codes: true,
       // Redirection post-paiement → /my-learning (robuste : pas de dépendance au slug en cache,
       // l'user voit immédiatement son tableau de bord avec le programme déjà enroll via webhook)
       success_url: `${baseUrl}/my-learning?success=1&program=${encodeURIComponent(programSlug)}&session_id={CHECKOUT_SESSION_ID}`,
@@ -115,6 +118,20 @@ export async function POST(req: Request) {
           userId: session.user.id,
           programSlug,
           programType: program.type,
+        },
+      },
+      // Génère automatiquement une facture Stripe (hosted_invoice_url + invoice_pdf)
+      // récupérée par le webhook pour la stocker en DB et l'envoyer à l'apprenant.
+      invoice_creation: {
+        enabled: true,
+        invoice_data: {
+          description: `Achat du programme "${program.title}" sur Impulsion`,
+          metadata: {
+            programSlug,
+            programType: program.type,
+            userId: session.user.id,
+          },
+          footer: 'Merci pour votre confiance — Impulsion',
         },
       },
     });
