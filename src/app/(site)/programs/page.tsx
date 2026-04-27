@@ -107,8 +107,8 @@ export default async function ProgramsIndexPage({
             </div>
           ) : (
             <div className="mt-[var(--space-xl)] grid gap-[var(--space-md)] sm:grid-cols-2 lg:grid-cols-3">
-              {filtered.map((p) => (
-                <ProgramCard key={p.slug} p={p} showDraft={isAdmin} />
+              {filtered.map((p, idx) => (
+                <ProgramCard key={p.slug} p={p} showDraft={isAdmin} priority={idx < 3} />
               ))}
             </div>
           )}
@@ -177,7 +177,7 @@ function FilterTabs({ current, counts }: { current: Filter; counts: { all: numbe
 
 // ─── Card programme ───
 
-function ProgramCard({ p, showDraft }: { p: ProgramMeta; showDraft: boolean }) {
+function ProgramCard({ p, showDraft, priority = false }: { p: ProgramMeta; showDraft: boolean; priority?: boolean }) {
   const thumb = p.thumbnailUrl ?? p.coverImageUrl;
   const paid = isPaid(p);
   const priceLabel = paid ? formatPrice(p.price ?? 0, p.currency ?? 'EUR') : null;
@@ -208,7 +208,7 @@ function ProgramCard({ p, showDraft }: { p: ProgramMeta; showDraft: boolean }) {
         </>
       ) : null}
 
-      <ProgramCardThumb src={thumb} title={p.title} />
+      <ProgramCardThumb src={thumb} title={p.title} priority={priority} />
 
       <div className="flex flex-1 flex-col gap-[var(--space-2xs)] p-[var(--space-md)]">
         <div className="flex items-center gap-2">

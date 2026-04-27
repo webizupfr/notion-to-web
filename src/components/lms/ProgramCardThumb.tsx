@@ -1,4 +1,5 @@
 import { IconSparkles } from '@/components/ui/icons';
+import { cloudinaryThumb } from '@/lib/cloudinary-url';
 
 /**
  * Thumb visuel d'un programme. Si l'URL est fournie → image cover.
@@ -6,26 +7,46 @@ import { IconSparkles } from '@/components/ui/icons';
  *
  * Utilisé dans : cards /programs, /my-learning, landing.
  *
- * Dimensions recommandées des images : 1600x1000 (16:10).
+ * Optimisations images :
+ *   - Cloudinary : w_800,f_auto,q_auto,c_limit,dpr_auto (≈ 50-100kB en WebP/AVIF
+ *     vs ~500kB en JPG full size). Voir lib/cloudinary-url.ts.
+ *   - <img loading="lazy"> par défaut pour les cards hors viewport.
+ *   - <img decoding="async"> pour ne pas bloquer le main thread.
+ *
+ * Dimensions recommandées des images source : 1600x1000 (16:10).
  */
 export function ProgramCardThumb({
   src,
   title,
   className = '',
   ratio = '16/10',
+  priority = false,
 }: {
   src?: string | null;
   title: string;
   className?: string;
   ratio?: '16/10' | '16/9' | '4/3' | '1/1';
+  /** Hint pour le LCP : passe `true` sur la 1re card visible (au-dessus du fold). */
+  priority?: boolean;
 }) {
   if (src) {
+    const optimizedSrc = cloudinaryThumb(src, 800);
     return (
       <div
-        className={`w-full bg-cover bg-center ${className}`}
-        style={{ backgroundImage: `url(${src})`, aspectRatio: ratio }}
-        aria-hidden
-      />
+        className={`w-full overflow-hidden ${className}`}
+        style={{ aspectRatio: ratio }}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={optimizedSrc}
+          alt=""
+          loading={priority ? 'eager' : 'lazy'}
+          decoding="async"
+          fetchPriority={priority ? 'high' : 'auto'}
+          className="h-full w-full object-cover"
+          aria-hidden
+        />
+      </div>
     );
   }
 

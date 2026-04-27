@@ -6,6 +6,7 @@ import "@/styles/hub.css";
 import { getProgramTree } from "@/lib/programs";
 import { resolveInstructors } from "@/lib/instructors";
 import { auth } from "@/auth";
+import { cloudinaryHero } from "@/lib/cloudinary-url";
 import { isEnrolled, getEnrollment, getProgramProgress } from "@/lib/db/progress";
 import type { NotionBlock } from "@/lib/notion";
 import { buildDayEntriesFromProgram, unitLabelsFor } from "@/lib/program-nav";
@@ -175,7 +176,7 @@ export default async function ProgramPage({
             style={
               meta.coverImageUrl
                 ? {
-                    backgroundImage: `linear-gradient(180deg, rgba(15,23,42,0.70), rgba(15,23,42,0.92)), url(${meta.coverImageUrl})`,
+                    backgroundImage: `linear-gradient(180deg, rgba(15,23,42,0.70), rgba(15,23,42,0.92)), url(${cloudinaryHero(meta.coverImageUrl, 1600)})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     color: 'white',
