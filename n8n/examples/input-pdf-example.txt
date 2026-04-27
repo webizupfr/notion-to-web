@@ -1,0 +1,111 @@
+PROMPT ENGINEERING POUR FREELANCES
+Guide pratique pour intégrer ChatGPT dans son quotidien professionnel
+
+---
+
+INTRODUCTION
+
+L'IA générative est passée d'un gadget à un outil de productivité majeur en moins
+de 18 mois. Pourtant, la majorité des freelances et indépendants continuent de
+l'utiliser de manière superficielle : "Écris-moi un email pour mon client".
+Résultat : du contenu générique, peu différencié, et un sentiment de déception.
+
+Ce guide te montre comment passer du "bricolage ChatGPT" à une vraie maîtrise
+qui fait gagner 5 à 10 heures par semaine sur les tâches répétitives.
+
+---
+
+PARTIE 1 — LES 5 CAS D'USAGE PROFESSIONNELS PRIORITAIRES
+
+1. Rédaction de propositions commerciales
+   Au lieu de partir de zéro, utilise un template enrichi avec ton tone of voice.
+   Cas concret : Marc, consultant SEO, est passé de 3h à 30min par proposition
+   en chargeant ses 5 dernières propositions gagnantes comme contexte.
+
+2. Préparation de réunions client
+   Avant chaque call, liste les enjeux du client + ton angle + tes questions.
+   Demande à l'IA de te challenger ces hypothèses comme un sparring partner.
+
+3. Veille concurrentielle
+   Plutôt que de Google manuellement, structure une veille hebdo automatique
+   avec une grille d'analyse précise (positionnement, prix, ton, cibles).
+
+4. Rédaction de contenu LinkedIn
+   Produis 5 posts/semaine en 1h plutôt que d'attendre l'inspiration.
+   Le secret : ne JAMAIS publier brut. Toujours réécrire 30% pour ton ton perso.
+
+5. Synthèses de calls / réunions
+   Otter ou Fireflies te transcrivent. Puis ChatGPT structure : décisions,
+   actions, points d'attention. Gain de 1h par semaine en moyenne.
+
+---
+
+PARTIE 2 — LA FORMULE DU PROMPT EFFICACE
+
+Un bon prompt suit la structure CRAFT :
+- C : Contexte (qui tu es, qui est ton interlocuteur, quelle situation)
+- R : Rôle (qui doit être l'IA — un coach exigeant ? un copywriter ? un freelance senior ?)
+- A : Action (que doit-elle faire précisément ?)
+- F : Format (quelle longueur ? quel style ? bullets ou paragraphes ?)
+- T : Ton (formel, convivial, direct, provocateur ?)
+
+Exemple naze : "Écris-moi un post LinkedIn sur l'IA"
+
+Exemple structuré CRAFT :
+"Tu es Marc, un consultant SEO indépendant qui s'adresse à d'autres consultants
+sur LinkedIn. Tu écris un post sur l'usage de l'IA pour la rédaction de propositions
+commerciales. Format : 5 paragraphes courts (max 2 lignes chacun) + une question
+finale. Ton : direct, un peu provocateur, sans jargon. Inclus 1 anecdote concrète."
+
+Différence : 1 prompt naze = 30 itérations. 1 prompt CRAFT = 1 résultat utilisable.
+
+---
+
+PARTIE 3 — LES 3 ERREURS À ÉVITER
+
+1. Ne JAMAIS publier le contenu brut
+   L'IA produit du correct, pas du remarquable. Réécris 30% pour ton ton perso,
+   tes anecdotes, tes opinions tranchées.
+
+2. Ne pas surcharger le contexte
+   Plus tu donnes de contexte, mieux c'est. Mais au-delà de ~3 paragraphes,
+   l'IA dilue. Garde l'essentiel : ton rôle, ton public, ton objectif.
+
+3. Ne pas itérer
+   Le 1er résultat est rarement le bon. Demande "réécris en plus court" ou
+   "plus provocateur" ou "avec un exemple concret". 3 itérations = 10x mieux.
+
+---
+
+PARTIE 4 — TEMPLATES À COPIER
+
+Template 1 — Proposition commerciale :
+"Tu es un consultant senior en [DOMAINE]. Voici une demande client : [BRIEF].
+Voici 3 de mes propositions gagnantes : [EXEMPLES]. Rédige une proposition
+de 1 page max qui suit la structure : pain → solution → process → prix → CTA.
+Ton : pro mais humain. Inclus 2 exemples chiffrés."
+
+Template 2 — Synthèse de call :
+"Voici la transcription d'un call client : [TRANSCRIPT]. Synthétise en 3 sections :
+1. Décisions prises (avec dates) 2. Actions à faire (avec responsable) 3. Points
+ouverts à reclarifier au prochain call. Format : bullets courts, max 1 ligne chacun."
+
+Template 3 — Post LinkedIn :
+"Sujet : [SUJET]. Mon angle : [OPINION TRANCHÉE]. Public : [QUI]. Format :
+hook + 3-4 paragraphes max 2 lignes + question finale. Ton : direct, un peu
+provocateur, sans jargon corporate. Inclus 1 anecdote vraie de ma vie."
+
+---
+
+CONCLUSION
+
+L'IA n'est pas magique. Elle est un levier qui amplifie ce que tu sais déjà faire.
+Si tu sais bien briefer un freelance, tu sauras bien briefer ChatGPT.
+
+Ton plan d'action pour cette semaine :
+1. Choisis 1 cas d'usage parmi les 5
+2. Écris ton premier prompt CRAFT
+3. Itère 3 fois sur le résultat
+4. Adopte la routine pour 1 semaine
+
+Dans 7 jours, tu seras déjà 5x plus efficace que la moyenne des freelances.
