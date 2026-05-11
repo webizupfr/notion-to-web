@@ -28,6 +28,7 @@ import {
   NotionColumns,
   NotionTable,
   NotionCode,
+  NotionHtml,
   NotionEquation,
   NotionTableOfContents,
   NotionBreadcrumb,
@@ -721,6 +722,10 @@ export async function renderBlockAsync(
         } catch (error) {
           console.error("[notion-widget] YAML parse error", { blockId: block.id, language }, error);
         }
+      }
+
+      if (language === "html") {
+        return <NotionHtml html={codeText} caption={caption} />;
       }
 
       return <NotionCode code={codeText} language={codeBlock.language} caption={caption} />;

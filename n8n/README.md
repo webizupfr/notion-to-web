@@ -61,12 +61,24 @@ Ouvre le node **"Set: Config"** (le 1er node après le Form Trigger) :
 | `default_visibility` | `public` |
 | `default_certificate_enabled` | `true` |
 
-### 5. Coller les prompts
+### 5. Vérifier les prompts (déjà inclus dans le workflow)
 
-Pour chaque node "Claude Analyse / Architecte / Rédacteur" :
-1. Ouvre le node
-2. Onglet **Messages** → User Message
-3. Copie-colle le prompt depuis `prompts.md` (Prompt 1, 2, 3 respectivement)
+Les prompts sont déjà collés dans les 3 nodes `LLM Chain — X`. Si tu veux les ajuster :
+1. Ouvre le node `LLM Chain — Analyse` (ou Architecte / Rédacteur)
+2. Onglet **Parameters** :
+   - **Text** = le prompt user (avec variables `{{ }}` n8n)
+   - **Messages → System Message** = les instructions générales
+
+Si tu veux personnaliser le ton / style, c'est dans `prompts.md` que tu trouveras les versions complètes annotées avec des conseils d'itération.
+
+### 5bis. Vérifier le model Anthropic dans les sub-nodes
+
+Pour chaque `Anthropic Model — X` (sub-node attaché au Chain) :
+- **Model** : `claude-sonnet-4-5-20250929` (ou autre Sonnet récent dispo dans ton compte)
+- **Max Tokens** : 1500 (Analyse) / 4000 (Architecte) / 4000 (Rédacteur)
+- **Temperature** : 0.3 (Analyse) / 0.5 (Architecte) / 0.6 (Rédacteur)
+
+> 💡 Si le model n'apparaît pas dans la liste, vérifie ton accès Anthropic. Tu peux passer en `claude-3-5-sonnet-20241022` ou `claude-haiku-4-5` selon ce qui est dispo.
 
 ### 6. Activer le workflow
 
@@ -93,39 +105,57 @@ Pour chaque node "Claude Analyse / Architecte / Rédacteur" :
 
 ## 🎯 Workflow
 
+Le workflow utilise le pattern **LangChain n8n** : chaque "Claude call" est composé de 2 nodes :
+- **`LLM Chain — X`** (le node principal qui contient le prompt)
+- **`Anthropic Model — X`** (sub-node connecté en `ai_languageModel`)
+
 ```
 [Form Trigger]
        │ POST avec fichier + metadata
        ▼
-[Set: Config]                    ← variables centralisées
+[Set: Config]                       ← variables centralisées
        │
        ▼
-[Extract from File]              ← PDF → texte
+[Extract from File]                 ← PDF → texte
        │
        ▼
-[Claude — Analyse]               ← comprend le contenu, identifie le public
+[LLM Chain — Analyse]               ← prompt 1 (analyse contenu)
+       │ ← attaché : [Anthropic Model — Analyse] (sub-connection ai_languageModel)
+       ▼
+[Parse Analyse JSON]                ← clean + valide le JSON output
        │
        ▼
-[Claude — Architecte]            ← propose le squelette : N units, learning outcomes, etc.
+[LLM Chain — Architecte]            ← prompt 2 (squelette programme)
+       │ ← attaché : [Anthropic Model — Architecte]
+       ▼
+[Parse Architecte JSON]
        │
        ▼
-[Notion — Create Program Page]   ← page programme créée (status=draft)
+[Notion — Create Program Page]      ← HTTP POST /v1/pages (parent = database)
+       │                              status=draft, props complètes
+       ▼
+[Split Units]                       ← itère sur chaque unit du squelette
        │
        ▼
-[Split In Batches: units]        ← itère sur chaque unit
+[LLM Chain — Rédacteur]             ← prompt 3 (contenu détaillé de la unit)
+       │ ← attaché : [Anthropic Model — Rédacteur]
+       ▼
+[Transform Blocks]                  ← Claude format → Notion API blocks + callout ⚙️
        │
        ▼
-[Claude — Rédacteur]             ← rédige le contenu de la unit (intro, exercices, conclusion)
+[Notion — Create Unit Page]         ← HTTP POST /v1/pages (parent = program page)
+       │                              + callout ⚙️ Config (durée, déverrouillage)
+       ▼
+[Prepare Steps]                     ← prépare les requêtes par step
        │
        ▼
-[Notion — Create Unit Page]      ← child_page sous le programme
-       │                          + callout ⚙️ Config (durée, déverrouillage)
+[Notion — Create Step Page]         ← HTTP POST /v1/pages (parent = unit page)
+       │                              avec children blocks (callout ⚙️ + contenu)
        ▼
-[Notion — Create Step Pages]     ← sub-child pages pour chaque step de la unit
-       │
-       ▼
-[Slack — Notification]           ← te ping "✅ Programme draft : <titre>"
+[Log Success]                       ← lien Notion vers le programme créé
 ```
+
+**Total : 17 nodes** (3 paires LLM Chain + Model, 3 nodes Notion HTTP, 3 nodes Code, etc.)
 
 ---
 

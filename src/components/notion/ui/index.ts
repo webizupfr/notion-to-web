@@ -8,6 +8,7 @@ export * from "./NotionTodo";
 export * from "./NotionCallout";
 export * from "./NotionToggle";
 export * from "./NotionCode";
+export * from "./NotionHtml";
 export * from "./NotionEquation";
 export * from "./NotionImage";
 export * from "./NotionVideo";

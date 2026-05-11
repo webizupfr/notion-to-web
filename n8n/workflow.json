@@ -78,18 +78,25 @@
     },
     {
       "parameters": {
+        "operation": "pdf",
+        "binaryPropertyName": "source_file",
+        "options": {}
+      },
+      "id": "extract-from-file",
+      "name": "Extract from File",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [460, 400],
+      "notes": "binaryPropertyName doit matcher le fieldName du Form Trigger. Si tu uploads des .txt/.md à la place, change operation à 'text'."
+    },
+    {
+      "parameters": {
         "assignments": {
           "assignments": [
             {
               "id": "config-db-id",
               "name": "notion_programs_db_id",
               "value": "34c7fdb7-6b00-8166-a36a-d433231dc04c",
-              "type": "string"
-            },
-            {
-              "id": "config-model",
-              "name": "claude_model",
-              "value": "claude-sonnet-4-5-20250929",
               "type": "string"
             },
             {
@@ -112,58 +119,56 @@
       "name": "Set: Config",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [460, 400]
+      "position": [680, 400],
+      "notes": "Placé APRÈS Extract from File pour ne pas drop le binary du Form Trigger."
     },
     {
       "parameters": {
-        "operation": "text",
-        "options": {}
-      },
-      "id": "extract-from-file",
-      "name": "Extract from File",
-      "type": "n8n-nodes-base.extractFromFile",
-      "typeVersion": 1,
-      "position": [680, 400]
-    },
-    {
-      "parameters": {
-        "modelId": {
-          "value": "={{ $('Set: Config').item.json.claude_model }}",
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-5-20250929",
           "mode": "list"
-        },
-        "messages": {
-          "values": [
-            {
-              "content": "Tu es un consultant pédagogique senior. Tu analyses du contenu brut pour préparer un programme d'apprentissage en ligne. Tu réponds toujours en JSON strict, sans préambule ni commentaire.",
-              "role": "system"
-            },
-            {
-              "content": "=CONTENU SOURCE (brut, à analyser) :\n\"\"\"\n{{ $('Extract from File').item.json.text }}\n\"\"\"\n\nCONTEXTE FOURNI PAR L'AUTEUR :\n- Public cible : {{ $('Form Trigger').item.json.audience }}\n- Format souhaité : {{ $('Form Trigger').item.json.format }}\n- Niveau : {{ $('Form Trigger').item.json.level }}\n- Objectif business : {{ $('Form Trigger').item.json.business_goal }}\n- Notes additionnelles : {{ $('Form Trigger').item.json.notes || '(aucune)' }}\n\nTÂCHE :\nAnalyse ce contenu en profondeur. Identifie les concepts clés, le public réel, les objectifs d'apprentissage atteignables. Propose un découpage cohérent en unités.\n\nLIVRE EXACTEMENT CE JSON (rien d'autre, pas de ```json wrapper) :\n{\n  \"concepts_cles\": [string],\n  \"public_reel\": string,\n  \"objectifs_apprentissage\": [string],\n  \"prerequis\": string|null,\n  \"duree_totale_minutes\": number,\n  \"complexite\": \"low\"|\"medium\"|\"high\",\n  \"recommandation_decoupage\": {\n    \"type\": \"async\"|\"sync\"|\"event\",\n    \"nombre_unites\": number,\n    \"duree_par_unite_minutes\": number\n  },\n  \"ton_recommande\": \"directif\"|\"convivial\"|\"pro\"|\"impertinent\",\n  \"angle_business\": string\n}\n\nSois concis et précis. Pas de bullshit. Si une info manque, mets null.",
-              "role": "user"
-            }
-          ]
         },
         "options": {
           "maxTokensToSample": 1500,
           "temperature": 0.3
         }
       },
-      "id": "claude-analyse",
-      "name": "Claude — Analyse",
+      "id": "anthropic-model-analyse",
+      "name": "Anthropic Model — Analyse",
       "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
       "typeVersion": 1.3,
-      "position": [900, 400],
+      "position": [900, 600],
       "credentials": {
         "anthropicApi": {
           "id": "REPLACE_WITH_YOUR_ANTHROPIC_CRED_ID",
           "name": "Anthropic API"
         }
-      },
-      "notes": "PROMPT 1 — Analyse. Coller le prompt depuis prompts.md."
+      }
     },
     {
       "parameters": {
-        "jsCode": "// Parse la réponse JSON de Claude — Analyse\nconst raw = $input.first().json.message?.content?.[0]?.text || $input.first().json.text || '';\nconst cleaned = raw.replace(/^```json\\n?|```$/g, '').trim();\ntry {\n  const parsed = JSON.parse(cleaned);\n  return [{ json: parsed }];\n} catch (e) {\n  throw new Error('Claude n\\'a pas renvoyé du JSON valide pour Analyse: ' + e.message + '\\n\\nReçu:\\n' + raw);\n}"
+        "promptType": "define",
+        "text": "=CONTENU SOURCE (brut, à analyser) :\n\"\"\"\n{{ $('Extract from File').item.json.text }}\n\"\"\"\n\nCONTEXTE FOURNI PAR L'AUTEUR :\n- Public cible : {{ $('Form Trigger').item.json.audience }}\n- Format souhaité : {{ $('Form Trigger').item.json.format }}\n- Niveau : {{ $('Form Trigger').item.json.level }}\n- Objectif business : {{ $('Form Trigger').item.json.business_goal }}\n- Notes additionnelles : {{ $('Form Trigger').item.json.notes || '(aucune)' }}\n\nTÂCHE :\nAnalyse ce contenu en profondeur. Identifie les concepts clés, le public réel, les objectifs d'apprentissage atteignables. Propose un découpage cohérent en unités.\n\nLIVRE EXACTEMENT CE JSON (rien d'autre, pas de wrapper markdown) :\n{\n  \"concepts_cles\": [string],\n  \"public_reel\": string,\n  \"objectifs_apprentissage\": [string],\n  \"prerequis\": string|null,\n  \"duree_totale_minutes\": number,\n  \"complexite\": \"low\"|\"medium\"|\"high\",\n  \"recommandation_decoupage\": {\n    \"type\": \"async\"|\"sync\"|\"event\",\n    \"nombre_unites\": number,\n    \"duree_par_unite_minutes\": number\n  },\n  \"ton_recommande\": \"directif\"|\"convivial\"|\"pro\"|\"impertinent\",\n  \"angle_business\": string\n}\n\nSois concis et précis. Pas de bullshit. Si une info manque, mets null.",
+        "messages": {
+          "messageValues": [
+            {
+              "messageType": "system",
+              "message": "Tu es un consultant pédagogique senior. Tu analyses du contenu brut pour préparer un programme d'apprentissage en ligne. Tu réponds toujours en JSON strict, sans préambule, sans commentaire, sans wrapper markdown."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "chain-analyse",
+      "name": "LLM Chain — Analyse",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [900, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse la réponse JSON de Claude — Analyse\nconst raw = $input.first().json.text || $input.first().json.output || '';\nconst cleaned = String(raw).replace(/^```json\\n?|```$/g, '').trim();\ntry {\n  const parsed = JSON.parse(cleaned);\n  return [{ json: parsed }];\n} catch (e) {\n  throw new Error('Analyse: JSON invalide. ' + e.message + '\\n\\nReçu:\\n' + raw);\n}"
       },
       "id": "parse-analyse",
       "name": "Parse Analyse JSON",
@@ -173,43 +178,51 @@
     },
     {
       "parameters": {
-        "modelId": {
-          "value": "={{ $('Set: Config').item.json.claude_model }}",
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-5-20250929",
           "mode": "list"
-        },
-        "messages": {
-          "values": [
-            {
-              "content": "Tu es un architecte pédagogique pour Impulsion, une plateforme d'apprentissage de l'IA pour entrepreneurs et freelances. Philosophie : court, focalisé, pratique. Une unité = un thème + un livrable concret. Le ton est inspirant mais sans bullshit. Tutoyer.\n\nTu réponds toujours en JSON strict, sans préambule ni commentaire.",
-              "role": "system"
-            },
-            {
-              "content": "=ANALYSE PRÉALABLE :\n{{ JSON.stringify($('Parse Analyse JSON').item.json) }}\n\nCONTENU SOURCE (pour rappel) :\n\"\"\"\n{{ $('Extract from File').item.json.text }}\n\"\"\"\n\nCONFIG IMPULSION :\n- Type de programme : {{ $('Parse Analyse JSON').item.json.recommandation_decoupage.type }}\n- Nombre d'unités cible : {{ $('Parse Analyse JSON').item.json.recommandation_decoupage.nombre_unites }}\n\nTÂCHE :\nConçois le squelette détaillé du programme. Le titre doit être PUNCHY et clair sur la promesse.\n\nPour chaque unité :\n- Titre : \"Jour N — Verbe d'action + objet\" (async) ou \"Module N — ...\" (sync)\n- 3 à 5 steps : intro courte (5-10min) + 1-3 exercices pratiques (10-20min) + conclusion/synthèse (5min)\n- Le déverrouillage : J+0 pour la 1re, J+1 pour la 2e (async)\n\nLIVRE EXACTEMENT CE JSON (rien d'autre, pas de ```json wrapper) :\n{\n  \"title\": string,\n  \"slug\": string,\n  \"subtitle\": string,\n  \"description\": string,\n  \"type\": \"async\"|\"sync\"|\"event\",\n  \"estimated_duration_minutes\": number,\n  \"target_audience\": string,\n  \"prerequisites\": string|null,\n  \"learning_outcomes\": [string],\n  \"certificate_enabled\": boolean,\n  \"units\": [{\n    \"order\": number,\n    \"title\": string,\n    \"summary\": string,\n    \"duration_minutes\": number,\n    \"unlock_offset_days\": number,\n    \"steps\": [{\n      \"order\": number,\n      \"title\": string,\n      \"type\": \"intro\"|\"step\"|\"conclusion\"|\"option\",\n      \"duration_minutes\": number,\n      \"summary\": string\n    }]\n  }]\n}\n\nCONTRAINTES :\n- slug : kebab-case, sans accents, court (max 30 chars)\n- title : max 60 chars\n- description : 1-2 phrases punchy\n- learning_outcomes : 3 à 5 items, format \"Maîtrise X\" ou \"Capacité à Y\"\n- units : exactement {{ $('Parse Analyse JSON').item.json.recommandation_decoupage.nombre_unites }} unités",
-              "role": "user"
-            }
-          ]
         },
         "options": {
           "maxTokensToSample": 4000,
           "temperature": 0.5
         }
       },
-      "id": "claude-architecte",
-      "name": "Claude — Architecte",
+      "id": "anthropic-model-architecte",
+      "name": "Anthropic Model — Architecte",
       "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
       "typeVersion": 1.3,
-      "position": [1340, 400],
+      "position": [1340, 600],
       "credentials": {
         "anthropicApi": {
           "id": "REPLACE_WITH_YOUR_ANTHROPIC_CRED_ID",
           "name": "Anthropic API"
         }
-      },
-      "notes": "PROMPT 2 — Architecte. Coller le prompt depuis prompts.md."
+      }
     },
     {
       "parameters": {
-        "jsCode": "// Parse la réponse JSON de Claude — Architecte\nconst raw = $input.first().json.message?.content?.[0]?.text || $input.first().json.text || '';\nconst cleaned = raw.replace(/^```json\\n?|```$/g, '').trim();\ntry {\n  const parsed = JSON.parse(cleaned);\n  return [{ json: parsed }];\n} catch (e) {\n  throw new Error('Claude n\\'a pas renvoyé du JSON valide pour Architecte: ' + e.message + '\\n\\nReçu:\\n' + raw);\n}"
+        "promptType": "define",
+        "text": "=ANALYSE PRÉALABLE :\n{{ JSON.stringify($('Parse Analyse JSON').item.json) }}\n\nCONTENU SOURCE (pour rappel) :\n\"\"\"\n{{ $('Extract from File').item.json.text }}\n\"\"\"\n\nCONFIG IMPULSION :\n- Type de programme : {{ $('Parse Analyse JSON').item.json.recommandation_decoupage.type }}\n- Nombre d'unités cible : {{ $('Parse Analyse JSON').item.json.recommandation_decoupage.nombre_unites }}\n\nTÂCHE :\nConçois le squelette détaillé du programme. Le titre doit être PUNCHY et clair sur la promesse.\n\nPour chaque unité :\n- Titre : \"Jour N — Verbe d'action + objet\" (async) ou \"Module N — ...\" (sync)\n- 3 à 5 steps : intro courte (5-10min) + 1-3 exercices pratiques (10-20min) + conclusion (5min)\n- Le déverrouillage : J+0 pour la 1re, J+1 pour la 2e (async)\n\nLIVRE EXACTEMENT CE JSON (rien d'autre, pas de wrapper markdown) :\n{\n  \"title\": string,\n  \"slug\": string,\n  \"subtitle\": string,\n  \"description\": string,\n  \"type\": \"async\"|\"sync\"|\"event\",\n  \"estimated_duration_minutes\": number,\n  \"target_audience\": string,\n  \"prerequisites\": string|null,\n  \"learning_outcomes\": [string],\n  \"certificate_enabled\": boolean,\n  \"units\": [{\n    \"order\": number,\n    \"title\": string,\n    \"summary\": string,\n    \"duration_minutes\": number,\n    \"unlock_offset_days\": number,\n    \"steps\": [{\n      \"order\": number,\n      \"title\": string,\n      \"type\": \"intro\"|\"step\"|\"conclusion\"|\"option\",\n      \"duration_minutes\": number,\n      \"summary\": string\n    }]\n  }]\n}\n\nCONTRAINTES :\n- slug : kebab-case, sans accents, court (max 30 chars)\n- title : max 60 chars\n- description : 1-2 phrases punchy\n- learning_outcomes : 3 à 5 items, format \"Maîtrise X\" ou \"Capacité à Y\"\n- units : exactement {{ $('Parse Analyse JSON').item.json.recommandation_decoupage.nombre_unites }} unités",
+        "messages": {
+          "messageValues": [
+            {
+              "messageType": "system",
+              "message": "Tu es un architecte pédagogique pour Impulsion, une plateforme d'apprentissage de l'IA pour entrepreneurs et freelances. Philosophie : court, focalisé, pratique. Une unité = un thème + un livrable concret. Le ton est inspirant mais sans bullshit. Tutoyer.\n\nTu réponds toujours en JSON strict, sans préambule, sans commentaire, sans wrapper markdown."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "chain-architecte",
+      "name": "LLM Chain — Architecte",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [1340, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse la réponse JSON de Claude — Architecte\nconst raw = $input.first().json.text || $input.first().json.output || '';\nconst cleaned = String(raw).replace(/^```json\\n?|```$/g, '').trim();\ntry {\n  const parsed = JSON.parse(cleaned);\n  return [{ json: parsed }];\n} catch (e) {\n  throw new Error('Architecte: JSON invalide. ' + e.message + '\\n\\nReçu:\\n' + raw);\n}"
       },
       "id": "parse-architecte",
       "name": "Parse Architecte JSON",
@@ -219,44 +232,28 @@
     },
     {
       "parameters": {
-        "resource": "databasePage",
-        "operation": "create",
-        "databaseId": "={{ $('Set: Config').item.json.notion_programs_db_id }}",
-        "title": "={{ $('Parse Architecte JSON').item.json.title }}",
-        "propertiesUi": {
-          "propertyValues": [
+        "method": "POST",
+        "url": "https://api.notion.com/v1/pages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
             {
-              "key": "slug|rich_text",
-              "textContent": "={{ $('Parse Architecte JSON').item.json.slug }}"
-            },
-            {
-              "key": "type|select",
-              "selectValue": "={{ $('Parse Architecte JSON').item.json.type }}"
-            },
-            {
-              "key": "visibility|select",
-              "selectValue": "={{ $('Set: Config').item.json.default_visibility }}"
-            },
-            {
-              "key": "publishingStatus|select",
-              "selectValue": "draft"
-            },
-            {
-              "key": "description|rich_text",
-              "textContent": "={{ $('Parse Architecte JSON').item.json.description }}"
-            },
-            {
-              "key": "certificate_enabled|checkbox",
-              "checkboxValue": "={{ $('Parse Architecte JSON').item.json.certificate_enabled }}"
+              "name": "Notion-Version",
+              "value": "2022-06-28"
             }
           ]
         },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"parent\": { \"database_id\": \"{{ $('Set: Config').item.json.notion_programs_db_id }}\" },\n  \"properties\": {\n    \"Title\": {\n      \"title\": [{ \"type\": \"text\", \"text\": { \"content\": {{ JSON.stringify($('Parse Architecte JSON').item.json.title) }} } }]\n    },\n    \"slug\": {\n      \"rich_text\": [{ \"type\": \"text\", \"text\": { \"content\": {{ JSON.stringify($('Parse Architecte JSON').item.json.slug) }} } }]\n    },\n    \"type\": {\n      \"select\": { \"name\": {{ JSON.stringify($('Parse Architecte JSON').item.json.type) }} }\n    },\n    \"visibility\": {\n      \"select\": { \"name\": \"public\" }\n    },\n    \"publishingStatus\": {\n      \"select\": { \"name\": \"draft\" }\n    },\n    \"description\": {\n      \"rich_text\": [{ \"type\": \"text\", \"text\": { \"content\": {{ JSON.stringify($('Parse Architecte JSON').item.json.description) }} } }]\n    },\n    \"certificate_enabled\": {\n      \"checkbox\": {{ $('Parse Architecte JSON').item.json.certificate_enabled }}\n    }\n  }\n}",
         "options": {}
       },
       "id": "notion-create-program",
       "name": "Notion — Create Program Page",
-      "type": "n8n-nodes-base.notion",
-      "typeVersion": 2.2,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [1780, 400],
       "credentials": {
         "notionApi": {
@@ -264,7 +261,7 @@
           "name": "Notion API"
         }
       },
-      "notes": "Crée la page programme avec status=draft. ⚠️ Ajuste les keys|type selon les noms exacts des props dans ta DB Notion."
+      "notes": "⚠️ Si tes props Notion ont d'autres noms (ex: 'Slug' au lieu de 'slug'), ajuste les keys du JSON body."
     },
     {
       "parameters": {
@@ -279,43 +276,51 @@
     },
     {
       "parameters": {
-        "modelId": {
-          "value": "={{ $('Set: Config').item.json.claude_model }}",
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-4-5-20250929",
           "mode": "list"
-        },
-        "messages": {
-          "values": [
-            {
-              "content": "Tu rédiges le contenu pédagogique d'unités de programmes Impulsion. Tu écris en français, tu tutoies, tes phrases sont courtes (max 2 lignes), tes paragraphes courts (max 3 lignes). Tu privilégies les exemples concrets aux théories abstraites. Tu réponds toujours en JSON strict avec un array \"steps\" prêt pour l'API Notion.",
-              "role": "system"
-            },
-            {
-              "content": "=PROGRAMME : {{ $('Parse Architecte JSON').item.json.title }}\nPUBLIC : {{ $('Parse Architecte JSON').item.json.target_audience }}\n\nUNITÉ À RÉDIGER :\n- Titre : {{ $json.title }}\n- Résumé : {{ $json.summary }}\n- Durée totale : {{ $json.duration_minutes }} min\n- Steps prévus : {{ JSON.stringify($json.steps) }}\n\nCONTENU SOURCE (pour t'inspirer) :\n\"\"\"\n{{ $('Extract from File').item.json.text }}\n\"\"\"\n\nTÂCHE :\nRédige le contenu COMPLET de chaque step. Pour chaque step, fournis un array de blocs Notion utilisables directement par l'API Notion.\n\nTYPES DE BLOCS AUTORISÉS :\n- heading_2 (titres principaux)\n- heading_3 (sous-titres)\n- paragraph (corps de texte, courts)\n- bulleted_list_item (listes)\n- numbered_list_item (étapes numérotées, exercices)\n- callout (avec emoji 💡 pour conseil, ⚠️ pour attention, 🎯 pour objectif, 📌 pour point clé)\n- quote (citation, anecdote)\n- code (commandes, prompts à utiliser)\n\nLIVRE EXACTEMENT CE JSON (rien d'autre) :\n{\n  \"steps\": [\n    {\n      \"order\": 1,\n      \"title\": \"...\",\n      \"type\": \"intro\"|\"step\"|\"conclusion\"|\"option\",\n      \"duration_minutes\": 10,\n      \"blocks\": [\n        { \"type\": \"heading_2\", \"text\": \"...\" },\n        { \"type\": \"paragraph\", \"text\": \"...\" },\n        { \"type\": \"callout\", \"icon\": \"💡\", \"text\": \"...\" },\n        ...\n      ]\n    }\n  ]\n}\n\nCONTRAINTES :\n- 5 à 15 blocs par step\n- Toujours commencer par heading_2 ou callout\n- Pour exercices : numbered_list_item avec verbe d'action en début\n- Pas de blabla \"Dans cette section...\" — direct au but",
-              "role": "user"
-            }
-          ]
         },
         "options": {
           "maxTokensToSample": 4000,
           "temperature": 0.6
         }
       },
-      "id": "claude-redacteur",
-      "name": "Claude — Rédacteur",
+      "id": "anthropic-model-redacteur",
+      "name": "Anthropic Model — Rédacteur",
       "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
       "typeVersion": 1.3,
-      "position": [2240, 400],
+      "position": [2240, 600],
       "credentials": {
         "anthropicApi": {
           "id": "REPLACE_WITH_YOUR_ANTHROPIC_CRED_ID",
           "name": "Anthropic API"
         }
-      },
-      "notes": "PROMPT 3 — Rédacteur (par unit). Coller le prompt depuis prompts.md."
+      }
     },
     {
       "parameters": {
-        "jsCode": "// Parse la réponse Claude + transforme en blocks API Notion + crée le tout\nconst raw = $input.first().json.message?.content?.[0]?.text || $input.first().json.text || '';\nconst cleaned = raw.replace(/^```json\\n?|```$/g, '').trim();\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  throw new Error('Rédacteur: JSON invalide. ' + e.message);\n}\n\n// Convertit le format simplifié de Claude en format API Notion\nfunction toNotionBlock(b) {\n  const richText = (text) => [{ type: 'text', text: { content: text } }];\n  switch (b.type) {\n    case 'heading_2':\n      return { object: 'block', type: 'heading_2', heading_2: { rich_text: richText(b.text) } };\n    case 'heading_3':\n      return { object: 'block', type: 'heading_3', heading_3: { rich_text: richText(b.text) } };\n    case 'paragraph':\n      return { object: 'block', type: 'paragraph', paragraph: { rich_text: richText(b.text) } };\n    case 'bulleted_list_item':\n      return { object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: richText(b.text) } };\n    case 'numbered_list_item':\n      return { object: 'block', type: 'numbered_list_item', numbered_list_item: { rich_text: richText(b.text) } };\n    case 'callout':\n      return {\n        object: 'block', type: 'callout',\n        callout: {\n          icon: { type: 'emoji', emoji: b.icon || '💡' },\n          rich_text: richText(b.text)\n        }\n      };\n    case 'quote':\n      return { object: 'block', type: 'quote', quote: { rich_text: richText(b.text) } };\n    case 'code':\n      return { object: 'block', type: 'code', code: { rich_text: richText(b.text), language: 'plain text' } };\n    case 'divider':\n      return { object: 'block', type: 'divider', divider: {} };\n    default:\n      return { object: 'block', type: 'paragraph', paragraph: { rich_text: richText(b.text || '') } };\n  }\n}\n\n// Pour chaque step, génère les children blocks (callout config + content blocks)\nconst unitData = $('Split Units').item.json;\nconst stepsForOutput = parsed.steps.map((step) => {\n  const configCallout = {\n    object: 'block',\n    type: 'callout',\n    callout: {\n      icon: { type: 'emoji', emoji: '⚙️' },\n      rich_text: [{ type: 'text', text: { content: 'Config' } }],\n      children: [\n        { object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: `Type : ${step.type === 'step' ? 'étape' : step.type}` } }] } },\n        { object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: `Durée : ${step.duration_minutes} min` } }] } }\n      ]\n    }\n  };\n  const contentBlocks = (step.blocks || []).map(toNotionBlock);\n  return {\n    title: step.title,\n    blocks: [configCallout, ...contentBlocks]\n  };\n});\n\nreturn [{\n  json: {\n    unit_title: unitData.title,\n    unit_summary: unitData.summary,\n    unit_duration_minutes: unitData.duration_minutes,\n    unit_unlock_offset_days: unitData.unlock_offset_days,\n    steps: stepsForOutput,\n    program_page_id: $('Notion — Create Program Page').item.json.id\n  }\n}];"
+        "promptType": "define",
+        "text": "=PROGRAMME : {{ $('Parse Architecte JSON').item.json.title }}\nPUBLIC : {{ $('Parse Architecte JSON').item.json.target_audience }}\n\nUNITÉ À RÉDIGER :\n- Titre : {{ $json.title }}\n- Résumé : {{ $json.summary }}\n- Durée totale : {{ $json.duration_minutes }} min\n- Steps prévus : {{ JSON.stringify($json.steps) }}\n\nCONTENU SOURCE (pour t'inspirer) :\n\"\"\"\n{{ $('Extract from File').item.json.text }}\n\"\"\"\n\nTÂCHE :\nRédige le contenu COMPLET de chaque step. Pour chaque step, fournis un array de blocs Notion utilisables directement par l'API Notion.\n\nTYPES DE BLOCS AUTORISÉS :\n- heading_2 (titres principaux)\n- heading_3 (sous-titres)\n- paragraph (corps de texte, courts)\n- bulleted_list_item (listes)\n- numbered_list_item (étapes numérotées, exercices)\n- callout (avec emoji 💡 pour conseil, ⚠️ pour attention, 🎯 pour objectif, 📌 pour point clé)\n- quote (citation, anecdote)\n- code (commandes, prompts à utiliser)\n\nLIVRE EXACTEMENT CE JSON (rien d'autre, pas de wrapper markdown) :\n{\n  \"steps\": [\n    {\n      \"order\": 1,\n      \"title\": \"...\",\n      \"type\": \"intro\"|\"step\"|\"conclusion\"|\"option\",\n      \"duration_minutes\": 10,\n      \"blocks\": [\n        { \"type\": \"heading_2\", \"text\": \"...\" },\n        { \"type\": \"paragraph\", \"text\": \"...\" },\n        { \"type\": \"callout\", \"icon\": \"💡\", \"text\": \"...\" }\n      ]\n    }\n  ]\n}\n\nCONTRAINTES :\n- 5 à 15 blocs par step\n- Toujours commencer par heading_2 ou callout\n- Pour exercices : numbered_list_item avec verbe d'action en début\n- Pas de blabla \"Dans cette section...\" — direct au but",
+        "messages": {
+          "messageValues": [
+            {
+              "messageType": "system",
+              "message": "Tu rédiges le contenu pédagogique d'unités de programmes Impulsion. Tu écris en français, tu tutoies, tes phrases sont courtes (max 2 lignes), tes paragraphes courts (max 3 lignes). Tu privilégies les exemples concrets aux théories abstraites. Tu réponds toujours en JSON strict avec un array \"steps\" prêt pour l'API Notion. Pas de wrapper markdown."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "chain-redacteur",
+      "name": "LLM Chain — Rédacteur",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [2240, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse la réponse Claude + transforme en blocks API Notion + prepare la unit\nconst raw = $input.first().json.text || $input.first().json.output || '';\nconst cleaned = String(raw).replace(/^```json\\n?|```$/g, '').trim();\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  throw new Error('Rédacteur: JSON invalide. ' + e.message + '\\n\\nReçu:\\n' + raw);\n}\n\n// Convertit le format simplifié de Claude en format API Notion\nfunction toNotionBlock(b) {\n  const richText = (text) => [{ type: 'text', text: { content: String(text || '') } }];\n  switch (b.type) {\n    case 'heading_2':\n      return { object: 'block', type: 'heading_2', heading_2: { rich_text: richText(b.text) } };\n    case 'heading_3':\n      return { object: 'block', type: 'heading_3', heading_3: { rich_text: richText(b.text) } };\n    case 'paragraph':\n      return { object: 'block', type: 'paragraph', paragraph: { rich_text: richText(b.text) } };\n    case 'bulleted_list_item':\n      return { object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: richText(b.text) } };\n    case 'numbered_list_item':\n      return { object: 'block', type: 'numbered_list_item', numbered_list_item: { rich_text: richText(b.text) } };\n    case 'callout':\n      return {\n        object: 'block', type: 'callout',\n        callout: {\n          icon: { type: 'emoji', emoji: b.icon || '💡' },\n          rich_text: richText(b.text)\n        }\n      };\n    case 'quote':\n      return { object: 'block', type: 'quote', quote: { rich_text: richText(b.text) } };\n    case 'code':\n      return { object: 'block', type: 'code', code: { rich_text: richText(b.text), language: 'plain text' } };\n    case 'divider':\n      return { object: 'block', type: 'divider', divider: {} };\n    default:\n      return { object: 'block', type: 'paragraph', paragraph: { rich_text: richText(b.text || '') } };\n  }\n}\n\nconst unitData = $('Split Units').item.json;\nconst stepsForOutput = (parsed.steps || []).map((step) => {\n  // Callout ⚙️ Config en haut du step\n  const configCallout = {\n    object: 'block',\n    type: 'callout',\n    callout: {\n      icon: { type: 'emoji', emoji: '⚙️' },\n      rich_text: [{ type: 'text', text: { content: 'Config' } }]\n    }\n  };\n  // Bullets de config — placés APRÈS le callout (Notion les attache visuellement)\n  const stepTypeFr = step.type === 'step' ? 'étape' : step.type;\n  const configBullets = [\n    { object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: `Type : ${stepTypeFr}` } }] } },\n    { object: 'block', type: 'bulleted_list_item', bulleted_list_item: { rich_text: [{ type: 'text', text: { content: `Durée : ${step.duration_minutes} min` } }] } }\n  ];\n  const contentBlocks = (step.blocks || []).map(toNotionBlock);\n  return {\n    title: step.title,\n    blocks: [configCallout, ...configBullets, ...contentBlocks]\n  };\n});\n\nreturn [{\n  json: {\n    unit_title: unitData.title,\n    unit_summary: unitData.summary,\n    unit_duration_minutes: unitData.duration_minutes,\n    unit_unlock_offset_days: unitData.unlock_offset_days,\n    steps: stepsForOutput,\n    program_page_id: $('Notion — Create Program Page').item.json.id\n  }\n}];"
       },
       "id": "transform-blocks",
       "name": "Transform Blocks",
@@ -325,52 +330,39 @@
     },
     {
       "parameters": {
-        "resource": "page",
-        "operation": "create",
-        "pageId": "={{ $json.program_page_id }}",
-        "title": "={{ $json.unit_title }}",
-        "blockUi": {
-          "blockValues": [
+        "method": "POST",
+        "url": "https://api.notion.com/v1/pages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
             {
-              "type": "callout",
-              "richText": true,
-              "textContent": "={{ JSON.stringify({ icon: '⚙️', text: 'Config' }) }}"
-            },
-            {
-              "type": "bulleted_list_item",
-              "richText": true,
-              "textContent": "=Durée : {{ $json.unit_duration_minutes }} min"
-            },
-            {
-              "type": "bulleted_list_item",
-              "richText": true,
-              "textContent": "=Déverrouillage : J+{{ $json.unit_unlock_offset_days }}"
-            },
-            {
-              "type": "paragraph",
-              "richText": true,
-              "textContent": "={{ $json.unit_summary }}"
+              "name": "Notion-Version",
+              "value": "2022-06-28"
             }
           ]
         },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"parent\": { \"page_id\": {{ JSON.stringify($json.program_page_id) }} },\n  \"properties\": {\n    \"title\": [{ \"type\": \"text\", \"text\": { \"content\": {{ JSON.stringify($json.unit_title) }} } }]\n  },\n  \"children\": [\n    {\n      \"object\": \"block\",\n      \"type\": \"callout\",\n      \"callout\": {\n        \"icon\": { \"type\": \"emoji\", \"emoji\": \"⚙️\" },\n        \"rich_text\": [{ \"type\": \"text\", \"text\": { \"content\": \"Config\" } }]\n      }\n    },\n    {\n      \"object\": \"block\",\n      \"type\": \"bulleted_list_item\",\n      \"bulleted_list_item\": {\n        \"rich_text\": [{ \"type\": \"text\", \"text\": { \"content\": \"Durée : {{ $json.unit_duration_minutes }} min\" } }]\n      }\n    },\n    {\n      \"object\": \"block\",\n      \"type\": \"bulleted_list_item\",\n      \"bulleted_list_item\": {\n        \"rich_text\": [{ \"type\": \"text\", \"text\": { \"content\": \"Déverrouillage : J+{{ $json.unit_unlock_offset_days }}\" } }]\n      }\n    },\n    {\n      \"object\": \"block\",\n      \"type\": \"paragraph\",\n      \"paragraph\": {\n        \"rich_text\": [{ \"type\": \"text\", \"text\": { \"content\": {{ JSON.stringify($json.unit_summary) }} } }]\n      }\n    }\n  ]\n}",
         "options": {}
       },
       "id": "notion-create-unit",
       "name": "Notion — Create Unit Page",
-      "type": "n8n-nodes-base.notion",
-      "typeVersion": 2.2,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [2680, 400],
       "credentials": {
         "notionApi": {
           "id": "REPLACE_WITH_YOUR_NOTION_CRED_ID",
           "name": "Notion API"
         }
-      },
-      "notes": "Crée une child_page sous le programme. ⚠️ Si le node Notion n2n natif ne supporte pas la création de child_page sous une page (vs database), utiliser un node HTTP Request vers POST https://api.notion.com/v1/pages avec parent.page_id = program_page_id."
+      }
     },
     {
       "parameters": {
-        "jsCode": "// Pour chaque step de la unit, on crée une sub-child page via HTTP Request Notion API\n// Ce node prépare les requêtes que le HTTP node fera ensuite\nconst data = $input.first().json;\nconst unitPageId = $('Notion — Create Unit Page').item.json.id;\n\nconst stepRequests = data.steps.map((step) => ({\n  unit_page_id: unitPageId,\n  step_title: step.title,\n  step_blocks: step.blocks\n}));\n\nreturn stepRequests.map((s) => ({ json: s }));"
+        "jsCode": "// Pour chaque step de la unit, prépare une requête de création de sub-child page\nconst data = $('Transform Blocks').item.json;\nconst unitPageId = $('Notion — Create Unit Page').item.json.id;\n\nconst stepRequests = data.steps.map((step) => ({\n  unit_page_id: unitPageId,\n  step_title: step.title,\n  step_blocks: step.blocks\n}));\n\nreturn stepRequests.map((s) => ({ json: s }));"
       },
       "id": "prepare-steps",
       "name": "Prepare Steps",
@@ -395,7 +387,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"parent\": { \"page_id\": \"{{ $json.unit_page_id }}\" },\n  \"properties\": {\n    \"title\": [{ \"type\": \"text\", \"text\": { \"content\": {{ JSON.stringify($json.step_title) }} } }]\n  },\n  \"children\": {{ JSON.stringify($json.step_blocks) }}\n}",
+        "jsonBody": "={\n  \"parent\": { \"page_id\": {{ JSON.stringify($json.unit_page_id) }} },\n  \"properties\": {\n    \"title\": [{ \"type\": \"text\", \"text\": { \"content\": {{ JSON.stringify($json.step_title) }} } }]\n  },\n  \"children\": {{ JSON.stringify($json.step_blocks) }}\n}",
         "options": {}
       },
       "id": "notion-create-step",
@@ -408,8 +400,7 @@
           "id": "REPLACE_WITH_YOUR_NOTION_CRED_ID",
           "name": "Notion API"
         }
-      },
-      "notes": "Crée la sub-child_page (step) avec child_blocks pré-formatés. Plus fiable que le node Notion natif pour les blocks complexes."
+      }
     },
     {
       "parameters": {
@@ -426,21 +417,27 @@
   ],
   "connections": {
     "Form Trigger": {
-      "main": [[{ "node": "Set: Config", "type": "main", "index": 0 }]]
-    },
-    "Set: Config": {
       "main": [[{ "node": "Extract from File", "type": "main", "index": 0 }]]
     },
     "Extract from File": {
-      "main": [[{ "node": "Claude — Analyse", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "Set: Config", "type": "main", "index": 0 }]]
     },
-    "Claude — Analyse": {
+    "Set: Config": {
+      "main": [[{ "node": "LLM Chain — Analyse", "type": "main", "index": 0 }]]
+    },
+    "Anthropic Model — Analyse": {
+      "ai_languageModel": [[{ "node": "LLM Chain — Analyse", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "LLM Chain — Analyse": {
       "main": [[{ "node": "Parse Analyse JSON", "type": "main", "index": 0 }]]
     },
     "Parse Analyse JSON": {
-      "main": [[{ "node": "Claude — Architecte", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "LLM Chain — Architecte", "type": "main", "index": 0 }]]
     },
-    "Claude — Architecte": {
+    "Anthropic Model — Architecte": {
+      "ai_languageModel": [[{ "node": "LLM Chain — Architecte", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "LLM Chain — Architecte": {
       "main": [[{ "node": "Parse Architecte JSON", "type": "main", "index": 0 }]]
     },
     "Parse Architecte JSON": {
@@ -450,9 +447,12 @@
       "main": [[{ "node": "Split Units", "type": "main", "index": 0 }]]
     },
     "Split Units": {
-      "main": [[{ "node": "Claude — Rédacteur", "type": "main", "index": 0 }]]
+      "main": [[{ "node": "LLM Chain — Rédacteur", "type": "main", "index": 0 }]]
     },
-    "Claude — Rédacteur": {
+    "Anthropic Model — Rédacteur": {
+      "ai_languageModel": [[{ "node": "LLM Chain — Rédacteur", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "LLM Chain — Rédacteur": {
       "main": [[{ "node": "Transform Blocks", "type": "main", "index": 0 }]]
     },
     "Transform Blocks": {
@@ -473,9 +473,9 @@
   },
   "staticData": null,
   "meta": {
-    "instanceId": "impulsion-architect-v1"
+    "instanceId": "impulsion-architect-v2"
   },
   "pinData": {},
-  "versionId": "1.0.0",
+  "versionId": "2.0.0",
   "triggerCount": 1
 }
