@@ -67,7 +67,15 @@ export function isPinnedCallout(block: BlockObjectResponse): boolean {
   return icon.emoji === '📌';
 }
 
-/** Extrait les bullets enfants d'un callout sous forme de lignes de texte. */
+/** Extrait les bullets enfants d'un callout sous forme de lignes de texte.
+ *
+ * Trois formats supportés (par ordre de priorité) :
+ *   1. Children blocks de type bulleted_list_item (format canonique)
+ *   2. Children blocks de type paragraph (un par ligne)
+ *   3. Rich_text du callout lui-même, splitté sur newlines (fallback pour les
+ *      callouts écrits en ligne unique avec Shift+Enter — un piège fréquent
+ *      quand l'utilisateur tape ⚙️ Config puis des "• Durée..." à la suite).
+ */
 function extractBullets(callout: AugmentedBlock): string[] {
   const children = callout.__children ?? [];
   const out: string[] = [];
@@ -81,7 +89,16 @@ function extractBullets(callout: AugmentedBlock): string[] {
       if (text) out.push(text);
     }
   }
-  return out;
+  if (out.length > 0) return out;
+
+  // Fallback 3 : extraire les lignes du rich_text du callout lui-même.
+  if (callout.type !== 'callout') return out;
+  const inline = plainText(callout.callout.rich_text);
+  if (!inline) return out;
+  return inline
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^[\s•\-*·–—]+/, '').trim())
+    .filter((line) => line.length > 0 && /[:=]/.test(line));
 }
 
 // ─── Parsers de valeurs ───

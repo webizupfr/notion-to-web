@@ -702,11 +702,7 @@ export async function renderBlockAsync(
         .trim();
       const caption = codeBlock.caption?.[0]?.plain_text ?? null;
 
-      const hasWidgetMarker =
-        codeText.toLowerCase().includes("widget:") ||
-        codeText.toLowerCase().includes("type:");
-      const looksLikeWidget =
-        (language === "yaml" || language === "yml" || language === "") && hasWidgetMarker;
+      const looksLikeWidget = language === "yaml" || language === "yml" || language === "";
 
       if (looksLikeWidget) {
         try {
@@ -718,7 +714,7 @@ export async function renderBlockAsync(
               </div>
             );
           }
-          console.warn("[notion-widget] parseWidget returned null", { blockId: block.id });
+          // Pas de log : un YAML qui ne match aucun widget tombe juste en code block.
         } catch (error) {
           console.error("[notion-widget] YAML parse error", { blockId: block.id, language }, error);
         }
