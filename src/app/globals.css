@@ -192,7 +192,17 @@
     border: 1px solid var(--border-subtle);
     background: var(--surface-1);
     align-items: flex-start;
-    margin-bottom: 0;
+    /* Respiration verticale — un callout doit se détacher du flux. */
+    margin: var(--space-md) 0;
+  }
+  /* Premier et dernier enfant : pas de marge superflue (évite les doubles gaps) */
+  .callout:first-child { margin-top: 0; }
+  .callout:last-child { margin-bottom: 0; }
+  /* Dans un wrapper `space-y-*`, le gap parent suffit — annule la marge */
+  .space-y-1 > .callout, .space-y-2 > .callout, .space-y-3 > .callout,
+  .space-y-4 > .callout, .space-y-5 > .callout, .space-y-6 > .callout,
+  .space-y-8 > .callout, .space-y-10 > .callout, .space-y-12 > .callout {
+    margin: 0;
   }
   .callout--no-icon {
     grid-template-columns: 1fr;

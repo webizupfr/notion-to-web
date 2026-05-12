@@ -164,7 +164,7 @@ export default async function ResourcePage({
       </div>
 
       <section className="flex-1 min-w-0 hub-content">
-        <PageSection variant="content" size="wide">
+        <PageSection variant="content" size="fluid">
           <header className="border-b border-[color:var(--border-subtle)] pb-[var(--space-md)] mb-[var(--space-lg)]">
             <span className="eyebrow-pill">
               <span className="eyebrow-pill__dot" aria-hidden />
@@ -184,7 +184,7 @@ export default async function ResourcePage({
                 key={section.id}
                 variant="content"
                 tone={tone}
-                size="wide"
+                size="fluid"
               >
                 <div className="content-panel section-band w-full">
                   <Blocks
@@ -197,7 +197,7 @@ export default async function ResourcePage({
             );
           })
         ) : (
-          <PageSection variant="content" size="wide">
+          <PageSection variant="content" size="fluid">
             <p className="text-[color:var(--text-secondary)]">
               Cette ressource n&apos;a pas encore de contenu. Re-sync le programme depuis l&apos;admin
               pour récupérer les dernières modifications de Notion.

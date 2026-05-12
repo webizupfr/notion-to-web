@@ -159,7 +159,7 @@ export default async function ProgramPage({
       <section className="flex-1 min-w-0 hub-content">
         {/* Admin draft banner */}
         {meta.publishingStatus === 'draft' && sessionAuth?.user?.role === 'admin' ? (
-          <PageSection variant="content" size="wide" paddingY="tight">
+          <PageSection variant="content" size="fluid" paddingY="tight">
             <div
               role="alert"
               className="rounded-[var(--r-m)] border border-[color:var(--accent)] bg-[color:var(--accent-bg)] px-4 py-2 font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--accent-edge)]"
@@ -170,7 +170,7 @@ export default async function ProgramPage({
         ) : null}
 
         {/* Hero */}
-        <PageSection variant="content" size="wide">
+        <PageSection variant="content" size="fluid">
           <header
             className="relative overflow-hidden rounded-[var(--r-xl)] px-[var(--space-lg)] py-[var(--space-xl)]"
             style={
@@ -231,7 +231,7 @@ export default async function ProgramPage({
         {!userEnrolled ? (
           meta.price && meta.price > 0 ? (
             // Programme PAYANT non-acheté → PaywallCard pro
-            <PageSection variant="content" size="wide" paddingY="tight">
+            <PageSection variant="content" size="fluid" paddingY="tight">
               <div className="mx-auto max-w-[520px]">
                 <PaywallCard
                   programType={meta.type}
@@ -248,7 +248,7 @@ export default async function ProgramPage({
             </PageSection>
           ) : (
             // Programme GRATUIT non-inscrit → CTA simple
-            <PageSection variant="content" size="wide" paddingY="tight">
+            <PageSection variant="content" size="fluid" paddingY="tight">
               <div className="flex flex-col items-center gap-[var(--space-sm)] rounded-[var(--r-m)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] px-4 py-[var(--space-md)]">
                 {meta.certificateEnabled ? (
                   <span className="font-mono text-[11px] uppercase tracking-[0.1em] text-[color:var(--text-tertiary)]">
@@ -273,7 +273,7 @@ export default async function ProgramPage({
             </PageSection>
           )
         ) : userEnrolled ? (
-          <PageSection variant="content" size="wide" paddingY="tight">
+          <PageSection variant="content" size="fluid" paddingY="tight">
             <div className="flex flex-col gap-[var(--space-sm)] rounded-[var(--r-m)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] px-4 py-[var(--space-md)]">
               <div className="flex items-center justify-between gap-2">
                 <span className="inline-flex items-center gap-2 text-[0.9rem] text-[color:var(--text-secondary)]">
@@ -320,7 +320,7 @@ export default async function ProgramPage({
                   key={section.id}
                   variant="content"
                   tone={tone}
-                  size="wide"
+                  size="fluid"
                 >
                   <div className="content-panel section-band w-full">
                     <Blocks blocks={section.blocks} currentSlug={basePath} navigation={[]} />
@@ -332,7 +332,7 @@ export default async function ProgramPage({
 
         {/* StartToday — next available unit (uniquement si inscrit) */}
         {userEnrolled && days.length ? (
-          <PageSection variant="content" size="wide">
+          <PageSection variant="content" size="fluid">
             <StartToday days={days} unitLabelSingular={labels.singular} />
           </PageSection>
         ) : null}

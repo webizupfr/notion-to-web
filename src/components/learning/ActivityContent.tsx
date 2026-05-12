@@ -110,7 +110,7 @@ export async function ActivityContent({
               key={section.id}
               variant="content"
               tone={tone}
-              size="wide"
+              size="fluid"
               innerPadding={true}
               className="py-[var(--space-5)] sm:py-[var(--space-6)]"
             >
