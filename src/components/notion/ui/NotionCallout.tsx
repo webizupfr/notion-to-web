@@ -11,28 +11,65 @@ type Props = {
   navigationIndex?: NavigationIndex | null;
 };
 
+/**
+ * Mappe la couleur Notion (avec ou sans suffix _bg) à un tone normalisé.
+ * Notion supporte 9 couleurs : gray, brown, orange, yellow, green, blue, purple, pink, red.
+ */
+function normalizeTone(tone: string | null | undefined): string | null {
+  const t = (tone ?? "").toLowerCase().replace(/_bg$/, "");
+  if (!t || t === "default") return null;
+  const known = ["gray", "brown", "orange", "yellow", "green", "blue", "purple", "pink", "red"];
+  return known.includes(t) ? t : null;
+}
+
+/**
+ * Détecte si le rich_text est un "titre seul" : tout en gras, une seule ligne.
+ * Si oui, on peut le rendre plus visible (titre du callout) et déléguer le
+ * corps aux children.
+ */
+function isTitleOnly(richText: RichTextItemResponse[]): boolean {
+  if (richText.length === 0) return false;
+  const allBold = richText.every((r) => r.annotations?.bold === true);
+  const plain = richText.map((r) => r.plain_text ?? "").join("");
+  const hasNewline = plain.includes("\n");
+  return allBold && !hasNewline && plain.trim().length > 0;
+}
+
 export function NotionCallout({ richText, tone, icon, children, navigationIndex }: Props) {
-  const t = (tone ?? "").toLowerCase();
+  const dataTone = normalizeTone(tone);
   const hasIcon = Boolean(icon);
-  const toneClass =
-    t.includes("yellow") || t.includes("orange")
+  const titleMode = isTitleOnly(richText) && Boolean(children);
+
+  // Mapping legacy (pour compat marketing) — secondaire au data-callout-tone
+  const legacyClass =
+    dataTone === "yellow" || dataTone === "orange" || dataTone === "brown"
       ? "callout-warning"
-      : t.includes("green")
+      : dataTone === "green"
         ? "callout-success"
-        : t.includes("red") || t.includes("pink")
+        : dataTone === "red" || dataTone === "pink"
           ? "callout-danger"
-          : t.includes("blue") || t.includes("purple")
+          : dataTone === "blue" || dataTone === "purple"
             ? "callout-example"
             : "callout-note";
+
   return (
-    <div className={`callout ${toneClass} ${hasIcon ? "" : "callout--no-icon"}`}>
+    <div
+      className={`callout ${legacyClass} ${hasIcon ? "" : "callout--no-icon"}`}
+      data-callout-tone={dataTone ?? undefined}
+    >
       {hasIcon ? (
         <div className="callout__icon" aria-hidden>
           {icon}
         </div>
       ) : null}
       <div className="callout__body">
-        <RichText richText={richText} navigationIndex={navigationIndex} />
+        {titleMode ? (
+          <div className="callout__title">
+            <RichText richText={richText} navigationIndex={navigationIndex} />
+          </div>
+        ) : (
+          <RichText richText={richText} navigationIndex={navigationIndex} />
+        )}
         {children ? <div className="callout__children prose prose-notion">{children}</div> : null}
       </div>
     </div>

@@ -1184,29 +1184,69 @@
   margin-bottom: var(--space-xs);
 }
 
-/* Callouts/toggles/todos à tonalité Notion — refonte Variant D :
-   fond tinté + border 1px subtle (pas de stripe gauche). Le signal passe
-   par la teinte de fond, pas par une bordure colorée.
-   Padding resserré : moins "grosse carte", plus "aparté". */
+/* Callouts/toggles/todos à tonalité Notion — refonte v2 :
+   fond tinté + border 1px subtle + stripe colorée à gauche (4px) qui porte
+   le signal sémantique. Padding plus généreux pour aérer le contenu. */
 .callout[data-callout-tone],
 .toggle[data-toggle-tone],
 .todo[data-todo-tone] {
   background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: var(--r-m);
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  position: relative;
+}
+.callout[data-callout-tone] {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
 }
 .toggle[data-toggle-tone],
 .todo[data-todo-tone] {
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-md) var(--space-lg);
 }
 /* Callout sans tone explicite (rendu "default") — aparté très discret */
 .callout:not([data-callout-tone]) {
   background: var(--surface-1);
   border: 1px solid var(--border-subtle);
   border-radius: var(--r-m);
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
 }
+
+/* Icône du callout — emoji ou SVG Notion */
+.callout__icon {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  line-height: 1.4;
+  width: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.callout-icon-img {
+  width: 1.25rem;
+  height: 1.25rem;
+  object-fit: contain;
+  display: block;
+}
+.callout__body {
+  flex: 1;
+  min-width: 0;
+}
+/* Titre du callout (premier paragraphe en gras seul) — stylé pour ressortir */
+.callout__title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: -0.005em;
+  color: var(--text-primary);
+  margin-bottom: var(--space-2xs);
+  line-height: 1.4;
+}
+.callout__title strong { font-weight: 600; }
+.callout__children { margin-top: 0; }
 /* Typo plus compacte à l'intérieur d'un callout — c'est un aparté, pas une page */
 .callout > :first-child { margin-top: 0; }
 .callout > :last-child { margin-bottom: 0; }
@@ -1222,44 +1262,79 @@
 .callout ul, .callout ol { margin: 4px 0; }
 .callout li { font-size: 0.95rem; line-height: 1.5; }
 
+/* Couleurs Notion — chaque tone a sa propre signature visuelle (stripe gauche
+   + background tinté). Stripe portée par ::before pour ne pas affecter le flex
+   interne (icon + body). */
+.callout[data-callout-tone]::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: var(--r-m) 0 0 var(--r-m);
+  background: var(--callout-stripe, transparent);
+}
+
 .callout[data-callout-tone="gray"],
 .toggle[data-toggle-tone="gray"],
 .todo[data-todo-tone="gray"] {
+  --callout-stripe: color-mix(in oklab, var(--text-tertiary) 40%, transparent);
   background: var(--surface-1);
 }
 .callout[data-callout-tone="brown"],
 .toggle[data-toggle-tone="brown"],
-.todo[data-todo-tone="brown"],
+.todo[data-todo-tone="brown"] {
+  --callout-stripe: #a07042;
+  background: color-mix(in oklab, #a07042 8%, var(--surface-1));
+  border-color: color-mix(in oklab, #a07042 18%, var(--border-subtle));
+}
 .callout[data-callout-tone="orange"],
 .toggle[data-toggle-tone="orange"],
-.todo[data-todo-tone="orange"],
+.todo[data-todo-tone="orange"] {
+  --callout-stripe: #ec7237;
+  background: color-mix(in oklab, #ec7237 10%, var(--surface-1));
+  border-color: color-mix(in oklab, #ec7237 20%, var(--border-subtle));
+}
 .callout[data-callout-tone="yellow"],
 .toggle[data-toggle-tone="yellow"],
 .todo[data-todo-tone="yellow"] {
-  background: var(--accent-bg);
-  border-color: color-mix(in oklab, var(--accent) 18%, var(--border-subtle));
+  --callout-stripe: #d4a517;
+  background: color-mix(in oklab, #d4a517 10%, var(--surface-1));
+  border-color: color-mix(in oklab, #d4a517 20%, var(--border-subtle));
 }
 .callout[data-callout-tone="green"],
 .toggle[data-toggle-tone="green"],
 .todo[data-todo-tone="green"] {
+  --callout-stripe: var(--signal-success, #2d7d52);
   background: var(--signal-success-bg);
   border-color: color-mix(in oklab, var(--signal-success) 18%, var(--border-subtle));
 }
 .callout[data-callout-tone="blue"],
 .toggle[data-toggle-tone="blue"],
-.todo[data-todo-tone="blue"],
+.todo[data-todo-tone="blue"] {
+  --callout-stripe: #3b6fa0;
+  background: color-mix(in oklab, #3b6fa0 10%, var(--surface-1));
+  border-color: color-mix(in oklab, #3b6fa0 22%, var(--border-subtle));
+}
 .callout[data-callout-tone="purple"],
 .toggle[data-toggle-tone="purple"],
-.todo[data-todo-tone="purple"],
+.todo[data-todo-tone="purple"] {
+  --callout-stripe: #7f57c7;
+  background: color-mix(in oklab, #7f57c7 10%, var(--surface-1));
+  border-color: color-mix(in oklab, #7f57c7 22%, var(--border-subtle));
+}
 .callout[data-callout-tone="pink"],
 .toggle[data-toggle-tone="pink"],
 .todo[data-todo-tone="pink"] {
-  background: var(--surface-2);
-  border-color: var(--border-subtle);
+  --callout-stripe: #c95c8e;
+  background: color-mix(in oklab, #c95c8e 10%, var(--surface-1));
+  border-color: color-mix(in oklab, #c95c8e 22%, var(--border-subtle));
 }
 .callout[data-callout-tone="red"],
 .toggle[data-toggle-tone="red"],
 .todo[data-todo-tone="red"] {
+  --callout-stripe: var(--signal-danger, #d04a48);
   background: var(--signal-danger-bg);
   border-color: color-mix(in oklab, var(--signal-danger) 18%, var(--border-subtle));
 }
@@ -1458,6 +1533,194 @@
 }
 .notion-table tbody tr:hover {
   background: color-mix(in srgb, var(--bg-soft) 85%, white 15%);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Notion render — refinements (tables, toggles, quotes, headings)
+   Appliqués dans le contexte .notion-render (hub/sprint pages).
+   ───────────────────────────────────────────────────────────── */
+
+/* Headings rythmés — H1 généreux, H2 avec separator, H3 discret */
+.notion-render h1,
+.hub-content h1 {
+  font-size: clamp(1.85rem, 2.4vw, 2.4rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  margin-top: var(--space-2xl);
+  margin-bottom: var(--space-sm);
+  color: var(--text-primary);
+}
+.notion-render h2,
+.hub-content h2 {
+  font-size: clamp(1.4rem, 1.8vw, 1.75rem);
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  font-weight: 600;
+  margin-top: var(--space-xl);
+  margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+}
+.notion-render h3,
+.hub-content h3 {
+  font-size: clamp(1.1rem, 1.3vw, 1.3rem);
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  margin-top: var(--space-lg);
+  margin-bottom: var(--space-2xs);
+  color: var(--text-primary);
+}
+/* Premier heading d'une section ne doit pas avoir de margin-top extravagante */
+.notion-render > h1:first-child,
+.notion-render > h2:first-child,
+.notion-render > h3:first-child { margin-top: 0; }
+
+/* Quotes — typographie soignée avec barre latérale colorée */
+.notion-quote {
+  position: relative;
+  padding: var(--space-sm) var(--space-md) var(--space-sm) var(--space-lg);
+  margin: var(--space-md) 0;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: var(--text-primary);
+  font-style: italic;
+  font-family: var(--font-display, var(--font-sans));
+  background: color-mix(in oklab, var(--surface-1) 60%, transparent);
+  border-radius: 0 var(--r-m) var(--r-m) 0;
+}
+.notion-quote::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent, currentColor);
+  border-radius: 0 2px 2px 0;
+}
+.notion-quote__dot { display: none; }
+.notion-quote p:first-child { margin-top: 0; }
+.notion-quote p:last-child { margin-bottom: 0; }
+/* Tones de quote — réutilise les couleurs callout pour cohérence */
+.notion-quote[data-tone="blue"]::before { background: #3b6fa0; }
+.notion-quote[data-tone="green"]::before { background: var(--signal-success, #2d7d52); }
+.notion-quote[data-tone="orange"]::before { background: #ec7237; }
+.notion-quote[data-tone="yellow"]::before { background: #d4a517; }
+.notion-quote[data-tone="red"]::before { background: var(--signal-danger, #d04a48); }
+.notion-quote[data-tone="purple"]::before { background: #7f57c7; }
+.notion-quote[data-tone="pink"]::before { background: #c95c8e; }
+.notion-quote[data-tone="brown"]::before { background: #a07042; }
+.notion-quote[data-tone="gray"]::before { background: color-mix(in oklab, var(--text-tertiary) 50%, transparent); }
+
+/* Toggles — chevron rotatif animé + transitions fluides + padding aéré */
+.notion-render .learning-toggle,
+.hub-content .learning-toggle {
+  padding: var(--space-md) var(--space-lg);
+  background: var(--surface-1);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--r-m);
+  box-shadow: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.notion-render .learning-toggle:hover,
+.hub-content .learning-toggle:hover {
+  border-color: color-mix(in oklab, var(--text-primary) 18%, var(--border-subtle));
+}
+.notion-render .learning-toggle summary,
+.hub-content .learning-toggle summary {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 2px 0;
+}
+.notion-render .learning-toggle__caret,
+.hub-content .learning-toggle__caret {
+  font-size: 0.85rem;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0.7;
+}
+.notion-render .learning-toggle[open] .learning-toggle__caret,
+.hub-content .learning-toggle[open] .learning-toggle__caret {
+  transform: rotate(180deg);
+  opacity: 1;
+}
+.notion-render .learning-toggle__content,
+.hub-content .learning-toggle__content {
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px dashed var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+/* Tables — header distinct, padding généreux, hover row */
+.notion-render .notion-table-wrap,
+.hub-content .notion-table-wrap {
+  margin: var(--space-md) 0;
+  border-radius: var(--r-m);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-0);
+  overflow-x: auto;
+  box-shadow: none;
+}
+.notion-render .notion-table th,
+.notion-render .notion-table td,
+.hub-content .notion-table th,
+.hub-content .notion-table td {
+  padding: 0.85rem 1.1rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.notion-render .notion-table thead th,
+.hub-content .notion-table thead th {
+  background: var(--surface-1);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  color: var(--text-primary);
+  text-transform: none;
+  font-size: 0.875rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--text-primary) 15%, var(--border-subtle));
+}
+.notion-render .notion-table tbody tr:last-child td,
+.hub-content .notion-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.notion-render .notion-table tbody tr,
+.hub-content .notion-table tbody tr {
+  transition: background 0.15s ease;
+  background: transparent;
+}
+.notion-render .notion-table tbody tr:nth-child(even),
+.hub-content .notion-table tbody tr:nth-child(even) {
+  background: color-mix(in oklab, var(--surface-1) 50%, transparent);
+}
+.notion-render .notion-table tbody tr:hover,
+.hub-content .notion-table tbody tr:hover {
+  background: color-mix(in oklab, var(--surface-1) 90%, transparent);
+}
+.notion-render .notion-table td.table-row-header,
+.hub-content .notion-table td.table-row-header {
+  background: color-mix(in oklab, var(--surface-1) 60%, transparent);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Images Notion — radius doux, ombre légère, captions stylées */
+.notion-render figure img,
+.hub-content figure img {
+  border-radius: var(--r-m);
+}
+.notion-render figcaption,
+.hub-content figcaption {
+  margin-top: var(--space-2xs);
+  font-size: 0.82rem;
+  text-align: center;
+  color: var(--text-tertiary);
+  letter-spacing: -0.005em;
 }
 
 /* ─────────────────────────────────────────────────────────────

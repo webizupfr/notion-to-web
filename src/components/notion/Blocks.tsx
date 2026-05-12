@@ -522,9 +522,29 @@ export async function renderBlockAsync(
     case "callout": {
       const children = getBlockChildren(block);
       const callout = (block as Extract<NotionBlock, { type: "callout" }>).callout;
+      const icon = callout.icon;
+      let iconNode: React.ReactNode = undefined;
+      if (icon?.type === "emoji") {
+        iconNode = icon.emoji;
+      } else if (icon?.type === "external") {
+        let src = icon.external?.url ?? "";
+        // Notion CDN icons : URLs en /icons/xxx.svg → préfixer le host
+        if (src.startsWith("/icons/")) src = `https://www.notion.so${src}`;
+        if (src) {
+          iconNode = (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={src} alt="" className="callout-icon-img" loading="lazy" />
+          );
+        }
+      } else if (icon?.type === "file" && icon.file?.url) {
+        iconNode = (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={icon.file.url} alt="" className="callout-icon-img" loading="lazy" />
+        );
+      }
       return (
         <NotionCallout
-          icon={callout.icon?.type === "emoji" ? callout.icon.emoji : undefined}
+          icon={iconNode}
           tone={callout.color}
           richText={callout.rich_text}
           navigationIndex={navigationIndex}
