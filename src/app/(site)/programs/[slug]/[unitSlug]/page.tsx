@@ -120,14 +120,31 @@ export default async function UnitPage({
   // Unit body blocks viennent directement du tree (sans callout ⚙️ ni child_pages)
   const sections = splitBlocksIntoSections(currentEntry.bodyBlocks as NotionBlock[]);
 
-  // Step wizard (query ?step=N)
+  // Mode overview = pas de `?step=` dans l'URL → on affiche la page d'accueil
+  // du module (intro + grille des activités). Mode wizard = `?step=N` → on
+  // entre dans l'activité N. Ça donne 3 niveaux : programme → module → activité.
   const spAll = (await searchParams?.catch(() => undefined)) || undefined;
-  const stepIndexRaw = Number(spAll?.step ?? "1");
+  const stepParamRaw = spAll?.step;
+  const isOverview = !stepParamRaw && stepsForUnit.length > 0;
+  const stepIndexRaw = Number(stepParamRaw ?? "1");
   const stepIdx = Number.isFinite(stepIndexRaw) && stepIndexRaw >= 1 ? stepIndexRaw - 1 : 0;
   const currentStepEntry = stepsForUnit[stepIdx] ?? stepsForUnit[0] ?? null;
   const currentStep = currentStepEntry?.meta ?? null;
   const currentStepBlocks = (currentStepEntry?.bodyBlocks ?? []) as NotionBlock[];
   const unitBasePath = `/programs/${slug}/${unitSlug}`;
+
+  // Pour la grille d'activités : pré-calcule les status (terminé / en cours / à faire)
+  const stepStatuses = stepsForUnit.map((s) => ({
+    notionId: s.meta.notionId,
+    slug: s.meta.slug,
+    title: s.meta.title,
+    order: s.meta.order,
+    durationMinutes: s.meta.durationMinutes,
+    type: s.meta.type,
+    completed: completedUnitIds.has(s.meta.notionId),
+  }));
+  const firstPendingStep = stepStatuses.findIndex((s) => !s.completed);
+  const resumeStepIndex = firstPendingStep === -1 ? 0 : firstPendingStep;
 
   // Prev / next unit
   const currentIndex = units.findIndex((u) => u.meta.slug === unitSlug);
@@ -216,18 +233,31 @@ export default async function UnitPage({
       </div>
 
       <section className="flex-1 min-w-0 hub-content">
-        {/* Header */}
+        {/* Header — en mode overview, on cache le compteur d'étapes pour laisser
+            place à l'intro du module. */}
         <PageSection variant="content" size="wide">
           <LearningHeader
             unitLabel={labels.singular}
             unitNumber={currentUnit.order}
             title={currentUnit.title}
             summary={currentUnit.summary ?? null}
-            currentStep={stepsForUnit.length ? stepIdx + 1 : null}
-            totalSteps={stepsForUnit.length || null}
+            currentStep={isOverview ? null : stepsForUnit.length ? stepIdx + 1 : null}
+            totalSteps={isOverview ? null : stepsForUnit.length || null}
             completed={unitCompleted}
           />
         </PageSection>
+
+        {/* Lien retour en mode wizard step — permet de revenir à la page module */}
+        {!isOverview && stepsForUnit.length > 0 ? (
+          <PageSection variant="content" size="wide" paddingY="tight">
+            <Link
+              href={unitBasePath}
+              className="inline-flex items-center gap-1.5 text-[12px] text-[color:var(--text-tertiary)] hover:text-[color:var(--text-secondary)] transition-colors"
+            >
+              ← Retour à la page {labels.singular.toLowerCase()}
+            </Link>
+          </PageSection>
+        ) : null}
 
         {/* Complete banner — only if enrolled and no steps (when steps exist, completion is in StepNavBar) */}
         {userIsEnrolled && stepsForUnit.length === 0 ? (
@@ -257,10 +287,9 @@ export default async function UnitPage({
           </PageSection>
         ) : null}
 
-        {/* Unit body — Notion blocks de la page unit.
-            ➜ Affiché UNIQUEMENT si pas de steps (sinon on répète l'intro à chaque étape).
-            Quand il y a des steps, tout le contenu utile est dans le step wizard. */}
-        {stepsForUnit.length === 0 && sections.length > 0
+        {/* Unit body — affiché en mode overview (page d'accueil du module) ET
+            quand il n'y a pas de steps. Sert d'intro/objectifs/livrables. */}
+        {(isOverview || stepsForUnit.length === 0) && sections.length > 0
           ? sections.map((section, idx) => {
               const tone = idx % 2 === 0 ? "default" : "alt";
               return (
@@ -282,8 +311,70 @@ export default async function UnitPage({
             })
           : null}
 
-        {/* Steps wizard */}
-        {stepsForUnit.length > 0 && currentStep ? (
+        {/* Grille des activités — affichée en mode overview, sous l'intro du module */}
+        {isOverview && stepStatuses.length > 0 ? (
+          <PageSection variant="content" size="wide">
+            <div className="space-y-4">
+              <div className="flex items-baseline justify-between gap-4">
+                <h2 className="font-display text-[1.4rem] font-medium text-[color:var(--text-primary)]">
+                  Activités
+                </h2>
+                <span className="font-mono text-[11px] uppercase tracking-[0.14em] text-[color:var(--text-tertiary)]">
+                  {stepStatuses.filter((s) => s.completed).length} / {stepStatuses.length} terminée{stepStatuses.length > 1 ? 's' : ''}
+                </span>
+              </div>
+              <ol className="grid gap-3 sm:grid-cols-2">
+                {stepStatuses.map((s, idx) => (
+                  <li key={s.notionId}>
+                    <Link
+                      href={`${unitBasePath}?step=${idx + 1}`}
+                      className="group flex items-start gap-3 rounded-[var(--r-m)] border border-[color:var(--border-subtle)] bg-[color:var(--surface-1)] p-4 transition-all hover:border-[color:var(--border-default)] hover:bg-[color:var(--surface-2)]"
+                    >
+                      <span
+                        className={
+                          'mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-medium ' +
+                          (s.completed
+                            ? 'bg-[color:var(--signal-success,#1D9E75)] text-white'
+                            : 'bg-[color:var(--surface-3)] text-[color:var(--text-secondary)] group-hover:bg-[color:var(--surface-4,var(--surface-3))]')
+                        }
+                      >
+                        {s.completed ? '✓' : String(idx + 1).padStart(2, '0')}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[0.95rem] font-medium text-[color:var(--text-primary)] leading-snug">
+                          {s.title}
+                        </div>
+                        {(s.durationMinutes || s.type) && (
+                          <div className="mt-1.5 flex items-center gap-2 text-[11px] text-[color:var(--text-tertiary)]">
+                            {s.durationMinutes ? <span>{s.durationMinutes} min</span> : null}
+                            {s.durationMinutes && s.type ? <span>·</span> : null}
+                            {s.type ? <span className="capitalize">{s.type}</span> : null}
+                          </div>
+                        )}
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+              <div className="pt-2">
+                <Link
+                  href={`${unitBasePath}?step=${resumeStepIndex + 1}`}
+                  className="btn btn-primary"
+                  style={{ height: 40, padding: '0 20px', fontSize: 14 }}
+                >
+                  {stepStatuses.some((s) => s.completed)
+                    ? firstPendingStep === -1
+                      ? 'Revoir les activités'
+                      : `Reprendre · activité ${resumeStepIndex + 1}`
+                    : 'Commencer le module →'}
+                </Link>
+              </div>
+            </div>
+          </PageSection>
+        ) : null}
+
+        {/* Steps wizard — uniquement en mode step (pas en overview) */}
+        {!isOverview && stepsForUnit.length > 0 && currentStep ? (
           <div className="space-y-[var(--space-m)]" id="steps">
             <PageSection variant="content" size="wide">
               <ActivityContent
@@ -313,9 +404,9 @@ export default async function UnitPage({
           </div>
         ) : null}
 
-        {/* Prev / next unit — UNIQUEMENT si pas de steps (sinon le StepNavBar gère la nav).
-            Évite la superposition visuelle entre le StepNavBar sticky et ce lien. */}
-        {stepsForUnit.length === 0 && (prevUnit || nextUnit) && (
+        {/* Prev / next unit — affiché en mode overview ET quand pas de steps.
+            En mode wizard step, c'est le StepNavBar sticky qui gère la nav. */}
+        {(isOverview || stepsForUnit.length === 0) && (prevUnit || nextUnit) && (
           <PageSection variant="content" size="wide" paddingY="tight">
             <div className="flex items-center justify-between gap-2">
               {prevUnit ? (
