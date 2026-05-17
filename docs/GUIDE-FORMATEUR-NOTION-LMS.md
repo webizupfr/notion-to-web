@@ -131,6 +131,16 @@ Deux callouts ont une **sémantique spéciale** et sont **filtrés du rendu body
 • Accès : gratuit
 ```
 
+**Pour une sortie à une date + heure précise :**
+```
+⚙️ Config
+• Durée : 2h
+• Déverrouillage : 2026-06-12T09:00:00+02:00
+• Accès : payant
+```
+
+> ⏰ Si vous mettez seulement une date (`2026-06-12`), le module s'ouvre le jour J dès minuit heure de Paris. Si vous mettez une date avec heure (`2026-06-12T09:00:00+02:00`), le module s'ouvre à l'heure exacte.
+
 **Sur un STEP :**
 ```
 ⚙️ Config

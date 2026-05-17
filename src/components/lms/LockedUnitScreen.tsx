@@ -17,16 +17,31 @@ type Props = {
   unlockDateIso: string | null;
 };
 
+function hasTimeComponent(iso: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(iso.trim());
+}
+
 function formatFrDate(iso: string | null): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return null;
-  return d.toLocaleDateString('fr-FR', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-    timeZone: 'Europe/Paris',
-  });
+  const options: Intl.DateTimeFormatOptions = hasTimeComponent(iso)
+    ? {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+        timeZone: 'Europe/Paris',
+      }
+    : {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        timeZone: 'Europe/Paris',
+      };
+  return d.toLocaleString('fr-FR', options);
 }
 
 function dayKeyParis(d: Date): string {

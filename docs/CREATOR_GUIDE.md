@@ -137,7 +137,7 @@ Ajoute un callout (emoji ⚙️) en tête de page pour personnaliser une unit ou
 | Clé | Valeurs | Défaut |
 |---|---|---|
 | Durée | `45 min`, `1h`, `1h30`, `90 min` | non défini |
-| Déverrouillage | `J+0`, `J+7`, `immédiat`, date `2026-05-15` | `J+(ordre-1)` |
+| Déverrouillage | `J+0`, `J+7`, `immédiat`, date `2026-05-15`, date+heure `2026-05-15T14:00:00+02:00` | `J+(ordre-1)` |
 | Accès | `gratuit`, `payant`, `aperçu` | `gratuit` |
 | Type *(step)* | `intro`, `étape`, `conclusion`, `bonus` | `étape` |
 | Validation requise *(step)* | `oui`, `non` | `non` |

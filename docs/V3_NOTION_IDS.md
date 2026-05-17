@@ -80,7 +80,7 @@ Parent page : "Espaces Impulsion" (`34b7fdb76b00801aa325e6c1ebdf808e`).
 | Clé | Valeurs | Défaut |
 |---|---|---|
 | Durée | `45 min`, `1h`, `1h30`, `90 min` | null |
-| Déverrouillage | `J+0`, `J+7`, `immédiat`, `2026-05-15` | `J+{order-1}` |
+| Déverrouillage | `J+0`, `J+7`, `immédiat`, `2026-05-15`, `2026-05-15T14:00:00+02:00` | `J+{order-1}` |
 | Accès | `gratuit`, `payant`, `aperçu` | `gratuit` |
 | Type *(step)* | `intro`, `étape`, `conclusion`, `bonus` | `étape` |
 | Validation requise *(step)* | `oui`, `non` | `non` |

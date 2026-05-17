@@ -31,6 +31,7 @@ export function CompletionToast() {
     // Clean l'URL (remove ?done=1 / ?success=1 + ?session_id=...)
     const params = new URLSearchParams(searchParams.toString());
     params.delete('done');
+    params.delete('completed');
     params.delete('success');
     params.delete('session_id');
     const qs = params.toString();

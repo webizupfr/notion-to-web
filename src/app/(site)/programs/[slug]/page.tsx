@@ -89,6 +89,13 @@ export default async function ProgramPage({
     }
   }
 
+  const spAll = (await searchParams?.catch(() => undefined)) || undefined;
+  const completedHintSlug = spAll?.done === '1' ? spAll.completed?.trim() : null;
+  if (completedHintSlug) {
+    const hintedUnit = units.find(({ meta: u }) => u.slug === completedHintSlug);
+    if (hintedUnit) completedUnitIds.add(hintedUnit.meta.notionId);
+  }
+
   // Body blocks viennent directement du tree (déjà filtrés : pas de child_page, pas de 📌)
   const sections = splitBlocksIntoSections(tree.bodyBlocks as NotionBlock[]);
 

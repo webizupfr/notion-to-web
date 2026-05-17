@@ -14,6 +14,25 @@ function formatFrDate(d: Date) {
   });
 }
 
+function hasTimeComponent(iso: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(iso.trim());
+}
+
+function formatUnlockDate(iso: string): string | null {
+  const d = new Date(iso);
+  if (!isFinite(d.getTime())) return null;
+  if (!hasTimeComponent(iso)) return formatFrDate(d);
+  return d.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Europe/Paris',
+  });
+}
+
 function getNowDateKeyParis(): string {
   // Build a YYYY-MM-DD string for Europe/Paris current date to compare to Notion dates safely
   const now = new Date();
@@ -55,15 +74,14 @@ type PickResult =
  * Choisit quel jour afficher dans "Prochaine activité".
  *
  * Priorités :
- *   1. Premier jour non-complété ET débloqué (par ordre d'order)
- *   2. Si tout terminé → 'all-done'
- *   3. Si rien n'est débloqué → premier jour à venir (locked)
+ *   1. Premier jour/module non-complété dans l'ordre du programme
+ *   2. S'il est verrouillé, on l'affiche quand même comme prochaine étape
+ *   3. Si tout terminé → 'all-done'
  */
 function pickTodayDay(days: DayEntry[]): PickResult | null {
   if (!days.length) return null;
   const sorted = [...days].sort((a, b) => a.order - b.order);
 
-  // Cas 1 : premier non-complété + non verrouillé (par date OU par state)
   const nowKey = getNowDateKeyParis();
   const nowNum = toKeyNum(nowKey)!;
   const isUnlocked = (d: DayEntry): boolean => {
@@ -75,22 +93,15 @@ function pickTodayDay(days: DayEntry[]): PickResult | null {
     return true;
   };
 
-  const firstAvailableNotDone = sorted.find((d) => !d.completed && isUnlocked(d));
-  if (firstAvailableNotDone) {
-    return { kind: 'available', day: firstAvailableNotDone, locked: false };
+  const firstNotDone = sorted.find((d) => !d.completed);
+  if (firstNotDone) {
+    const unlocked = isUnlocked(firstNotDone);
+    return unlocked
+      ? { kind: 'available', day: firstNotDone, locked: false }
+      : { kind: 'locked', day: firstNotDone, locked: true };
   }
 
-  // Cas 2 : tout complété
-  const allCompleted = sorted.every((d) => d.completed);
-  if (allCompleted) return { kind: 'all-done' };
-
-  // Cas 3 : rien de débloqué et non terminé → prochain jour locked
-  const firstLockedNotDone = sorted.find((d) => !d.completed && !isUnlocked(d));
-  if (firstLockedNotDone) {
-    return { kind: 'locked', day: firstLockedNotDone, locked: true };
-  }
-
-  return null;
+  return { kind: 'all-done' };
 }
 
 type StartTodayProps = {
@@ -136,12 +147,8 @@ export default async function StartToday({ days, unitLabelSingular, basePathPref
   // Subtitle: locked → show availability date if known
   let subtitle: string | null = null;
   if (locked && day.unlockDate) {
-    const parsed = dateKeyFromIso(day.unlockDate);
-    if (parsed) {
-      const [y, m, d] = parsed.split('-').map((x) => Number(x));
-      const dt = new Date(Date.UTC(y, (m - 1), d, 0, 0, 0));
-      subtitle = `Disponible le ${formatFrDate(dt)}`;
-    }
+    const formatted = formatUnlockDate(day.unlockDate);
+    if (formatted) subtitle = `Disponible le ${formatted}`;
   }
   if (!subtitle) subtitle = locked ? 'Bientôt disponible' : 'Prêt ?';
 

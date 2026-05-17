@@ -81,8 +81,10 @@ export function StepNavBar({
           }),
         });
         if (!res.ok) throw new Error('server_error');
-        // Redirection avec feedback success
-        router.push(`${completion.returnTo}?done=1`);
+        // Redirection avec feedback success + hint optimiste pour la home.
+        const params = new URLSearchParams({ done: '1' });
+        if (completion.unitSlug) params.set('completed', completion.unitSlug);
+        router.push(`${completion.returnTo}?${params.toString()}`);
       } catch (e) {
         setCompleted(false); // rollback
         setError(e instanceof Error ? e.message : 'Erreur');

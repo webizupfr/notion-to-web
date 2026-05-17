@@ -4,9 +4,12 @@ import type { DayEntry, ActivityStep, ProgramTree } from '@/lib/types';
 
 // ─── Helpers timezone Europe/Paris ───
 //
-// On compare les unlocks en JOURS CIVILS Paris (pas en timestamps glissants 24h).
+// On garde les offsets relatifs (`J+1`, `7 jours`) en JOURS CIVILS Paris.
 // Sinon : si l'user s'inscrit à 18h, son Jour 2 ne se débloque qu'à 18h le lendemain,
 // alors qu'il s'attend naturellement à un déblocage "le jour J" (= dès minuit Paris).
+//
+// Les dates explicites avec heure (`2026-06-12T09:00:00+02:00`) restent précises
+// à la minute pour les programmes live/sync.
 
 function dateKeyParis(d: Date): string {
   const parts = new Intl.DateTimeFormat('fr-FR', {
@@ -33,6 +36,15 @@ function dateKeyParisFromIso(iso: string): string | null {
   return dateKeyParis(d);
 }
 
+function hasTimeComponent(iso: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(iso.trim());
+}
+
+type ComputedUnlock = {
+  date: string | null;
+  precision: 'day' | 'instant';
+};
+
 type SidebarNavItem = {
   type: 'section' | 'page';
   title: string;
@@ -48,21 +60,28 @@ type SidebarNavItem = {
  *
  * - `async` : enrolledAt + unlockOffsetDays (day-by-day)
  *   Fallback : dayIndex - 1
+ * - explicit date+time : exact timestamp unlock
+ * - explicit date-only : civil day unlock
  * - `sync`  : unit.unlockAt if defined, else startDatetime + dayIndex - 1
- * - `event` : always unlocked
+ * - `event` : unlocked unless unit.unlockAt is explicitly defined
  */
 function computeUnitUnlockDate(opts: {
   programType: ProgramTree['meta']['type'];
   enrolledAt: Date | null;
   programStartDatetime: string | null;
   unit: ProgramTree['units'][number]['meta'];
-}): string | null {
+}): ComputedUnlock {
   const { programType, enrolledAt, programStartDatetime, unit } = opts;
 
-  if (programType === 'event') return null;
-
   // 1) explicit unlockAt wins
-  if (unit.unlockAt) return unit.unlockAt;
+  if (unit.unlockAt) {
+    return {
+      date: unit.unlockAt,
+      precision: hasTimeComponent(unit.unlockAt) ? 'instant' : 'day',
+    };
+  }
+
+  if (programType === 'event') return { date: null, precision: 'day' };
 
   // 2) sync : program start + dayIndex offset
   if (programType === 'sync') {
@@ -72,10 +91,13 @@ function computeUnitUnlockDate(opts: {
         const off = (unit.dayIndex ?? unit.order) - 1;
         const d = new Date(base);
         d.setDate(d.getDate() + Math.max(0, off));
-        return d.toISOString();
+        return {
+          date: d.toISOString(),
+          precision: hasTimeComponent(programStartDatetime) ? 'instant' : 'day',
+        };
       }
     }
-    return null;
+    return { date: null, precision: 'day' };
   }
 
   // 3) async : enrolledAt + unlockOffsetDays
@@ -84,12 +106,27 @@ function computeUnitUnlockDate(opts: {
       const off = unit.unlockOffsetDays ?? (unit.dayIndex ?? unit.order) - 1;
       const d = new Date(enrolledAt);
       d.setDate(d.getDate() + Math.max(0, off));
-      return d.toISOString();
+      return { date: d.toISOString(), precision: 'day' };
     }
-    return null;
+    return { date: null, precision: 'day' };
   }
 
-  return null;
+  return { date: null, precision: 'day' };
+}
+
+function isUnlockLocked(unlock: ComputedUnlock): boolean {
+  if (!unlock.date) return false;
+
+  if (unlock.precision === 'instant') {
+    const d = new Date(unlock.date);
+    if (isNaN(d.getTime())) return false;
+    return d.getTime() > Date.now();
+  }
+
+  const todayKey = todayKeyParis();
+  const unlockKey = dateKeyParisFromIso(unlock.date);
+  if (!unlockKey) return false;
+  return unlockKey > todayKey;
 }
 
 /**
@@ -110,23 +147,15 @@ export function buildDayEntriesFromProgram(opts: {
   const { meta, units } = tree;
 
   return units.map(({ meta: u, steps }) => {
-    const unlockDate = computeUnitUnlockDate({
+    const unlock = computeUnitUnlockDate({
       programType: meta.type,
       enrolledAt,
       programStartDatetime: meta.startDatetime ?? null,
       unit: u,
     });
+    const unlockDate = unlock.date;
 
-    const isLocked = (() => {
-      if (meta.type === 'event') return false;
-      if (!unlockDate) return false; // pas de contrainte → accessible
-      // Compare en jour civil Europe/Paris : si on est le jour J, l'unit
-      // est dispo dès 00:00 Paris (pas H+24 glissant).
-      const todayKey = todayKeyParis();
-      const unlockKey = dateKeyParisFromIso(unlockDate);
-      if (!unlockKey) return false;
-      return unlockKey > todayKey; // verrouillé seulement si STRICTEMENT après aujourd'hui
-    })();
+    const isLocked = isUnlockLocked(unlock);
 
     const completed = completedUnitIds?.has(u.notionId) ?? false;
 

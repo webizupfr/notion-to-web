@@ -52,12 +52,26 @@ const stripPinEmoji = (value: string): string => {
 };
 const isUrl = (value: string | null | undefined): value is string => Boolean(value && /^https?:\/\//i.test(value));
 
-/** Format court "15/04" pour l'affichage dans la sidebar (space contraint). */
+function hasTimeComponent(iso: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(iso.trim());
+}
+
+/** Format court "15/04" ou "15/04 09:00" pour l'affichage dans la sidebar. */
 function formatUnlockShort(iso: string | null | undefined): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (isNaN(d.getTime())) return null;
-  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', timeZone: 'Europe/Paris' });
+  if (!hasTimeComponent(iso)) {
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', timeZone: 'Europe/Paris' });
+  }
+  return d.toLocaleString('fr-FR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Europe/Paris',
+  });
 }
 
 export function PageSidebar({
