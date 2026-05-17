@@ -128,11 +128,14 @@ export default async function ResourcePage({
       ? [
           {
             label: labels.plural,
-            items: tree.units.map(({ meta: u }) => ({
-              id: u.notionId,
-              title: u.title,
-              slug: `${basePrefix}/${u.slug}`,
-              order: u.order,
+            items: days.map((day) => ({
+              id: day.id,
+              title: day.title,
+              slug: day.slug,
+              order: day.order,
+              state: day.state,
+              unlockDate: day.unlockDate,
+              completed: day.completed,
             })),
           },
         ]

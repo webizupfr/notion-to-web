@@ -27,7 +27,18 @@ type PageSidebarProps = {
   learningKind?: 'days' | 'modules';
   unitLabelSingular?: string | null;
   unitLabelPlural?: string | null;
-  moduleQuickGroups?: Array<{ label: string; items: Array<{ id: string; title: string; slug: string; order: number }> }>;
+  moduleQuickGroups?: Array<{
+    label: string;
+    items: Array<{
+      id: string;
+      title: string;
+      slug: string;
+      order: number;
+      state?: string | null;
+      unlockDate?: string | null;
+      completed?: boolean;
+    }>;
+  }>;
   actionsSlot?: ReactNode;
   /** Si la page n'a pas de Header global : sidebar part de tout en haut. */
   fullHeight?: boolean;
@@ -429,30 +440,49 @@ function SidebarProgress({
                         const isDone = Boolean(d.completed);
                         const isLocked = !isDone && Boolean(d.state && /verrou/i.test(d.state));
                         const unlockShort = isLocked ? formatUnlockShort(d.unlockDate) : null;
+                        const itemContent = (
+                          <>
+                            <span className="nav-rail__item-index" aria-hidden>
+                              {isDone ? '✓' : isLocked ? '🔒' : String(d.order).padStart(2, '0')}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <span className="nav-rail__item-title block truncate">{displayTitle}</span>
+                              {unlockShort ? (
+                                <span className="mt-[1px] block font-mono text-[9px] uppercase tracking-[0.08em] text-[color:var(--text-tertiary)]">
+                                  Dispo le {unlockShort}
+                                </span>
+                              ) : null}
+                            </div>
+                          </>
+                        );
+
                         return (
                           <li key={d.id}>
-                            <Link
-                              href={`/${d.slug}`}
-                              onClick={onNavigate}
-                              className="nav-rail__item"
-                              data-active={isActive || undefined}
-                              data-done={isDone || undefined}
-                              data-locked={isLocked || undefined}
-                              aria-current={isActive ? 'page' : undefined}
-                              title={unlockShort ? `Débloqué le ${unlockShort}` : undefined}
-                            >
-                              <span className="nav-rail__item-index" aria-hidden>
-                                {isDone ? '✓' : isLocked ? '🔒' : String(d.order).padStart(2, '0')}
+                            {isLocked ? (
+                              <span
+                                className="nav-rail__item"
+                                data-active={isActive || undefined}
+                                data-done={isDone || undefined}
+                                data-locked="true"
+                                aria-current={isActive ? 'page' : undefined}
+                                aria-disabled="true"
+                                role="link"
+                                title={unlockShort ? `Débloqué le ${unlockShort}` : 'Bientôt disponible'}
+                              >
+                                {itemContent}
                               </span>
-                              <div className="min-w-0 flex-1">
-                                <span className="block truncate">{displayTitle}</span>
-                                {unlockShort ? (
-                                  <span className="mt-[1px] block font-mono text-[9px] uppercase tracking-[0.08em] text-[color:var(--text-tertiary)]">
-                                    Dispo le {unlockShort}
-                                  </span>
-                                ) : null}
-                              </div>
-                            </Link>
+                            ) : (
+                              <Link
+                                href={`/${d.slug}`}
+                                onClick={onNavigate}
+                                className="nav-rail__item"
+                                data-active={isActive || undefined}
+                                data-done={isDone || undefined}
+                                aria-current={isActive ? 'page' : undefined}
+                              >
+                                {itemContent}
+                              </Link>
+                            )}
                           </li>
                         );
                       })}
@@ -495,20 +525,51 @@ function SidebarProgress({
                         const isActive = currentPath === item.slug;
                         const number = item.order ?? idx + 1;
                         const title = cleanModuleTitle(item.title);
+                        const isDone = Boolean(item.completed);
+                        const isLocked = !isDone && Boolean(item.state && /verrou/i.test(item.state));
+                        const unlockShort = isLocked ? formatUnlockShort(item.unlockDate) : null;
+                        const itemContent = (
+                          <>
+                            <span className="nav-rail__item-index" aria-hidden>
+                              {isDone ? '✓' : isLocked ? '🔒' : String(number).padStart(2, '0')}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <span className="nav-rail__item-title block truncate">{title}</span>
+                              {unlockShort ? (
+                                <span className="mt-[1px] block font-mono text-[9px] uppercase tracking-[0.08em] text-[color:var(--text-tertiary)]">
+                                  Dispo le {unlockShort}
+                                </span>
+                              ) : null}
+                            </div>
+                          </>
+                        );
                         return (
                           <li key={item.id}>
-                            <Link
-                              href={`/${item.slug}`}
-                              onClick={onNavigate}
-                              className="nav-rail__item"
-                              data-active={isActive || undefined}
-                              aria-current={isActive ? 'page' : undefined}
-                            >
-                              <span className="nav-rail__item-index">
-                                {String(number).padStart(2, '0')}
+                            {isLocked ? (
+                              <span
+                                className="nav-rail__item"
+                                data-active={isActive || undefined}
+                                data-done={isDone || undefined}
+                                data-locked="true"
+                                aria-current={isActive ? 'page' : undefined}
+                                aria-disabled="true"
+                                role="link"
+                                title={unlockShort ? `Débloqué le ${unlockShort}` : 'Bientôt disponible'}
+                              >
+                                {itemContent}
                               </span>
-                              <span className="min-w-0 flex-1 truncate">{title}</span>
-                            </Link>
+                            ) : (
+                              <Link
+                                href={`/${item.slug}`}
+                                onClick={onNavigate}
+                                className="nav-rail__item"
+                                data-active={isActive || undefined}
+                                data-done={isDone || undefined}
+                                aria-current={isActive ? 'page' : undefined}
+                              >
+                                {itemContent}
+                              </Link>
+                            )}
                           </li>
                         );
                       })}
@@ -523,4 +584,3 @@ function SidebarProgress({
     </div>
   );
 }
-

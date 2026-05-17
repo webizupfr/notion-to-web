@@ -2116,14 +2116,19 @@
   color: var(--signal-success);
   font-size: 12px;
 }
-.nav-rail__item[data-done="true"] > span:last-child {
+.nav-rail__item[data-done="true"] .nav-rail__item-title {
   color: var(--text-secondary);
   text-decoration: line-through;
   text-decoration-thickness: 1px;
   text-decoration-color: color-mix(in oklab, var(--text-tertiary) 50%, transparent);
 }
 .nav-rail__item[data-locked="true"] {
+  cursor: not-allowed;
   opacity: 0.55;
+}
+.nav-rail__item[data-locked="true"]:hover {
+  background: transparent;
+  color: var(--text-secondary);
 }
 .nav-rail__item[data-locked="true"] .nav-rail__item-index {
   font-size: 10px;
